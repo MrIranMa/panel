@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-lang="fa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>NIGHTLINE — پنل مدیریت اشتراک و تونل کلادفلر</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23141210'/%3E%3Cpath d='M8 23V9h3l6 8.4V9h3v14h-3l-6-8.4V23z' fill='%23e9e5da'/%3E%3C/svg%3E">
+<style>{{STYLE}}</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ─────────── OFFICIAL FREE & NON-COMMERCIAL POPUP NOTICE ─────────── -->
+<div class="modal-backdrop" id="free-notice-modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="fn-title">
+    <p class="kicker">
+      <span class="fa">✦ اطلاعیهٔ رسمی و دائمی — NIGHTLINE V{{VERSION}}</span>
+      <span class="en">✦ OFFICIAL NOTICE — NIGHTLINE V{{VERSION}}</span>
+    </p>
+    <h2 class="head" id="fn-title" style="font-size:21px;margin-top:4px">
+      <span class="fa">این سرویس کاملاً رایگان و غیرقابل فروش است</span>
+      <span class="en">100% Free &amp; Open-Source — Strictly Not For Sale</span>
+    </h2>
+    <p class="labor" style="margin-top:10px">
+      <span class="fa">پروژهٔ <strong>NIGHTLINE</strong> یک نرم‌افزار آزاد، رایگان و متن‌باز (Open-Source) است. هرگونه خرید و فروش سورس، پنل یا لینک‌های اشتراک این سرویس اکیداً ممنوع بوده و اگر هزینه‌ای بابت آن پرداخت کرده‌اید، فروشنده از یک ابزار رایگان سوءاستفاده کرده است.</span>
+      <span class="en"><strong>NIGHTLINE</strong> is a 100% free and open-source project. Selling access, panels, or subscriptions built with this software is strictly prohibited.</span>
+    </p>
+    <div class="actions" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn primary" id="btn-free-close" type="button">
+        <span class="fa">متوجه شدم — ورود به پنل</span><span class="en">I UNDERSTAND — CONTINUE</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ───────────────────────────── masthead ───────────────────────────── -->
+  <header class="masthead">
+    <div class="topline">
+      <span class="tick">EDITION V{{VERSION}}</span>
+      <span class="bar"></span>
+      <span class="tick" id="top-edge">COLO · —</span>
+      <span class="mid-tick">✦</span>
+      <span class="bar"></span>
+      <button class="sw" id="btn-free-info" type="button" title="اطلاعیه رایگان بودن">🆓 <span class="fa">رایگان و غیرقابل فروش</span><span class="en">FREE · NOT FOR SALE</span></button>
+      <button class="sw" id="lang" type="button" title="Language">EN</button>
+      <div class="theme-grp" role="group" aria-label="Theme">
+        <button class="sw t-pick" data-th="light" type="button" title="تم روشن">☀</button>
+        <button class="sw t-pick" data-th="dark" type="button" title="تم دارک">☾</button>
+      </div>
+    </div>
+
+    <h1 class="mast-title" id="mast-title">NIGHTLINE</h1>
+
+    <div class="subline">
+      <span class="fa">پنلِ اشتراک، مسیریابی و ضدّ فیلترِ VLESS و Trojan روی شبکهٔ ابری کلادفلر</span>
+      <span class="en">Serverless VLESS, Trojan &amp; Telegram Proxy Desk on Cloudflare Network</span>
+      <span class="mono sm" id="mode-pill">FREE &amp; OPEN · V{{VERSION}}</span>
+    </div>
+
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>PROXYIP &amp; NAT64</span><span>100% FREE · NOT FOR SALE</span>
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>PROXYIP &amp; NAT64</span><span>100% FREE · NOT FOR SALE</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="free-ribbon">
+    <span>🆓</span>
+    <span class="fa"><strong>این سرویس کاملاً رایگان و غیرقابل فروش است</strong> — پروژهٔ آزاد و متن‌باز NIGHTLINE (نسخهٔ V{{VERSION}})</span>
+    <span class="en"><strong>100% FREE &amp; STRICTLY NOT FOR SALE</strong> — Open-Source NIGHTLINE Project (V{{VERSION}})</span>
+  </div>
+
+  <!-- ═════════════════════ VIEW 1: FIRST-RUN KV SETUP ════════════════════ -->
+  <section id="v-setup" hidden>
+    <div class="cols">
+      <div class="card">
+        <p class="kicker"><span class="fa">راه‌اندازیِ نخستین شماره</span><span class="en">FIRST EDITION SETUP</span></p>
+        <h2 class="head">
+          <span class="fa">افتتاحِ پنل بدونِ متغیرِ محیطی</span>
+          <span class="en">Open the Night Desk — Zero Env Vars</span>
+        </h2>
+        <p class="labor">
+          <span class="fa">فضای ذخیره‌سازی <code>KV</code> با موفقیت متصل است. یک رمز عبور برای پنل مدیریت انتخاب کن تا نخستین مشترک (VLESS + Trojan)، لینک اشتراک هوشمند و تنظیمات ضد فیلتر به طور خودکار ساخته شوند.</span>
+          <span class="en">Cloudflare <code>KV</code> storage is connected. Choose an admin password to mint your first VLESS + Trojan subscriber, anti-DPI fragment profile, and Private DoH endpoint.</span>
+        </p>
+
+        <form id="f-setup">
+          <div class="stack" style="margin-top:10px;gap:12px">
+            <div>
+              <label class="fld-label" for="setup-pass"><span class="fa">رمز عبورِ مدیر پنل (حداقل ۶ نویسه)</span><span class="en">ADMIN PASSWORD (MIN 6 CHARS)</span></label>
+              <input id="setup-pass" type="password" autocomplete="new-password" required minlength="6" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="fld-label" for="setup-name"><span class="fa">نامِ مشترک اول</span><span class="en">FIRST SUBSCRIBER NAME</span></label>
+              <input id="setup-name" class="fa-inp" type="text" value="سردبیر (اصلی)">
+            </div>
+            <div>
+              <label class="fld-label" for="setup-uuid"><span class="fa">شناسهٔ UUID دلخواه (اختیاری — خالی بگذار تا خودکار بسازد)</span><span class="en">OPTIONAL CUSTOM UUID (LEAVE BLANK TO AUTO-MINT)</span></label>
+              <div class="fld">
+                <input id="setup-uuid" dir="ltr" type="text" placeholder="auto-generate">
+                <button class="mini" id="setup-gen-uuid" type="button" title="Mint UUID">✦</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" type="submit">
+              <span class="fa">افتتاحِ تحریریه و ورود به پنل</span><span class="en">INITIALIZE &amp; ENTER PANEL</span>
+            </button>
+          </div>
+          <p class="err" id="setup-err" hidden></p>
+        </form>
+      </div>
+
+      <div class="card card-subtle">
+        <p class="kicker"><span class="fa">امکاناتِ نسخهٔ کامل</span><span class="en">WHAT THIS DESK RUNS</span></p>
+        <table class="specs">
+          <tbody>
+            <tr><th><span class="fa">پروتکل‌های همزمان</span><span class="en">PROTOCOLS</span></th><td class="mono">VLESS + Trojan WS</td></tr>
+            <tr><th><span class="fa">مدیریت مشترکین</span><span class="en">MULTI-USER</span></th><td class="mono">GB Quota · Expiry · First-Use</td></tr>
+            <tr><th><span class="fa">ضد فیلتر (DPI)</span><span class="en">ANTI-DPI</span></th><td class="mono">Fragment (1-1 / tlshello)</td></tr>
+            <tr><th><span class="fa">خروجیِ اشتراک</span><span class="en">SUB CORES</span></th><td class="mono">Xray · Sing-box · Mihomo</td></tr>
+            <tr><th><span class="fa">رفعِ بلاک کلادفلر</span><span class="en">OUTBOUND</span></th><td class="mono">ProxyIP · NAT64 · Chain</td></tr>
+            <tr><th><span class="fa">سرور DNS خصوصی</span><span class="en">PRIVATE DoH</span></th><td class="mono">/dns-query/&lt;token&gt;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ VIEW 2: LOGIN GATE ══════════════════════════ -->
+  <section id="v-login" hidden>
+    <div class="cols">
+      <div class="card">
+        <p class="kicker"><span class="fa">ورودِ سردبیر</span><span class="en">EDITOR'S CREDENTIALS</span></p>
+        <h2 class="head" style="font-size:26px">
+          <span class="fa">اتاقِ فرمانِ NIGHTLINE</span>
+          <span class="en">Enter the Night Desk</span>
+        </h2>
+        <p class="labor">
+          <span class="fa">برای مدیریتِ مشترکین، IPهای تمیز، Fragment و قوانین مسیریابی، رمزِ عبورِ مدیر را وارد کن.</span>
+          <span class="en">Enter the administrator password to manage subscribers, Clean IPs, Fragment, and routing rules.</span>
+        </p>
+        <form id="f-login">
+          <label class="fld-label" for="login-pass"><span class="fa">رمز عبورِ مدیریت</span><span class="en">ADMIN PASSWORD</span></label>
+          <input id="login-pass" type="password" autocomplete="current-password" required placeholder="••••••••">
+          <div class="actions">
+            <button class="btn primary" type="submit">
+              <span class="fa">ورود به پنل مدیریت</span><span class="en">SIGN IN TO DESK</span>
+            </button>
+          </div>
+          <p class="err" id="login-err" hidden></p>
+        </form>
+      </div>
+
+      <div class="card card-subtle">
+        <p class="kicker"><span class="fa">گیشهٔ مشترکین</span><span class="en">SUBSCRIBER WINDOW</span></p>
+        <p class="labor">
+          <span class="fa">اگر مشترک هستی و توکن اشتراک داری، بدون نیاز به رمزِ مدیر می‌توانی کارتِ اشتراک، حجم باقی‌مانده و کدهای QR خودت را ببینی:</span>
+          <span class="en">Hold a subscriber pass token? Open your personal Press Pass for QR codes, remaining GB, and one-tap client links:</span>
+        </p>
+        <label class="fld-label" for="sub-jump-inp"><span class="fa">توکن اشتراک یا UUID</span><span class="en">SUBSCRIPTION TOKEN OR UUID</span></label>
+        <div class="fld">
+          <input id="sub-jump-inp" dir="ltr" type="text" placeholder="e.g. k8m2x9p4q7w3n5r2">
+          <button class="btn ghost sm-btn" id="sub-jump-btn" type="button">
+            <span class="fa">مشاهده ↗</span><span class="en">OPEN ↗</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      {{SKYLINE}}
+      <figcaption>
+        <span class="fa">خیابانِ چهل‌ودوم، نیمه‌شب — تصویرِ تلگرافیِ دفترِ نیویورک</span>
+        <span class="en">Forty-Second Street at midnight — wire photo from the New York desk</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ═══════════════ VIEW 3: STATELESS / KV NOT BOUND GUIDE ══════════════ -->
+  <section id="v-stateless" hidden>
+    <aside class="notice warn-box">
+      <p class="notice-title">
+        <span class="fa">⚠ چرا متغیر و Bindings قفل بود یا KV هنوز وصل نیست؟ (راهنمای ۶۰ ثانیه‌ای)</span>
+        <span class="en">⚠ STORAGE NOT BOUND YET — 60-SECOND CLOUDFLARE KV SETUP</span>
+      </p>
+      <p class="fa">
+        در داشبورد جدید کلادفلر، اگر در بخش Workers گزینهٔ <strong>Upload assets</strong> را بزنی، کلادفلر یک ورکرِ «فقط فایل ثابت» می‌سازد و پیغام می‌دهد <em>Variables/Bindings cannot be added to a Worker that only has static assets</em>. برای فعال‌سازیِ پنل کاملِ NIGHTLINE (چندکاربره و بدون نیاز به متغیر محیطی):
+      </p>
+      <ol class="fa">
+        <li>در منوی چپ کلادفلر به <strong>Storage &amp; Databases → KV</strong> برو، دکمهٔ <strong>Create</strong> را بزن و یک فضا به نام <code>nightline</code> بساز.</li>
+        <li>به <strong>Workers &amp; Pages → Create</strong> برو، گزینهٔ <strong>Start with Hello World!</strong> را بزن و <strong>Deploy</strong> کن.</li>
+        <li>روی دکمهٔ <strong>Edit code</strong> (بالا راست) کلیک کن، کل کد فایل <code>worker-single-file.js</code> را جایگزین کد قبلی کن و <strong>Deploy</strong> بزن.</li>
+        <li>در صفحهٔ ورکر به <strong>Settings → Bindings → Add binding → KV namespace</strong> برو، در کادر Variable name دقیقاً بنویس <code>KV</code>، فضای <code>nightline</code> را انتخاب کن و <strong>Save</strong> بزن.</li>
+        <li>همین صفحه را رفرش کن — فرم انتخاب رمز مدیر باز می‌شود و دیگر هیچ متغیری لازم نداری!</li>
+      </ol>
+      <ol class="en">
+        <li>In Cloudflare Dashboard, open <strong>Storage &amp; Databases → KV → Create</strong> and name it <code>nightline</code>.</li>
+        <li>Open <strong>Workers &amp; Pages → Create → Start with Hello World! → Deploy</strong> (do <em>not</em> use Workers "Upload assets", which creates a static-only Worker).</li>
+        <li>Click <strong>Edit code</strong>, paste the entire contents of <code>worker-single-file.js</code>, and click <strong>Deploy</strong>.</li>
+        <li>Go to <strong>Settings → Bindings → Add binding → KV namespace</strong>, set Variable name to <code>KV</code>, select <code>nightline</code>, and save. Refresh this page!</li>
+      </ol>
+    </aside>
+
+    <div class="cols">
+      <div class="card">
+        <p class="kicker"><span class="fa">چاپِ بلیتِ تک‌کاربره (حالت بدون KV)</span><span class="en">STATELESS SINGLE-TICKET MODE</span></p>
+        <p class="labor">
+          <span class="fa">اگر نخواهی KV وصل کنی و فقط یک متغیرِ <code>uuid</code> در Settings ست کرده‌ای، همان شناسه را اینجا وارد کن تا لینک و QR چاپ شود:</span>
+          <span class="en">Running stateless with a <code>uuid</code> secret instead of KV? Paste that UUID below to print your VLESS URI and QR code:</span>
+        </p>
+        <div class="fld">
+          <input id="sl-uuid" dir="ltr" type="text" placeholder="00000000-0000-4000-8000-000000000000">
+          <button class="mini" id="sl-mint" type="button">✦</button>
+        </div>
+        <div id="sl-box" style="margin-top:16px" hidden>
+          <div class="qr-center"><div class="qrbox"><div class="qr" id="sl-qr"></div></div></div>
+          <div class="actions" style="justify-content:center">
+            <button class="btn primary sm-btn" id="sl-copy" type="button"><span class="fa">کپی لینک VLESS</span><span class="en">COPY VLESS URI</span></button>
+            <a class="btn ghost sm-btn" id="sl-sub" href="#" target="_blank"><span class="fa">لینک اشتراک</span><span class="en">SUBSCRIPTION</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-subtle">
+        <p class="kicker"><span class="fa">وضعیتِ فعلیِ لبه</span><span class="en">RUNTIME DIAGNOSTICS</span></p>
+        <table class="specs">
+          <tbody>
+            <tr><th><span class="fa">حالتِ اجرا</span><span class="en">RUNTIME MODE</span></th><td class="mono" id="diag-mode">STATELESS</td></tr>
+            <tr><th><span class="fa">اتصال KV</span><span class="en">KV BINDING</span></th><td class="mono" id="diag-kv">NOT BOUND</td></tr>
+            <tr><th><span class="fa">متغیر UUID</span><span class="en">ENV UUID</span></th><td class="mono" id="diag-uuid">—</td></tr>
+            <tr><th><span class="fa">دیتاسنتر کلادفلر</span><span class="en">EDGE COLO</span></th><td class="mono" id="diag-edge">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════ VIEW 4: FULL ADMIN PANEL ══════════════════════ -->
+  <section id="v-admin" hidden>
+
+    <!-- Status Ledger Bar -->
+    <div class="ledger-bar">
+      <div class="ledger-items">
+        <span><span class="fa">دیتاسنتر:</span><span class="en">COLO:</span> <b id="st-edge">—</b></span>
+        <span>·</span>
+        <span>KV: <b id="st-kv">OK</b></span>
+        <span>·</span>
+        <span>USERS: <b id="st-users">0</b></span>
+        <span>·</span>
+        <span>TRAFFIC: <b id="st-traffic">0 B</b></span>
+        <span id="demo-badge" class="badge bad" hidden>DEMO PREVIEW</span>
+      </div>
+      <div class="ledger-actions">
+        <button class="btn danger sm-btn" id="btn-kill" type="button">
+          <span class="fa" id="kill-fa">کلید قطع اضطراری: خاموش</span>
+          <span class="en" id="kill-en">KILL SWITCH: OFF</span>
+        </button>
+        <button class="btn ghost sm-btn" id="btn-logout" type="button">
+          <span class="fa">خروج</span><span class="en">LOGOUT</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 5 Editorial Section Tabs -->
+    <nav class="nav-tabs" aria-label="Panel Sections">
+      <button class="tab-btn active" data-tab="sub" type="button">
+        <span><span class="fa">پیشخوان و اشتراک</span><span class="en">DISPATCH &amp; SUB</span></span>
+        <span class="tnum">01</span>
+      </button>
+      <button class="tab-btn" data-tab="users" type="button">
+        <span><span class="fa">مشترکین</span><span class="en">SUBSCRIBERS</span></span>
+        <span class="tnum">02</span>
+      </button>
+      <button class="tab-btn" data-tab="net" type="button">
+        <span><span class="fa">شبکه و Fragment</span><span class="en">NET &amp; FRAGMENT</span></span>
+        <span class="tnum">03</span>
+      </button>
+      <button class="tab-btn" data-tab="route" type="button">
+        <span><span class="fa">مسیریابی و DoH</span><span class="en">ROUTING &amp; DoH</span></span>
+        <span class="tnum">04</span>
+      </button>
+      <button class="tab-btn" data-tab="sec" type="button">
+        <span><span class="fa">استتار و پشتیبان</span><span class="en">STEALTH &amp; BACKUP</span></span>
+        <span class="tnum">05</span>
+      </button>
+    </nav>
+
+    <!-- ─────────────── TAB 1: DISPATCH & SUBSCRIPTIONS ─────────────── -->
+    <div class="tab-pane" id="pane-sub">
+      <div class="cols">
+        <div class="card">
+          <div class="stat-strip" style="margin-bottom:12px">
+            <p class="kicker" style="margin:0"><span class="fa">کارتِ اشتراکِ مشترک</span><span class="en">SUBSCRIBER PRESS PASS</span></p>
+            <button class="btn ghost sm-btn" id="go-add-user" type="button">
+              <span class="fa">+ مشترک جدید</span><span class="en">+ NEW USER</span>
+            </button>
+          </div>
+
+          <label class="fld-label" for="sel-user"><span class="fa">انتخابِ مشترک</span><span class="en">ACTIVE SUBSCRIBER</span></label>
+          <select id="sel-user" class="fa-sel"></select>
+
+          <div class="specs" style="margin-top:12px">
+            <table class="specs">
+              <tbody>
+                <tr><th><span class="fa">وضعیتِ خط</span><span class="en">STATUS</span></th><td id="u-status-cell">—</td></tr>
+                <tr><th><span class="fa">مصرفِ ترافیک</span><span class="en">BANDWIDTH</span></th><td class="mono" id="u-bw-cell">—</td></tr>
+                <tr><th><span class="fa">مهلتِ اعتبار</span><span class="en">EXPIRY</span></th><td id="u-exp-cell">—</td></tr>
+                <tr><th><span class="fa">شناسهٔ VLESS</span><span class="en">VLESS UUID</span></th><td class="mono" style="font-size:11px;word-break:break-all" id="u-uuid-cell">—</td></tr>
+                <tr><th><span class="fa">رمزِ Trojan</span><span class="en">TROJAN PASS</span></th><td class="mono" id="u-tr-cell">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="meter" style="margin-top:10px"><i id="u-meter" style="width:6%"></i></div>
+
+          <p class="kicker" style="margin-top:20px"><span class="fa">رونوشتِ لینک‌های اشتراک (مالتی‌کلاینت)</span><span class="en">MULTI-CLIENT SUBSCRIPTION LINKS</span></p>
+          <div class="sub-grid">
+            <button class="btn primary sm-btn" id="cp-b64" type="button">
+              <span class="fa">اشتراک عمومی (Base64)</span><span class="en">NORMAL SUB (BASE64)</span>
+            </button>
+            <button class="btn sm-btn" id="cp-xray" type="button">
+              <span class="fa">⚡ اشتراک Fragment (Xray)</span><span class="en">⚡ FRAGMENT SUB (XRAY)</span>
+            </button>
+            <button class="btn sm-btn" id="cp-sb" type="button">
+              <span class="fa">اشتراک Sing-box / Hiddify</span><span class="en">SING-BOX / HIDDIFY</span>
+            </button>
+            <button class="btn sm-btn" id="cp-clash" type="button">
+              <span class="fa">اشتراک Clash / Mihomo</span><span class="en">CLASH / MIHOMO YAML</span>
+            </button>
+            <button class="btn ghost sm-btn" id="cp-doh" type="button">
+              <span class="fa">سرور DoH اختصاصی</span><span class="en">PRIVATE DoH URL</span>
+            </button>
+            <a class="btn ghost sm-btn" id="open-pass" href="#" target="_blank" rel="noopener">
+              <span class="fa">صفحهٔ مشترک ↗</span><span class="en">SUBSCRIBER PAGE ↗</span>
+            </a>
+          </div>
+          <p class="hint">
+            <span class="fa">نکته: لینکِ اول (عمومی) User-Agent برنامه را خودکار تشخیص می‌دهد. برای فعال شدن Fragment در v2rayNG / MahsaNG / v2rayN حتماً از دکمهٔ <strong>⚡ اشتراک Fragment</strong> استفاده کن.</span>
+            <span class="en">Tip: For DPI Fragment in v2rayNG / MahsaNG / v2rayN, import the <strong>⚡ Fragment Sub (Xray)</strong> URL as a subscription.</span>
+          </p>
+
+          <div class="tg-box" id="dash-tg-box">
+            <p class="kicker" style="margin:0 0 8px">
+              <span class="fa">✈️ پروکسی رسمی تلگرام (Web Proxy — بدون نیاز به فیلترشکن)</span>
+              <span class="en">✈️ OFFICIAL TELEGRAM WEB PROXY (NO VPN APP NEEDED)</span>
+            </p>
+            <div class="actions" style="margin-top:6px">
+              <a class="btn primary sm-btn" id="dash-tg-open" href="#">
+                <span class="fa">اتصال یک‌ضرب در تلگرام</span><span class="en">CONNECT IN TELEGRAM</span>
+              </a>
+              <button class="btn ghost sm-btn" id="dash-tg-copy" type="button">
+                <span class="fa">کپی لینک اشتراک تلگرام</span><span class="en">COPY t.me LINK</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="kicker"><span class="fa">کدِ مربعی (QR) و نودهای تولیدشده</span><span class="en">QR PLATE &amp; GENERATED NODES</span></p>
+          <div class="qr-center">
+            <div class="qrbox"><div class="qr" id="main-qr"></div></div>
+            <p class="mono sm" id="qr-caption" style="margin:9px 0 0;word-break:break-all">NORMAL SUBSCRIPTION</p>
+          </div>
+          <div class="actions" style="justify-content:center;margin-top:8px">
+            <button class="btn ghost sm-btn" id="qr-btn-b64" type="button">Normal QR</button>
+            <button class="btn ghost sm-btn" id="qr-btn-xray" type="button">Fragment QR</button>
+            <button class="btn ghost sm-btn" id="qr-btn-sb" type="button">Sing-box QR</button>
+            <button class="btn ghost sm-btn" id="qr-btn-tg" type="button">Telegram QR</button>
+          </div>
+
+          <div class="dotted" style="margin:16px 0"></div>
+          <p class="kicker"><span class="fa">فهرستِ نودهای این مشترک (<span id="node-count">0</span>)</span><span class="en">GENERATED NODES (<span id="node-count-en">0</span>)</span></p>
+          <div class="node-list" id="admin-nodes"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────── TAB 2: SUBSCRIBERS ─────────────────── -->
+    <div class="tab-pane" id="pane-users" hidden>
+      <div class="stack">
+        <div class="card">
+          <div class="stat-strip">
+            <p class="kicker" style="margin:0"><span class="fa" id="uf-title-fa">افزودنِ مشترک تازه</span><span class="en" id="uf-title-en">ADD NEW SUBSCRIBER</span></p>
+            <button class="btn ghost sm-btn" id="uf-reset" type="button" hidden>
+              <span class="fa">لغو ویرایش</span><span class="en">CANCEL EDIT</span>
+            </button>
+          </div>
+
+          <form id="f-user" style="margin-top:12px">
+            <input type="hidden" id="uf-id" value="">
+            <div class="field-grid">
+              <div>
+                <label class="fld-label" for="uf-name"><span class="fa">نامِ مشترک</span><span class="en">SUBSCRIBER NAME</span></label>
+                <input id="uf-name" class="fa-inp" type="text" required placeholder="مثلاً: علی — موبایل">
+              </div>
+              <div>
+                <label class="fld-label" for="uf-note"><span class="fa">یادداشت (اختیاری)</span><span class="en">NOTE (OPTIONAL)</span></label>
+                <input id="uf-note" class="fa-inp" type="text" placeholder="همراه اول / شخصی">
+              </div>
+              <div>
+                <label class="fld-label" for="uf-gb"><span class="fa">سقفِ حجم به گیگابایت (۰ = نامحدود)</span><span class="en">QUOTA LIMIT GB (0 = UNLIMITED)</span></label>
+                <input id="uf-gb" type="number" min="0" step="0.5" value="0">
+              </div>
+              <div>
+                <label class="fld-label" for="uf-days"><span class="fa">مهلتِ زمانی به روز (۰ = بدون انقضا)</span><span class="en">EXPIRY DAYS (0 = NEVER)</span></label>
+                <input id="uf-days" type="number" min="0" step="1" value="0">
+              </div>
+              <div>
+                <label class="fld-label" for="uf-uuid"><span class="fa">شناسهٔ VLESS (UUID)</span><span class="en">VLESS UUID</span></label>
+                <div class="fld">
+                  <input id="uf-uuid" dir="ltr" type="text" placeholder="auto">
+                  <button class="mini" id="uf-gen-uuid" type="button">✦</button>
+                </div>
+              </div>
+              <div>
+                <label class="fld-label" for="uf-tr"><span class="fa">رمزِ Trojan</span><span class="en">TROJAN PASSWORD</span></label>
+                <div class="fld">
+                  <input id="uf-tr" dir="ltr" type="text" placeholder="auto">
+                  <button class="mini" id="uf-gen-tr" type="button">✦</button>
+                </div>
+              </div>
+              <div class="field-full">
+                <label class="chk">
+                  <input id="uf-first" type="checkbox">
+                  <span>
+                    <span class="fa">شروعِ شمارشِ روزهای اعتبار فقط از <strong>اولین اتصالِ واقعی</strong> مشترک (Start on First Connect)</span>
+                    <span class="en">Start expiry countdown on <strong>first actual connection</strong></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" type="submit">
+                <span class="fa" id="uf-submit-fa">ثبتِ مشترک</span><span class="en" id="uf-submit-en">SAVE SUBSCRIBER</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <p class="kicker"><span class="fa">دفترِ کلِ مشترکین</span><span class="en">SUBSCRIBER LEDGER</span></p>
+          <div class="user-list" id="users-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── TAB 3: NETWORK, CLEAN IP & FRAGMENT ─────────────── -->
+    <div class="tab-pane" id="pane-net" hidden>
+      <div class="cols-even">
+        <!-- Protocols & TLS -->
+        <div class="card">
+          <p class="kicker"><span class="fa">پروتکل‌ها، پورت‌ها و TLS</span><span class="en">PROTOCOLS, PORTS &amp; TLS</span></p>
+          <div class="check-list">
+            <label class="chk"><input type="checkbox" id="s-vless"><span><strong>VLESS</strong> over WS</span></label>
+            <label class="chk"><input type="checkbox" id="s-trojan"><span><strong>Trojan</strong> over WS</span></label>
+            <label class="chk field-full"><input type="checkbox" id="s-http-on"><span><span class="fa">تولید نودهای بدون TLS (پورت‌های HTTP ۸۰/۸۰۸۰ برای دامنهٔ workers.dev)</span><span class="en">Include non-TLS HTTP ports (80/8080)</span></span></label>
+          </div>
+
+          <p class="fld-label" style="margin-top:14px"><span class="fa">پورت‌های TLS کلادفلر (همهٔ پورت‌های تیک‌خورده در اشتراک تولید می‌شوند)</span><span class="en">CLOUDFLARE TLS PORTS (ALL CHECKED PORTS EMIT NODES)</span></p>
+          <div class="check-list ports-grid" id="tls-ports-box">
+            <label class="chk"><input type="checkbox" value="443"><span>443</span></label>
+            <label class="chk"><input type="checkbox" value="8443"><span>8443</span></label>
+            <label class="chk"><input type="checkbox" value="2053"><span>2053</span></label>
+            <label class="chk"><input type="checkbox" value="2083"><span>2083</span></label>
+            <label class="chk"><input type="checkbox" value="2087"><span>2087</span></label>
+            <label class="chk"><input type="checkbox" value="2096"><span>2096</span></label>
+          </div>
+
+          <p class="fld-label" style="margin-top:12px"><span class="fa">پورت‌های بدون TLS (HTTP — هنگام فعال بودن تیک بالا)</span><span class="en">CLOUDFLARE HTTP PORTS (WHEN NON-TLS IS ENABLED)</span></p>
+          <div class="check-list ports-grid" id="http-ports-box">
+            <label class="chk"><input type="checkbox" value="80"><span>80</span></label>
+            <label class="chk"><input type="checkbox" value="8080"><span>8080</span></label>
+            <label class="chk"><input type="checkbox" value="8880"><span>8880</span></label>
+            <label class="chk"><input type="checkbox" value="2052"><span>2052</span></label>
+            <label class="chk"><input type="checkbox" value="2082"><span>2082</span></label>
+            <label class="chk"><input type="checkbox" value="2086"><span>2086</span></label>
+            <label class="chk"><input type="checkbox" value="2095"><span>2095</span></label>
+          </div>
+          <p class="hint" style="margin-top:8px">
+            <span class="fa">نکته: کلادفلر روی دامنهٔ <code>*.workers.dev</code> فقط پورت‌های <code>443</code> و <code>80</code> را باز می‌گذارد، امّا روی <strong>دامنهٔ شخصی (Custom Domain)</strong> و <strong>IPهای تمیز</strong> هر ۶ پورت TLS و ۷ پورت HTTP کار می‌کنند.</span>
+            <span class="en">Note: <code>*.workers.dev</code> listens on 443/80; Custom Domains and Clean IPs support all 6 TLS + 7 HTTP Cloudflare ports.</span>
+          </p>
+
+          <div class="field-grid" style="margin-top:14px">
+            <div>
+              <label class="fld-label" for="s-fp"><span class="fa">اثرانگشت TLS (uTLS)</span><span class="en">uTLS FINGERPRINT</span></label>
+              <select id="s-fp">
+                <option value="chrome">chrome</option>
+                <option value="firefox">firefox</option>
+                <option value="safari">safari</option>
+                <option value="ios">ios</option>
+                <option value="android">android</option>
+                <option value="edge">edge</option>
+                <option value="randomized">randomized</option>
+              </select>
+            </div>
+            <div>
+              <label class="fld-label" for="s-alpn">ALPN</label>
+              <select id="s-alpn">
+                <option value="http/1.1">http/1.1 (Recommended WS)</option>
+                <option value="h2,http/1.1">h2,http/1.1</option>
+                <option value="h3">h3</option>
+              </select>
+            </div>
+            <div>
+              <label class="fld-label" for="s-ed"><span class="fa">دادهٔ زودهنگام (Early Data)</span><span class="en">EARLY DATA</span></label>
+              <select id="s-ed">
+                <option value="2048">2048 (Standard)</option>
+                <option value="2560">2560 (Max)</option>
+                <option value="0">0 (Off)</option>
+              </select>
+            </div>
+            <div>
+              <label class="fld-label" for="s-wspath"><span class="fa">مسیر WebSocket</span><span class="en">WS PATH</span></label>
+              <input id="s-wspath" dir="ltr" type="text" value="/">
+            </div>
+          </div>
+        </div>
+
+        <!-- Fragment & Anti-DPI -->
+        <div class="card">
+          <p class="kicker"><span class="fa">تنظیمات ضد فیلتر (Fragment &amp; Noise)</span><span class="en">ANTI-DPI FRAGMENTATION</span></p>
+          <label class="chk">
+            <input type="checkbox" id="s-frag-on">
+            <span>
+              <span class="fa">فعال‌سازی <strong>Fragment</strong> در اشتراک‌های Xray و Sing-box (عبور از فیلترینگ SNI در ایران)</span>
+              <span class="en">Enable TLS Fragmentation in Xray &amp; Sing-box subscriptions</span>
+            </span>
+          </label>
+
+          <div class="actions" style="margin-top:12px">
+            <button class="btn ghost sm-btn frag-preset" data-p="1-1" data-l="10-20" data-i="10-20" type="button">
+              <span class="fa">پیشنهادی ایران (شدید 1-1)</span><span class="en">SEVERE (1-1)</span>
+            </button>
+            <button class="btn ghost sm-btn frag-preset" data-p="tlshello" data-l="10-20" data-i="10-20" type="button">
+              <span class="fa">کلاسیک (tlshello)</span><span class="en">TLSHELLO</span>
+            </button>
+            <button class="btn ghost sm-btn frag-preset" data-p="1-3" data-l="20-50" data-i="10-20" type="button">
+              <span class="fa">ملایم (1-3)</span><span class="en">MILD (1-3)</span>
+            </button>
+          </div>
+
+          <div class="field-grid" style="margin-top:12px">
+            <div>
+              <label class="fld-label" for="s-frag-pkt">Packets</label>
+              <input id="s-frag-pkt" dir="ltr" type="text" value="1-1">
+            </div>
+            <div>
+              <label class="fld-label" for="s-frag-len">Length (bytes)</label>
+              <input id="s-frag-len" dir="ltr" type="text" value="10-20">
+            </div>
+            <div>
+              <label class="fld-label" for="s-frag-int">Interval (ms)</label>
+              <input id="s-frag-int" dir="ltr" type="text" value="10-20">
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <label class="chk" style="width:100%">
+                <input type="checkbox" id="s-noise">
+                <span><span class="fa">تزریق UDP Noise (Xray)</span><span class="en">UDP Noise (Xray)</span></span>
+              </label>
+            </div>
+          </div>
+          <p class="hint">
+            <span class="fa">روی اپراتورهای همراه اول و ایرانسل که <code>tlshello</code> بسته شده، حالت <code>1-1</code> با طول <code>10-20</code> بهترین نتیجه را می‌دهد.</span>
+            <span class="en">Packet mode <code>1-1</code> fragments the very first TCP payload, bypassing strict SNI inspection.</span>
+          </p>
+        </div>
+
+        <!-- Clean IPs + Browser Scanner -->
+        <div class="card">
+          <p class="kicker"><span class="fa">IPها و دامنه‌های تمیز کلادفلر + اسکنرِ مرورگر</span><span class="en">CLEAN IPs, DOMAINS &amp; BROWSER SCANNER</span></p>
+          <label class="fld-label" for="s-cleanips">
+            <span class="fa">فهرست IP / دامنهٔ تمیز شما (هر خط یک مورد — مثلاً <code>172.67.73.163#MCI</code> یا <code>www.speedtest.net#Speedtest</code>)</span>
+            <span class="en">YOUR CLEAN IPs / DOMAINS (ONE PER LINE, OPTIONAL #REMARK)</span>
+          </label>
+          <textarea id="s-cleanips"></textarea>
+
+          <div class="actions" style="margin-top:10px">
+            <button class="btn primary sm-btn" id="btn-scan-user-list" type="button">
+              <span class="fa">⚡ اسکن لیستِ فعلیِ شما (روی اینترنت مرورگر)</span><span class="en">⚡ SCAN YOUR LISTED IPs</span>
+            </button>
+            <button class="btn ghost sm-btn" id="btn-prune-clean" type="button" hidden>
+              <span class="fa">✓ نگه‌داشتن و مرتب‌سازی فقط سالم‌ها</span><span class="en">✓ KEEP &amp; SORT HEALTHY</span>
+            </button>
+            <button class="btn ghost sm-btn" id="btn-scan-clean" type="button">
+              <span class="fa">🔍 اسکن رنج‌های پیشنهادی کلادفلر</span><span class="en">🔍 SCAN CF PRESET RANGES</span>
+            </button>
+            <button class="btn ghost sm-btn" id="btn-add-presets" type="button">
+              <span class="fa">+ افزودن منتخب‌ها</span><span class="en">+ ADD PRESETS</span>
+            </button>
+          </div>
+          <p class="hint" id="scan-summary" hidden></p>
+          <div id="scan-results" class="scan-grid" hidden></div>
+
+          <div style="margin-top:14px">
+            <label class="fld-label" for="s-custom-domains">
+              <span class="fa">دامنه‌های سفارشی متصل به ورکر (Custom Domains — هر خط یک دامنه)</span>
+              <span class="en">CUSTOM DOMAINS (MERGED INTO SUBSCRIPTIONS)</span>
+            </label>
+            <textarea id="s-custom-domains" style="min-height:62px" placeholder="sub.yourdomain.com"></textarea>
+          </div>
+        </div>
+
+        <!-- Outbound ProxyIP, NAT64, Chain -->
+        <div class="card">
+          <p class="kicker"><span class="fa">خروجیِ ورکر: ProxyIP، NAT64 و پروکسی زنجیره‌ای</span><span class="en">OUTBOUND: PROXYIP, NAT64 &amp; CHAIN</span></p>
+          <label class="fld-label" for="s-proxyips">
+            <span class="fa">فهرست ProxyIP (برای باز شدن سایت‌های پشت کلادفلر مثل speedtest.net — هر خط <code>host</code> یا <code>host:port</code>)</span>
+            <span class="en">PROXY IPs (FALLBACK FOR CLOUDFLARE-HOSTED SITES LIKE SPEEDTEST)</span>
+          </label>
+          <textarea id="s-proxyips" style="min-height:70px" placeholder="ProxyIP.NL.CMLiussss.net"></textarea>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn ghost sm-btn" id="btn-test-proxyip" type="button">
+              <span class="fa">تست اتصالِ اولین ProxyIP از روی ورکر</span><span class="en">TEST PROXYIP FROM WORKER</span>
+            </button>
+            <span class="mono sm" id="proxyip-res"></span>
+          </div>
+
+          <div style="margin-top:14px">
+            <label class="chk">
+              <input type="checkbox" id="s-nat64-on">
+              <span><span class="fa">فعال‌سازی پشتیبان <strong>NAT64</strong> (تبدیل خودکار IPv4 به IPv6)</span><span class="en">Enable NAT64 IPv6 Fallback</span></span>
+            </label>
+            <textarea id="s-nat64" style="min-height:58px;margin-top:6px"></textarea>
+          </div>
+
+          <div style="margin-top:14px">
+            <label class="fld-label" for="s-chain">
+              <span class="fa">پروکسی زنجیره‌ای خروجی (SOCKS5 / HTTP برای IP ثابت — اختیاری)</span>
+              <span class="en">CHAIN OUTBOUND PROXY (SOCKS5 / HTTP FOR FIXED EXIT IP)</span>
+            </label>
+            <div class="fld">
+              <input id="s-chain" dir="ltr" type="text" placeholder="socks5://user:pass@1.2.3.4:1080">
+              <button class="btn ghost sm-btn" id="btn-test-chain" type="button">TEST</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official Telegram Web Proxy Card -->
+        <div class="card field-full">
+          <p class="kicker"><span class="fa">✈️ پروکسیِ رسمیِ تلگرام (Telegram Web Proxy — بدون نیاز به برنامه‌جانبی)</span><span class="en">✈️ OFFICIAL TELEGRAM WEB PROXY (DESKTOP &amp; ANDROID)</span></p>
+          <label class="chk">
+            <input type="checkbox" id="s-tgproxy">
+            <span>
+              <span class="fa">فعال‌سازی <strong>پروکسی رسمی تلگرام (<code>tg://webproxy</code>)</strong> روی همین ورکر با رمزنگاری سرتاسری MTProto</span>
+              <span class="en">Enable Official Telegram Web Proxy (<code>tg://webproxy</code>) on this Worker</span>
+            </span>
+          </label>
+          <div class="field-grid" style="margin-top:12px">
+            <div>
+              <label class="fld-label" for="s-tgsecret"><span class="fa">کلید مخفی ۳۲ کاراکتری (Secret Hex)</span><span class="en">32-CHAR HEX SECRET</span></label>
+              <div class="fld">
+                <input id="s-tgsecret" dir="ltr" type="text" maxlength="34" placeholder="auto-generated 32-hex">
+                <button class="mini" id="btn-gen-tgsecret" type="button" title="Generate new secret">✦</button>
+              </div>
+            </div>
+            <div>
+              <label class="fld-label" for="s-tgdomain"><span class="fa">دامنهٔ اختصاصیِ پروکسی تلگرام (اختیاری — خالی = دامنهٔ فعلی ورکر)</span><span class="en">OPTIONAL CUSTOM DOMAIN (BLANK = CURRENT HOST)</span></label>
+              <input id="s-tgdomain" dir="ltr" type="text" placeholder="tg.yourdomain.com">
+            </div>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <a class="btn primary sm-btn" id="set-tg-open" href="#">
+              <span class="fa">✈️ اتصال یک‌ضرب در تلگرام</span><span class="en">✈️ CONNECT IN TELEGRAM</span>
+            </a>
+            <button class="btn ghost sm-btn" id="set-tg-copy" type="button">
+              <span class="fa">کپی لینک اشتراک تلگرام (t.me)</span><span class="en">COPY SHAREABLE t.me LINK</span>
+            </button>
+          </div>
+          <p class="hint">
+            <span class="fa">پشتیبانی رسمی در <strong>Telegram Desktop</strong> و <strong>Telegram Android</strong> (نسخه‌های ۲۰۲۶ به بعد). اگر دامنهٔ <code>workers.dev</code> روی اینترنت شما فیلتر است، یک Custom Domain وصل کنید تا بدون هیچ فیلترشکنی تلگرام باز شود.</span>
+            <span class="en">Supported natively in Telegram Desktop &amp; Telegram Android via <code>tg://webproxy</code>. Attach a Custom Domain if <code>workers.dev</code> is blocked on your ISP.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="save-net" type="button">
+          <span class="fa">ذخیرهٔ تنظیماتِ شبکه و Fragment</span><span class="en">SAVE NETWORK &amp; FRAGMENT SETTINGS</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ─────────────── TAB 4: ROUTING & PRIVATE DoH ─────────────── -->
+    <div class="tab-pane" id="pane-route" hidden>
+      <div class="cols-even">
+        <div class="card">
+          <p class="kicker"><span class="fa">سرور DoH اختصاصی و تنظیمات DNS</span><span class="en">PRIVATE DoH &amp; DNS SERVERS</span></p>
+          <div class="stack" style="margin-top:8px;gap:12px">
+            <div>
+              <label class="fld-label" for="s-updoh"><span class="fa">سرور DoH بالادستیِ ورکر (Upstream DoH)</span><span class="en">WORKER UPSTREAM DoH</span></label>
+              <select id="s-updoh">
+                <option value="https://1.1.1.1/dns-query">Cloudflare (https://1.1.1.1/dns-query)</option>
+                <option value="https://dns.google/dns-query">Google (https://dns.google/dns-query)</option>
+                <option value="https://dns.quad9.net/dns-query">Quad9 Security (https://dns.quad9.net/dns-query)</option>
+                <option value="https://unfiltered.adguard-dns.com/dns-query">AdGuard Unfiltered</option>
+              </select>
+            </div>
+            <div>
+              <label class="fld-label" for="s-remotedns"><span class="fa">DNS راه دور در فایل اشتراکِ کلاینت‌ها</span><span class="en">CLIENT REMOTE DNS</span></label>
+              <select id="s-remotedns">
+                <option value="private-doh">Private DoH (/dns-query/&lt;token&gt; on this Worker)</option>
+                <option value="cloudflare">Cloudflare DoH (1.1.1.1)</option>
+                <option value="google">Google DoH (dns.google)</option>
+                <option value="quad9">Quad9 DoH (dns.quad9.net)</option>
+              </select>
+            </div>
+            <div>
+              <label class="fld-label" for="s-directdns"><span class="fa">DNS مستقیم (برای سایت‌های داخلی)</span><span class="en">DIRECT DOMESTIC DNS</span></label>
+              <input id="s-directdns" dir="ltr" type="text" value="8.8.8.8">
+            </div>
+          </div>
+
+          <p class="kicker" style="margin-top:20px"><span class="fa">کلیدهای مسیریابیِ هوشمند</span><span class="en">SMART ROUTING SWITCHES</span></p>
+          <div class="check-list" style="grid-template-columns:1fr">
+            <label class="chk"><input type="checkbox" id="r-ir"><span><span class="fa">دور زدن دامنه‌ها و IPهای <strong>ایران</strong> (اتصال مستقیم بانک‌ها و سایت‌های .ir)</span><span class="en">Bypass Iran (.ir &amp; geoip:ir direct)</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-lan"><span><span class="fa">دور زدن شبکهٔ محلی (LAN / مودم)</span><span class="en">Bypass Private LAN IPs</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-quic"><span><span class="fa">مسدودسازی <strong>QUIC</strong> (UDP 443 — افزایش پایداری در اپراتورهای ایران)</span><span class="en">Block QUIC (UDP 443)</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-ads"><span><span class="fa">مسدودسازی تبلیغات، ردیاب‌ها و فیشینگ (AdBlock)</span><span class="en">Block Ads, Trackers &amp; Malware</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-adult"><span><span class="fa">مسدودسازی محتوای بزرگسالان (Family Filter)</span><span class="en">Block Adult Content</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-sanction"><span><span class="fa">عبور اجباری سرویس‌های تحریمی و هوش مصنوعی از تونل</span><span class="en">Force Sanctioned / AI Domains via Tunnel</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-cn"><span><span class="fa">دور زدن چین (CN)</span><span class="en">Bypass China (CN)</span></span></label>
+            <label class="chk"><input type="checkbox" id="r-ru"><span><span class="fa">دور زدن روسیه (RU)</span><span class="en">Bypass Russia (RU)</span></span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="kicker"><span class="fa">فهرستِ دامنه‌های سفارشی</span><span class="en">CUSTOM DOMAIN ROUTING LISTS</span></p>
+          <div class="stack" style="margin-top:8px;gap:14px">
+            <div>
+              <label class="fld-label" for="r-proxy-list"><span class="fa">دامنه‌های اجباری با تونل (تحریم‌شکن / هوش مصنوعی — هر خط یک دامنه)</span><span class="en">FORCE PROXY DOMAINS (AI / SANCTIONED)</span></label>
+              <textarea id="r-proxy-list"></textarea>
+            </div>
+            <div>
+              <label class="fld-label" for="r-direct-list"><span class="fa">دامنه‌های همیشه مستقیم (Direct — هر خط یک دامنه)</span><span class="en">FORCE DIRECT DOMAINS</span></label>
+              <textarea id="r-direct-list" style="min-height:68px" placeholder="digikala.com"></textarea>
+            </div>
+            <div>
+              <label class="fld-label" for="r-block-list"><span class="fa">دامنه‌های همیشه مسدود (Block — هر خط یک دامنه)</span><span class="en">FORCE BLOCKED DOMAINS</span></label>
+              <textarea id="r-block-list" style="min-height:68px"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="save-route" type="button">
+          <span class="fa">ذخیرهٔ تنظیماتِ مسیریابی و DNS</span><span class="en">SAVE ROUTING &amp; DNS SETTINGS</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ─────────────── TAB 5: STEALTH, SECURITY & BACKUP ─────────────── -->
+    <div class="tab-pane" id="pane-sec" hidden>
+      <div class="cols-even">
+        <div class="card">
+          <p class="kicker"><span class="fa">استتارِ صفحهٔ اول و نمایشِ وضعیت اشتراک</span><span class="en">FRONT-PAGE CAMOUFLAGE &amp; SUBSCRIPTION DISPLAY</span></p>
+
+          <div>
+            <label class="fld-label" for="s-rootmode"><span class="fa">رفتارِ آدرسِ ریشه (<code>/</code>) در برابر اسکنرها</span><span class="en">ROOT PATH (<code>/</code>) CAMOUFLAGE</span></label>
+            <select id="s-rootmode" class="fa-sel">
+              <option value="panel">نمایش عادی پنل در / و /panel (پیش‌فرض)</option>
+              <option value="gazette">روزنامهٔ استتاری ۱۹۵۰ نیویورک در / (پنل فقط در /panel)</option>
+              <option value="fallback">پروکسی معکوس به سایت دلخواه در / (پنل فقط در /panel)</option>
+            </select>
+          </div>
+          <div style="margin-top:12px">
+            <label class="fld-label" for="s-fallback"><span class="fa">دامنهٔ پوششی برای حالت پروکسی معکوس (مثلاً <code>www.ubuntu.com</code>)</span><span class="en">FALLBACK REVERSE-PROXY DOMAIN</span></label>
+            <input id="s-fallback" dir="ltr" type="text" placeholder="www.ubuntu.com">
+          </div>
+          <div style="margin-top:12px">
+            <label class="chk">
+              <input type="checkbox" id="s-infonodes">
+              <span><span class="fa">نمایش ردیف‌های اطلاع‌رسانیِ مصرف و انقضا در بالای اشتراک (همراه با اعلان رایگان بودن سرویس)</span><span class="en">Show bandwidth &amp; expiry info rows in URI subscriptions</span></span>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="save-sec" type="button">
+              <span class="fa">ذخیرهٔ تنظیماتِ استتار</span><span class="en">SAVE STEALTH SETTINGS</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="stack" style="margin-top:0">
+          <!-- Change Admin Password -->
+          <div class="card">
+            <p class="kicker"><span class="fa">تغییرِ رمزِ عبورِ مدیر</span><span class="en">CHANGE ADMIN PASSWORD</span></p>
+            <form id="f-pass">
+              <div class="field-grid">
+                <div>
+                  <label class="fld-label" for="pw-cur"><span class="fa">رمز فعلی</span><span class="en">CURRENT PASSWORD</span></label>
+                  <input id="pw-cur" type="password" required>
+                </div>
+                <div>
+                  <label class="fld-label" for="pw-new"><span class="fa">رمز جدید (حداقل ۶ نویسه)</span><span class="en">NEW PASSWORD</span></label>
+                  <input id="pw-new" type="password" required minlength="6">
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn sm-btn" type="submit">
+                  <span class="fa">به‌روزرسانی رمز و ابطال نشست‌ها</span><span class="en">UPDATE PASSWORD</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Backup & Restore -->
+          <div class="card">
+            <p class="kicker"><span class="fa">پشتیبان‌گیری و بازیابی (JSON)</span><span class="en">BACKUP &amp; RESTORE</span></p>
+            <p class="labor" style="margin-bottom:10px">
+              <span class="fa">تمامِ مشترکین، حجم‌ها و تنظیمات شبکه را در قالب یک پروندهٔ JSON ذخیره یا بازیابی کن:</span>
+              <span class="en">Export all subscribers and settings to a portable JSON file, or restore onto a new Worker:</span>
+            </p>
+            <div class="actions" style="margin-top:8px">
+              <button class="btn primary sm-btn" id="btn-export" type="button">
+                <span class="fa">⬇ دانلود فایل پشتیبان</span><span class="en">⬇ EXPORT BACKUP JSON</span>
+              </button>
+              <label class="btn ghost sm-btn" style="cursor:pointer">
+                <span class="fa">⬆ درون‌ریزی پشتیبان</span><span class="en">⬆ IMPORT JSON</span>
+                <input id="inp-import" type="file" accept=".json,application/json" hidden>
+              </label>
+            </div>
+          </div>
+
+          <!-- Activity Log -->
+          <div class="card card-subtle">
+            <p class="kicker"><span class="fa">دفترِ وقایعِ اخیر</span><span class="en">RECENT ACTIVITY LEDGER</span></p>
+            <div class="node-list" id="logs-list" style="max-height:160px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ────────────────────────────── footer ────────────────────────────── -->
+  <footer>
+    <div class="doblerule"><i></i><i></i></div>
+    <p class="colophon">
+      <span class="fa">حروف‌چینی با JetBrains Mono و وزیرمتن · موتورِ چندپروتکلهٔ VLESS + Trojan + Telegram Web Proxy روی شبکهٔ ابری کلادفلر</span>
+      <span class="en">Set in JetBrains Mono &amp; Vazirmatn · Multi-Protocol VLESS + Trojan + Telegram Web Proxy on Cloudflare</span>
+    </p>
+    <p class="colophon mono sm">NIGHTLINE V{{VERSION}} · <span id="year">2026</span> · <span class="fa">کاملاً رایگان و متن‌باز · غیرقابل فروش</span><span class="en">100% FREE &amp; OPEN-SOURCE · STRICTLY NOT FOR SALE</span></p>
+  </footer>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>window.NIGHTLINE={{CONFIG}};</script>
+<script>{{QR}}</script>
+<script>{{APP}}</script>
+</body>
+</html>
