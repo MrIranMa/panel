@@ -1,17 +1,17 @@
 <div align="center">
 
-# NIGHTLINE · V2.5.0
+# NIGHTLINE · V2.5.1
 
 **پنل آزاد، رایگان و متن‌باز مدیریت اشتراک VLESS، Trojan و پروکسی رسمی تلگرام روی شبکهٔ ابری کلادفلر**  
 *Free & Open-Source Serverless VLESS, Trojan, Fragment, Smart ISP Advisor, Live Monochrome Telemetry, Private DoH & Official Telegram Web Proxy Panel on Cloudflare Workers & Pages*
 
-[![Version](https://img.shields.io/badge/Version-2.5.0-111111?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/Version-2.5.1-111111?style=flat-square)](#)
 [![Runtime](https://img.shields.io/badge/Cloudflare-Workers%20%26%20Pages-111111?style=flat-square)](#)
 [![License](https://img.shields.io/badge/Free%20%26%20Open--Source-Not%20For%20Sale-14532d?style=flat-square)](#اطلاعیه-مهم-رایگان-و-غیرقابل-فروش)
 
 </div>
 
-[یادداشت انتشار V2.5.0 / Release Notes](RELEASE_NOTES_v2.5.0.md) · [مخزن رسمی / Official Repository](https://github.com/youdidking/NightLine)
+[یادداشت انتشار V2.5.1 / Release Notes](RELEASE_NOTES_v2.5.1.md) · [مخزن رسمی / Official Repository](https://github.com/youdidking/NightLine)
 
 ---
 
@@ -21,7 +21,7 @@
 
 ---
 
-## پیش‌نمایش محیط پنل (Screenshots — V2.5.0)
+## پیش‌نمایش محیط پنل (Screenshots — V2.5.1)
 
 ### ۱. پیشخوان مدیریت — تم روزنامهٔ روشن (فارسی) با نوار شناسایی IP/اپراتور و نوسان‌نگار تک‌رنگ سرعت
 ![NIGHTLINE Dashboard Light FA](docs/screenshots/01-dashboard-light-fa.png)
@@ -39,6 +39,17 @@
 ![NIGHTLINE Subscriber Press Pass](docs/screenshots/04-subscriber-press-pass.png)
 
 ![NIGHTLINE Private DoH Guide](docs/screenshots/05-private-doh-guide.png)
+
+### ۶. صفحهٔ ورود — نمایش در تم روشن فارسی و تم تاریک انگلیسی
+![NIGHTLINE Login Light FA](docs/screenshots/08-login-light-fa.png)
+
+![NIGHTLINE Login Dark EN](docs/screenshots/09-login-dark-en.png)
+
+---
+
+## نسخهٔ `V2.5.1`
+
+بهبودهای کلی رابط کاربری و رفع باگ‌ها.
 
 ---
 
@@ -167,7 +178,7 @@ npm run dev
 
 ## Quick Start (English)
 
-**NIGHTLINE v2.5.0** is a 100% free, non-commercial, open-source serverless panel for **Cloudflare Workers & Pages**, combining **VLESS + Trojan over WebSocket**, **Xray & Sing-box TLS Fragmentation**, **Official Telegram Web Proxy (`tg://webproxy`)**, **Smart Browser ISP Advisor & 1-Click Auto-Tuner**, **Visitor IP/Country/ISP Detection with Privacy Blur**, **Dynamic Monochrome Telemetry & Quota Charts**, and **RFC 8484 Private DoH**.
+**NIGHTLINE v2.5.1** is a 100% free, non-commercial, open-source serverless panel for **Cloudflare Workers & Pages**, combining **VLESS + Trojan over WebSocket**, **Xray & Sing-box TLS Fragmentation**, **Official Telegram Web Proxy (`tg://webproxy`)**, **Smart Browser ISP Advisor & 1-Click Auto-Tuner**, **Visitor IP/Country/ISP Detection with Privacy Blur**, **Dynamic Monochrome Telemetry & Quota Charts**, and **RFC 8484 Private DoH**.
 
 1. **Create a KV Namespace** in your Cloudflare Dashboard (`Storage & Databases → KV`) named `nightline-kv`.
 2. **Create a Worker** (`Workers & Pages → Create → Start with Hello World! → Deploy → Edit code`), replace the editor contents with **`worker-single-file.js`**, and click **Deploy**.

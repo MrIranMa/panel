@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.0 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.1 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -1122,7 +1122,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.0',
+      version: '2.5.1',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1160,7 +1160,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.0)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.1)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1252,11 +1252,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.0',
-          latestVersion: '2.5.0',
+          currentVersion: '2.5.1',
+          latestVersion: '2.5.1',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.0 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.1 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1266,8 +1266,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.0',
-          targetVersion: '2.5.0',
+          previousVersion: '2.5.1',
+          targetVersion: '2.5.1',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -2681,7 +2681,7 @@
   /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
 
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.0';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.1';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if ($('gh-upd-dot')) {

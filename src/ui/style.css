@@ -483,6 +483,67 @@ html[data-lang="en"] .specs th{font-family:var(--en-font);font-size:10px;letter-
   font-family:var(--en-font);font-size:11.5px;
 }
 
+/* theme-native sponsor dispatch on the login page ----------------------- */
+.sponsor-telegram{
+  position:relative;overflow:hidden;
+  display:grid;grid-template-columns:46px minmax(0,1fr) auto;
+  align-items:center;gap:14px;
+  margin:16px 0 0;padding:12px 16px;
+  border:1.5px solid var(--ink);border-inline-start-width:4px;
+  background:var(--paper-2);color:var(--ink);
+  box-shadow:var(--shadow-sm);text-decoration:none;
+  transition:background-color .2s ease;
+}
+.sponsor-telegram:hover,.sponsor-telegram:focus-visible{background:var(--paper-3)}
+.sponsor-telegram:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.sponsor-telegram::after{
+  content:"";position:absolute;bottom:0;inset-inline-start:0;
+  width:0;height:2px;background:var(--ink);opacity:.5;pointer-events:none;
+  animation:sponsor-rule 4.8s ease-in-out infinite;
+}
+.sponsor-icon{
+  width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid var(--ink);border-radius:50%;
+  background:var(--ink);color:var(--paper);
+}
+.sponsor-icon .ic{
+  width:27px;height:27px;stroke:none;fill:currentColor;
+  animation:sponsor-flight 4.8s ease-in-out infinite;
+}
+.sponsor-copy{display:flex;flex-direction:column;min-width:0;line-height:1.35;gap:4px}
+.sponsor-kicker{
+  display:inline-flex;align-items:center;gap:7px;
+  color:var(--ink-faint);font-size:11px;font-weight:700;
+}
+html[data-lang="en"] .sponsor-kicker{font-family:var(--en-font);font-size:9px;letter-spacing:.12em}
+.sponsor-pulse{
+  width:6px;height:6px;flex:none;border-radius:50%;background:var(--ink);
+  animation:sponsor-pulse 2.4s ease-in-out infinite;
+}
+.sponsor-name{font-size:17px;letter-spacing:.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sponsor-action{
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  border-bottom:1px solid var(--ink);padding-bottom:2px;
+  font-size:11.5px;font-weight:700;
+}
+html[data-lang="en"] .sponsor-action{font-family:var(--en-font);font-size:10px;letter-spacing:.04em}
+.sponsor-action .ic{transition:transform .2s ease}
+.sponsor-telegram:hover .sponsor-action .ic,.sponsor-telegram:focus-visible .sponsor-action .ic{transform:translate(2px,-2px)}
+@keyframes sponsor-rule{0%,100%{width:0;opacity:.4}35%,65%{width:34%;opacity:.85}}
+@keyframes sponsor-flight{0%,72%,100%{transform:translate(0,0) rotate(0)}81%{transform:translate(1px,-2px) rotate(-7deg)}90%{transform:translate(0,-1px) rotate(2deg)}}
+@keyframes sponsor-pulse{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+@media (max-width:600px){
+  .sponsor-telegram{grid-template-columns:40px minmax(0,1fr);gap:8px 12px;padding:11px 12px}
+  .sponsor-icon{width:40px;height:40px}
+  .sponsor-name{font-size:14px}
+  .sponsor-action{grid-column:2;justify-self:start;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  .sponsor-telegram::after{animation:none;width:34%;opacity:.4}
+  .sponsor-icon .ic,.sponsor-pulse{animation:none}
+  .sponsor-telegram,.sponsor-action .ic{transition:none}
+}
+
 /* figure & skyline ------------------------------------------------------ */
 .figure{margin:16px 0 0}
 .figure-frame{

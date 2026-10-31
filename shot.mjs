@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.0 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
+ * NIGHTLINE v2.5.1 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
  */
 
 import { spawn } from 'node:child_process';
@@ -142,6 +142,16 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/06-free-notice-popup.png` });
   await page.click('#btn-free-close');
 
+  // Sponsor dispatch on the login page — Light FA and Dark EN, both theme-native
+  await page.waitForSelector('#v-login:not([hidden])');
+  await page.screenshot({ path: `${OUT_DIR}/08-login-light-fa.png`, fullPage: true });
+  await page.click('#lang');
+  await page.click('.t-pick[data-th="dark"]');
+  await page.waitForTimeout(240);
+  await page.screenshot({ path: `${OUT_DIR}/09-login-dark-en.png`, fullPage: true });
+  await page.click('#lang');
+  await page.click('.t-pick[data-th="light"]');
+
   // Login
   await page.fill('#login-pass', 'DemoPassword2026!');
   await page.click('#f-login button[type="submit"]');
@@ -202,7 +212,7 @@ try {
   await dohPage.screenshot({ path: `${OUT_DIR}/05-private-doh-guide.png`, fullPage: true });
 
   await browser.close();
-  console.log('✓ Generated all 7 high-resolution v2.5.0 screenshots in docs/screenshots/');
+  console.log('✓ Generated all 9 high-resolution v2.5.1 screenshots in docs/screenshots/');
 } catch (err) {
   console.error('SHOT FAILED:', err);
   proc.kill('SIGTERM');

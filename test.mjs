@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
+ * NIGHTLINE v2.5.1 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -231,7 +231,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.5.0 Full Live Verification Suite (15/15) ═══');
+  console.log('═══ NIGHTLINE v2.5.1 Full Live Verification Suite (15/15) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -271,9 +271,9 @@ async function main() {
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.0) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.1) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.5.0', 'Health version must be 2.5.0');
+    assert.equal(health.version, '2.5.1', 'Health version must be 2.5.1');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -301,7 +301,7 @@ async function main() {
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.5.0');
+    assert.equal(boot.version, '2.5.1');
     assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
     assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -416,6 +416,46 @@ async function main() {
     // Free Notice Popup Modal
     assert.equal(await page.locator('#free-notice-modal').isVisible(), true);
     await page.click('#btn-free-close');
+
+    // Theme-native, animated & clickable sponsor placement on the login page
+    await page.waitForSelector('#v-login:not([hidden])');
+    const sponsor = page.locator('#sponsor-telegram');
+    assert.equal(await sponsor.isVisible(), true, 'Sponsor link must be visible before login');
+    assert.equal(await sponsor.getAttribute('href'), 'https://t.me/BlueKnight_Net');
+    assert.equal(await sponsor.getAttribute('target'), '_blank');
+    assert((await sponsor.getAttribute('rel')).includes('noopener'));
+    assert.equal(await sponsor.locator('.sponsor-icon use').getAttribute('href'), '#i-telegram');
+    const iconAnimation = await sponsor.locator('.sponsor-icon .ic').evaluate((el) => getComputedStyle(el).animationName);
+    assert(iconAnimation.includes('sponsor-flight'), 'Telegram icon must have the themed animation');
+    const lightBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await page.click('.t-pick[data-th="dark"]');
+    await page.waitForFunction((previous) => {
+      const card = document.getElementById('sponsor-telegram');
+      return document.documentElement.dataset.theme === 'dark' &&
+        getComputedStyle(card).backgroundColor !== previous;
+    }, lightBackground);
+    const darkBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
+    assert.notEqual(lightBackground, darkBackground, 'Sponsor card must adapt to the active theme');
+    await page.click('#lang');
+    assert.equal(await sponsor.locator('.sponsor-kicker .en').isVisible(), true);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sponsorBox = await sponsor.boundingBox();
+    assert(sponsorBox.x >= -1 && sponsorBox.x + sponsorBox.width <= 391, 'Sponsor must fit mobile viewport');
+    await page.setViewportSize({ width: 1400, height: 920 });
+    await page.click('#lang');
+    await page.click('.t-pick[data-th="light"]');
+    await context.route('https://t.me/BlueKnight_Net', (route) => route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<title>Telegram sponsor link verified</title>',
+    }));
+    const sponsorPopup = page.waitForEvent('popup');
+    await sponsor.click();
+    const openedSponsor = await sponsorPopup;
+    await openedSponsor.waitForLoadState('domcontentloaded');
+    assert.equal(openedSponsor.url(), 'https://t.me/BlueKnight_Net', 'Sponsor must open the active Telegram channel');
+    await openedSponsor.close();
+    console.log('✓ [login] Sponsor Telegram channel -> exact link, monochrome icon, animation, themes, mobile & clickable popup');
 
     // ── TEST 7: Visitor IP, Country, ISP Strip + BLUR Toggle BEFORE & AFTER Login ──
     await page.waitForFunction(() => {
@@ -679,7 +719,7 @@ async function main() {
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 15/15 NIGHTLINE v2.5.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 NIGHTLINE v2.5.1 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));
