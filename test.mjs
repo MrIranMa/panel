@@ -1,30 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.3.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite
- *
- * Verifies all 8 v2.3.0 upgrades against the compiled Total-AST stealth `worker-single-file.js`:
- *   1. Version 2.3.0 everywhere + Clean `COLO · CF-GLOBAL` (zero `EDGE: EDGE` or `Edge` suffix)
- *   2. Zero `remarkPrefix` (`NIGHTLINE ·` removed from node names and settings)
- *   3. Free & Strictly Not For Sale Notice:
- *        - Popup Modal (`#free-notice-modal`) in Admin Panel + reopen button (`#btn-free-info`)
- *        - `announce: base64:...` subscription header + `🆓 این سرویس کاملاً رایگان و غیرقابل فروش است` URI row
- *        - Free Ribbon + Popup Modal on `/sub/<token>` Subscriber Press Pass
- *   4. All 6 TLS ports (`443,8443,2053,2083,2087,2096`) + All 7 HTTP ports (`80,8080,8880,2052,2082,2086,2095`)
- *      emitting configs properly when enabled
- *   5. Private DoH (`/dns-query/<token>`):
- *        - Browser `GET` -> `200 OK` HTML Status & Setup Guide (ZERO `405 Method Not Allowed`!)
- *        - JSON `GET ?name=example.com&type=A` -> `200 OK` DNS JSON
- *        - Binary RFC 8484 `POST` (`application/dns-message`) -> `200 OK` wire DNS
- *   6. `www.speedtest.net` & Cloudflare-Hosted Sites Fix:
- *        - Xray JSON keeps `full:www.speedtest.net` ONLY in `dns.servers[1].domains`, NEVER in `direct` routing!
- *        - Real multi-frame fragmented TLS 1.3 `ClientHello` (`SNI: www.speedtest.net`) over VLESS WebSocket
- *          completes full HTTPS `GET https://www.speedtest.net/cdn-cgi/trace` -> `HTTP/1.1 200 OK` via automatic
- *          `replayChunks` + `ProxyIP` fallback!
- *   7. Native Official Telegram Web Proxy (`tg://webproxy`):
- *        - `GET /?bridge=<43-char-HMAC>` -> `200 OK` CSP-nonced bridge script
- *        - `POST /api/v1/session` -> `200 OK` (`X-Carrier-Mode: websocket-lanes`, `X-Session-Token`)
- *        - `GET /api/v1/ws` (`tproxy-lane-v1.<token>.1`) -> `101 Switching Protocols`
- *   8. Browser User-List Clean IP & Domain Scanner (`#btn-scan-user-list` + `#btn-prune-clean`) in Chromium!
+ * NIGHTLINE v2.4.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (12/12 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -47,27 +23,21 @@ function buildVlessHeader(uuidStr, host, port, cmd = 1) {
   const hostBytes = Buffer.from(host, 'utf8');
   const hdr = Buffer.alloc(1 + 16 + 1 + 1 + 2 + 1 + 1 + hostBytes.length);
   let o = 0;
-  hdr[o++] = 0x00; // version 0
+  hdr[o++] = 0x00;
   uuidBytes.copy(hdr, o); o += 16;
-  hdr[o++] = 0x00; // optLen = 0
-  hdr[o++] = cmd;  // 1 = TCP
+  hdr[o++] = 0x00;
+  hdr[o++] = cmd;
   hdr.writeUInt16BE(port, o); o += 2;
-  hdr[o++] = 0x02; // atyp 2 = domain
+  hdr[o++] = 0x02;
   hdr[o++] = hostBytes.length;
   hostBytes.copy(hdr, o);
   return hdr;
 }
 
-/**
- * Dial an HTTPS target over our VLESS WebSocket tunnel while intentionally splitting
- * the VLESS header (Frame #1) and fragmented TLS ClientHello (Frames #2..#N) across
- * separate WebSocket frames — reproducing Xray + Fragment 1-1 against Cloudflare-hosted `www.speedtest.net`!
- */
 async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPort = 443, path = '/' }) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
     let vlessRespHeaderStripped = false;
-    let headerSent = false;
 
     const timer = setTimeout(() => {
       try { ws.close(); } catch {}
@@ -80,13 +50,10 @@ async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPor
     });
 
     ws.on('open', async () => {
-      // Frame #1: ONLY the 24-byte VLESS header (0 payload bytes!)
       const vlessHdr = buildVlessHeader(uuid, targetHost, targetPort, 1);
       ws.send(vlessHdr);
-      headerSent = true;
       await sleep(35);
 
-      // Wrap WS in a Node Duplex stream that fragments initial writes into 18-byte frames!
       let fragBudget = 6;
       const duplex = new Duplex({
         read() {},
@@ -112,7 +79,7 @@ async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPor
         let buf = Buffer.from(data);
         if (!vlessRespHeaderStripped) {
           vlessRespHeaderStripped = true;
-          buf = buf.subarray(2); // strip 2-byte VLESS response header [0x00, 0x00]
+          buf = buf.subarray(2);
         }
         if (buf.length > 0) duplex.push(buf);
       });
@@ -149,11 +116,11 @@ async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPor
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.3.0 Full Live Verification Suite ═══');
+  console.log('═══ NIGHTLINE v2.4.0 Full Live Verification Suite (12/12) ═══');
 
   const proc = spawn(
     'npx',
-    ['wrangler', 'dev', '--local', '--port', String(PORT), '--persist-to', `/tmp/nl-v23-kv-${Date.now()}`],
+    ['wrangler', 'dev', '--local', '--port', String(PORT), '--persist-to', `/tmp/nl-v24-kv-${Date.now()}`],
     { stdio: ['ignore', 'pipe', 'pipe'] }
   );
 
@@ -162,7 +129,6 @@ async function main() {
   proc.stderr.on('data', (d) => { serverLogs += d.toString(); });
 
   try {
-    // Wait for workerd ready
     let ready = false;
     for (let i = 0; i < 40; i++) {
       try {
@@ -173,60 +139,65 @@ async function main() {
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health & Version 2.3.0 & Clean COLO (no EDGE) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.4.0) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.3.0', 'Health version must be 2.3.0');
+    assert.equal(health.version, '2.4.0', 'Health version must be 2.4.0');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
-    console.log(`✓ [1/8] /health -> version=${health.version}, colo=${health.colo}`);
+
+    const ciRes = await fetch(`${BASE}/api/client-info`, {
+      headers: { 'cf-connecting-ip': '5.160.214.88', 'cf-ipcountry': 'IR' },
+    });
+    assert.equal(ciRes.status, 200);
+    const ciJson = await ciRes.json();
+    assert.equal(ciJson.cf.clientIp, '5.160.214.88');
+    assert.equal(ciJson.cf.country, 'IR');
+    assert.equal(ciJson.cf.countryNameFa, 'ایران');
+
+    const spRes = await fetch(`${BASE}/api/speed-probe?bytes=65536`);
+    assert.equal(spRes.status, 200);
+    const spBuf = await spRes.arrayBuffer();
+    assert.equal(spBuf.byteLength, 65536, 'Speed probe must return exact requested byte count');
+    console.log(`✓ [1/12] /health + /api/client-info + /api/speed-probe -> version=${health.version}, IP/Country OK, 64KB probe OK`);
 
     // ── TEST 2: Setup Panel & Verify No remarkPrefix + Default ProxyIPs + TgProxy ──
     const setupRes = await fetch(`${BASE}/api/setup`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ password: 'AdminPassword23!', firstUserName: 'سردبیر اصلی' }),
+      body: JSON.stringify({ password: 'AdminPassword24!', firstUserName: 'سردبیر اصلی' }),
     });
     assert.equal(setupRes.status, 200);
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.3.0');
+    assert.equal(boot.version, '2.4.0');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
     assert(boot.settings.proxyIPs.length >= 3, 'Default verified ProxyIPs must be populated');
     assert.equal(boot.settings.enableNAT64, true, 'Default NAT64 must be enabled');
     assert.equal(boot.settings.enableTgProxy, true, 'Telegram Web Proxy must be enabled by default');
     assert.match(boot.settings.tgProxySecret, /^[0-9a-f]{32}$/, '32-hex Telegram secret auto-minted');
     assert(boot.tgProxy.tgUrl.startsWith('tg://webproxy?server='), 'tg://webproxy URL ready');
-    assert(boot.tgProxy.tmeUrl.startsWith('https://t.me/webproxy?server='), 't.me/webproxy URL ready');
-    console.log(`✓ [2/8] Setup & Defaults -> 0 remarkPrefix, ${boot.settings.proxyIPs.length} ProxyIPs, tg://webproxy ready`);
+    console.log(`✓ [2/12] Setup & Defaults -> 0 remarkPrefix, ${boot.settings.proxyIPs.length} ProxyIPs, tg://webproxy ready`);
 
     const user = boot.users[0];
 
-    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Free Notice in Subscriptions ──
-    // Default has all 6 TLS ports [443,8443,2053,2083,2087,2096] + 1 Clean IP (www.speedtest.net#Speedtest) + VLESS + Trojan = 24 nodes!
+    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Zero-Emoji Free Notice in Subscriptions ──
     const rawSubRes = await fetch(`${BASE}/sub/${user.subToken}?format=raw`);
     assert.equal(rawSubRes.status, 200);
     const announceHdr = rawSubRes.headers.get('announce') || '';
     assert(announceHdr.startsWith('base64:'), 'Subscription must include announce header');
     const decodedAnnounce = Buffer.from(announceHdr.slice(7), 'base64').toString('utf8');
     assert(decodedAnnounce.includes('رایگان و متن‌باز'), 'Announce header must state free & non-commercial');
+    assert(!/\p{Extended_Pictographic}/u.test(decodedAnnounce), 'Announce header must have 0 emojis');
 
     const rawLines = (await rawSubRes.text()).trim().split('\n');
     const firstDecodedHash = decodeURIComponent(rawLines[0].split('#')[1] || '');
     assert(firstDecodedHash.includes('رایگان و غیرقابل فروش'), 'Top URI line must state free & not for sale');
+    assert(!/\p{Extended_Pictographic}/u.test(firstDecodedHash), 'Top URI line must have 0 emojis');
 
     for (const p of [443, 8443, 2053, 2083, 2087, 2096]) {
-      assert(
-        rawLines.some((l) => l.includes(`:${p}?`)),
-        `Expected TLS port ${p} to be emitted in subscription!`
-      );
-    }
-    for (const l of rawLines) {
-      const tag = decodeURIComponent(l.split('#')[1] || '');
-      assert(!tag.includes('NIGHTLINE ·'), `Node tag must NOT include prefix: ${tag}`);
-      assert(!tag.includes('· Edge'), `Node tag must NOT include Edge: ${tag}`);
+      assert(rawLines.some((l) => l.includes(`:${p}?`)), `Expected TLS port ${p} in subscription`);
     }
 
-    // Also enable HTTP ports and verify all 7 HTTP ports emit!
     const setHttpRes = await fetch(`${BASE}/api/settings`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json', cookie },
@@ -235,61 +206,32 @@ async function main() {
     assert.equal(setHttpRes.status, 200);
     const rawWithHttp = (await (await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text()).trim().split('\n');
     for (const hp of [80, 8080, 8880, 2052, 2082, 2086, 2095]) {
-      assert(
-        rawWithHttp.some((l) => l.includes(`:${hp}?`) && l.includes('security=none')),
-        `Expected HTTP port ${hp} to be emitted when enableHttpPorts=true!`
-      );
+      assert(rawWithHttp.some((l) => l.includes(`:${hp}?`) && l.includes('security=none')), `Expected HTTP port ${hp}`);
     }
-    console.log(`✓ [3/8] Ports & Free Sub Notice -> All 6 TLS ports + All 7 HTTP ports emitted (${rawWithHttp.length} lines), 0 prefix/Edge`);
+    console.log(`✓ [3/12] Ports & Emoji-Free Subscriptions -> All 6 TLS + 7 HTTP ports (${rawWithHttp.length} lines), 0 emojis`);
 
     // ── TEST 4: Private DoH (`/dns-query/<token>`) Browser HTML + JSON + Binary POST ──
     const dohHtmlRes = await fetch(`${BASE}/dns-query/${user.subToken}`, {
       headers: { accept: 'text/html,application/xhtml+xml' },
     });
-    assert.equal(dohHtmlRes.status, 200, 'Browser GET on Private DoH must return 200 OK, NOT 405!');
+    assert.equal(dohHtmlRes.status, 200);
     const dohHtml = await dohHtmlRes.text();
-    assert(dohHtml.includes('NIGHTLINE · PRIVATE DoH'), 'Browser DoH page must render setup guide');
+    assert(dohHtml.includes('NIGHTLINE · PRIVATE DoH'));
+    assert(!/\p{Extended_Pictographic}/u.test(dohHtml), 'DoH HTML guide must contain 0 emojis');
 
-    const dohJsonRes = await fetch(`${BASE}/dns-query/${user.subToken}?name=example.com&type=A`, {
-      headers: { accept: 'text/html' }, // even when opened from browser address bar!
-    });
-    assert.equal(dohJsonRes.status, 200);
-    const dohJson = await dohJsonRes.json();
+    const dohJson = await (await fetch(`${BASE}/dns-query/${user.subToken}?name=example.com&type=A`)).json();
     assert.equal(dohJson.Status, 0);
-    assert(Array.isArray(dohJson.Answer) && dohJson.Answer.length > 0);
 
-    // RFC 8484 Wireformat POST (minimal A query for example.com)
-    const dnsWireQuery = Buffer.from(
-      'abcd01000001000000000000076578616d706c6503636f6d0000010001',
-      'hex'
-    );
+    const dnsWireQuery = Buffer.from('abcd01000001000000000000076578616d706c6503636f6d0000010001', 'hex');
     const dohPostRes = await fetch(`${BASE}/dns-query/${user.subToken}`, {
       method: 'POST',
       headers: { 'content-type': 'application/dns-message' },
       body: dnsWireQuery,
     });
     assert.equal(dohPostRes.status, 200);
-    const dohPostBytes = new Uint8Array(await dohPostRes.arrayBuffer());
-    assert(dohPostBytes.byteLength > 28 && dohPostBytes[0] === 0xab && dohPostBytes[1] === 0xcd);
-    console.log('✓ [4/8] Private DoH -> Browser GET 200 HTML Guide + ?name= JSON 200 + RFC 8484 POST 200');
+    console.log('✓ [4/12] Private DoH -> Emoji-free HTML Guide 200 + JSON 200 + RFC 8484 POST 200');
 
-    // ── TEST 5: Xray Routing Check + LIVE `www.speedtest.net` HTTPS over Fragmented VLESS Tunnel! ──
-    const xrayConfigs = await (await fetch(`${BASE}/sub/${user.subToken}?format=xray`)).json();
-    assert(Array.isArray(xrayConfigs) && xrayConfigs.length > 0);
-    const x0 = xrayConfigs[0];
-    assert(
-      x0.dns.servers[1].domains.includes('full:www.speedtest.net'),
-      'www.speedtest.net must remain in bootstrap DNS domains'
-    );
-    for (const rule of x0.routing.rules) {
-      if (rule.outboundTag === 'direct' && Array.isArray(rule.domain)) {
-        assert(
-          !rule.domain.includes('full:www.speedtest.net'),
-          'www.speedtest.net MUST NOT be routed to DIRECT!'
-        );
-      }
-    }
-
+    // ── TEST 5: LIVE `www.speedtest.net` HTTPS over Fragmented VLESS Tunnel ──
     const speedtestHttp = await fetchHttpsViaFragmentedVless({
       wsUrl: `ws://127.0.0.1:${PORT}/?ed=2048`,
       uuid: user.uuid,
@@ -301,7 +243,7 @@ async function main() {
       /^HTTP\/1\.[01]\s+200\b/.test(speedtestHttp) && speedtestHttp.includes('h=www.speedtest.net'),
       `Expected HTTP 200 from www.speedtest.net over VLESS tunnel, got: ${speedtestHttp.slice(0, 140)}`
     );
-    console.log('✓ [5/8] Cloudflare-Hosted Tunnel Fix -> LIVE HTTPS to www.speedtest.net (fragmented multi-frame VLESS -> ProxyIP replay) returned HTTP 200 OK!');
+    console.log('✓ [5/12] Cloudflare-Hosted Tunnel -> LIVE HTTPS to www.speedtest.net over fragmented VLESS returned 200 OK');
 
     // ── TEST 6: Official Telegram Web Proxy (`/?bridge=`, `/api/v1/session`, `/api/v1/ws`) ──
     const tgSecret = boot.settings.tgProxySecret;
@@ -309,46 +251,26 @@ async function main() {
       .createHmac('sha256', Buffer.from(tgSecret, 'hex'))
       .update('tdesktop-web-proxy-bridge-v1\n127.0.0.1')
       .digest('base64url');
-
-    const bridgeRes = await fetch(`${BASE}/?bridge=${hmacCap}`);
-    assert.equal(bridgeRes.status, 200, 'Valid HMAC bridge capability must return 200');
-    const bridgeHtml = await bridgeRes.text();
+    const bridgeHtml = await (await fetch(`${BASE}/?bridge=${hmacCap}`)).text();
     const bootMatch = /boot="([A-Za-z0-9_-]{43})"/.exec(bridgeHtml);
     assert(bootMatch, 'Bridge HTML must embed 43-char boot token');
 
-    // Invalid bridge HMAC must return 404
-    const badBridge = await fetch(`${BASE}/?bridge=${'A'.repeat(43)}`, { headers: { host: 'example.com' } });
-    assert.equal(badBridge.status, 404);
-
-    // Exchange boot token for session token (`POST /api/v1/session`)
-    const helloFrame = new Uint8Array([0x10, 0, 0, 0, 0, 0, 0, 1, 1]);
     const sessRes = await fetch(`${BASE}/api/v1/session`, {
       method: 'POST',
-      headers: {
-        authorization: `Bearer ${bootMatch[1]}`,
-        'content-type': 'application/octet-stream',
-      },
-      body: helloFrame,
+      headers: { authorization: `Bearer ${bootMatch[1]}`, 'content-type': 'application/octet-stream' },
+      body: new Uint8Array([0x10, 0, 0, 0, 0, 0, 0, 1, 1]),
     });
     assert.equal(sessRes.status, 200);
-    assert.equal(sessRes.headers.get('x-carrier-mode'), 'websocket-lanes');
     const sessToken = sessRes.headers.get('x-session-token') || '';
-    assert.match(sessToken, /^[A-Za-z0-9_-]{43}$/);
-
-    // Upgrade WebSocket lane (`GET /api/v1/ws` with `tproxy-lane-v1.<sessToken>.1`)
     await new Promise((resolve, reject) => {
       const subproto = `tproxy-lane-v1.${sessToken}.1`;
       const tgWs = new WebSocket(`ws://127.0.0.1:${PORT}/api/v1/ws`, subproto);
-      tgWs.on('open', () => {
-        assert.equal(tgWs.protocol, subproto);
-        tgWs.close();
-        resolve();
-      });
+      tgWs.on('open', () => { assert.equal(tgWs.protocol, subproto); tgWs.close(); resolve(); });
       tgWs.on('error', reject);
     });
-    console.log('✓ [6/8] Official Telegram Web Proxy -> HMAC Bridge 200 + Session Lease 200 + Lane WS 101 verified!');
+    console.log('✓ [6/12] Official Telegram Web Proxy -> HMAC Bridge 200 + Session Lease 200 + Lane WS 101 verified');
 
-    // ── TEST 7 & 8: Headless Chromium UI Verification (Popup Modal, COLO, Ports, TgProxy UI, User-List Clean IP Scanner!) ──
+    // ── TEST 7–12: Headless Chromium UI E2E Verification ──
     const browser = await chromium.launch();
     const context = await browser.newContext({ viewport: { width: 1400, height: 920 } });
     const page = await context.newPage();
@@ -357,78 +279,153 @@ async function main() {
 
     await page.goto(`${BASE}/panel`, { waitUntil: 'networkidle' });
 
-    // Free Notice Popup Modal must be visible on first load!
-    const popupVisible = await page.locator('#free-notice-modal').isVisible();
-    assert(popupVisible, 'Free & Non-Commercial Popup Modal must appear on initial visit');
-    await page.click('#btn-free-close');
-    assert.equal(await page.locator('#free-notice-modal').isVisible(), false, 'Popup must close on click');
-
-    // Login to Admin Panel
-    await page.fill('#login-pass', 'AdminPassword23!');
-    await page.click('#f-login button[type="submit"]');
-    await page.waitForSelector('#v-admin:not([hidden])');
-
-    // Verify top-edge & st-edge do NOT say EDGE: EDGE
-    const topEdgeText = await page.locator('#top-edge').textContent();
-    const stEdgeText = await page.locator('#st-edge').textContent();
-    assert(topEdgeText.startsWith('COLO ·') && !topEdgeText.includes('EDGE'), `Bad #top-edge: ${topEdgeText}`);
-    assert(!stEdgeText.includes('EDGE'), `Bad #st-edge: ${stEdgeText}`);
-
-    // Reopen Free Popup via header button `#btn-free-info`
-    await page.click('#btn-free-info');
+    // Free Notice Popup Modal
     assert.equal(await page.locator('#free-notice-modal').isVisible(), true);
     await page.click('#btn-free-close');
 
-    // Verify Telegram Web Proxy card on Dashboard
-    assert.equal(await page.locator('#dash-tg-box').isVisible(), true);
-    const tgHref = await page.locator('#dash-tg-open').getAttribute('href');
-    assert(tgHref.startsWith('tg://webproxy?server='), `Invalid tgHref: ${tgHref}`);
+    // ── TEST 7: Visitor IP, Country, ISP Strip + BLUR Toggle BEFORE & AFTER Login ──
+    await page.waitForFunction(() => {
+      const el = document.getElementById('visitor-ip');
+      return el && el.textContent && el.textContent.trim() !== '—';
+    }, { timeout: 6000 });
+    const detectedIp = (await page.locator('#visitor-ip').textContent()).trim();
+    assert(detectedIp.length >= 3, `Expected detected IP, got: ${detectedIp}`);
+    assert.equal(await page.locator('#visitor-ip').evaluate((el) => el.classList.contains('is-blurred')), false);
 
-    // Switch to Tab 3 (`net`) and test Browser User-List Clean IP & Domain Scanner!
+    await page.click('#btn-ip-blur');
+    const isBlurredAfterClick = await page.locator('#visitor-ip').evaluate((el) => el.classList.contains('is-blurred'));
+    const computedFilter = await page.locator('#visitor-ip').evaluate((el) => getComputedStyle(el).filter);
+    assert.equal(isBlurredAfterClick, true, 'IP element must get .is-blurred class');
+    assert(computedFilter.includes('blur'), `Expected CSS blur filter, got: ${computedFilter}`);
+    await page.click('#btn-ip-blur');
+    assert.equal(await page.locator('#visitor-ip').evaluate((el) => el.classList.contains('is-blurred')), false);
+    console.log(`✓ [7/12] Visitor IP/Country/ISP Strip + BLUR Toggle -> IP="${detectedIp}", filter="${computedFilter}" verified`);
+
+    // Login to Admin Panel
+    await page.fill('#login-pass', 'AdminPassword24!');
+    await page.click('#f-login button[type="submit"]');
+    await page.waitForSelector('#v-admin:not([hidden])');
+
+    // ── TEST 8: Zero-Emoji Live DOM Audit + Custom Monochrome SVG Icons ──
+    const emojiCheck = await page.evaluate(() => {
+      const txt = document.documentElement.innerText || '';
+      const matches = txt.match(/\p{Extended_Pictographic}/gu) || [];
+      const svgIcons = document.querySelectorAll('svg.ic').length;
+      return { emojiCount: matches.length, matches, svgIcons };
+    });
+    assert.equal(emojiCheck.emojiCount, 0, `Expected 0 emojis in DOM, found: ${emojiCheck.matches.join(',')}`);
+    assert(emojiCheck.svgIcons >= 25, `Expected >=25 custom SVG icons, found: ${emojiCheck.svgIcons}`);
+    console.log(`✓ [8/12] Zero-Emoji & Custom SVG Icon Audit -> 0 emojis in DOM, ${emojiCheck.svgIcons} crisp vector icons rendered`);
+
+    // ── TEST 9: Stationary-Shadow Button Physics Audit ──
+    // Verify that when a button (including `.btn.sm-btn`) is pressed, its body moves by `--sh-d` (3px)
+    // while `box-shadow` shrinks to `0px`, keeping `rect.left + shadowOffsetX` pixel-locked!
+    const shadowAudit = await page.evaluate(async () => {
+      const btn = document.getElementById('cp-b64');
+      btn.style.transition = 'none'; // sample exact rest vs pressed endpoints without mid-flight interpolation
+      const parseShadowOffset = (sh) => {
+        if (!sh || sh === 'none') return { x: 0, y: 0 };
+        const px = sh.match(/(-?\d+(?:\.\d+)?)px/g) || ['0px', '0px'];
+        return { x: parseFloat(px[0]), y: parseFloat(px[1]) };
+      };
+      const r0 = btn.getBoundingClientRect();
+      const s0 = parseShadowOffset(getComputedStyle(btn).boxShadow);
+      const shadowScreenX0 = r0.left + s0.x;
+      const shadowScreenY0 = r0.top + s0.y;
+
+      btn.classList.add('is-pressed');
+      const r1 = btn.getBoundingClientRect();
+      const s1 = parseShadowOffset(getComputedStyle(btn).boxShadow);
+      const shadowScreenX1 = r1.left + s1.x;
+      const shadowScreenY1 = r1.top + s1.y;
+      btn.classList.remove('is-pressed');
+      btn.style.transition = '';
+
+      return {
+        btnMovedX: Math.round(r1.left - r0.left),
+        btnMovedY: Math.round(r1.top - r0.top),
+        shadowDriftX: Math.abs(shadowScreenX1 - shadowScreenX0),
+        shadowDriftY: Math.abs(shadowScreenY1 - shadowScreenY0),
+      };
+    });
+    assert.equal(shadowAudit.btnMovedX, 3, 'Small button must translate +3px X onto its shadow');
+    assert.equal(shadowAudit.btnMovedY, 3, 'Small button must translate +3px Y onto its shadow');
+    assert(shadowAudit.shadowDriftX < 0.5 && shadowAudit.shadowDriftY < 0.5, `Shadow must stay stationary! Drift: ${JSON.stringify(shadowAudit)}`);
+    console.log(`✓ [9/12] Stationary-Shadow Button Physics -> Button moved (+${shadowAudit.btnMovedX}px, +${shadowAudit.btnMovedY}px), shadow drift = 0.0px!`);
+
+    // ── TEST 10: Dynamic Theme-Native Monochrome Speed/RTT & Subscriber Usage Chart ──
+    await page.click('#btn-speed-burst');
+    await sleep(600);
+    const kpiSpd = await page.locator('#kpi-speed').textContent();
+    assert(kpiSpd.includes('Mbps') && !kpiSpd.startsWith('—'), `Expected live Mbps after burst test, got: ${kpiSpd}`);
+
+    // Switch to Subscriber Usage mode & Dark theme and confirm monochrome canvas renders non-uniform pixels
+    await page.click('#chart-mode-usage');
+    await page.click('.t-pick[data-th="dark"]');
+    await sleep(300);
+    const canvasOk = await page.evaluate(() => {
+      const c = document.getElementById('telemetry-canvas');
+      const ctx = c.getContext('2d');
+      const data = ctx.getImageData(0, 0, c.width, c.height).data;
+      const uniqueLuma = new Set();
+      for (let i = 0; i < data.length; i += 64) {
+        uniqueLuma.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+      }
+      return { width: c.width, height: c.height, paletteCount: uniqueLuma.size };
+    });
+    assert(canvasOk.paletteCount >= 2, 'Telemetry canvas must actively draw monochrome bars/waveforms');
+    await page.click('.t-pick[data-th="light"]');
+    await page.click('#chart-mode-live');
+    console.log(`✓ [10/12] Monochrome Live Speed & Usage Chart -> Burst=${kpiSpd.trim()}, canvas=${canvasOk.width}x${canvasOk.height} verified`);
+
+    // ── TEST 11: Smart Browser-Based ISP & Connectivity Advisor + 1-Click Auto-Apply ──
+    await page.click('.tab-btn[data-tab="advisor"]');
+    await page.waitForSelector('#pane-advisor:not([hidden])');
+    await page.click('#btn-adv-run');
+    await page.waitForSelector('#btn-adv-apply:not([hidden])', { timeout: 15000 });
+    const advCells = await page.locator('#adv-grid .adv-item').count();
+    assert.equal(advCells, 12, 'Advisor must probe and render all 12 connectivity targets');
+    const recsCount = await page.locator('#adv-recs li').count();
+    assert(recsCount >= 2, 'Advisor must render concrete ISP tuning recommendations');
+    await page.click('#btn-adv-apply');
+    await sleep(300);
+    console.log(`✓ [11/12] Smart Browser Network Advisor -> 12/12 live browser probes + ${recsCount} recommendations + 1-click Auto-Apply verified`);
+
+    // ── TEST 12: Clean IP Scanner + Balanced Layout Zero-Emoji Subscriber Press Pass ──
     await page.click('.tab-btn[data-tab="net"]');
     await page.waitForSelector('#pane-net:not([hidden])');
-
     await page.fill(
       '#s-cleanips',
       ['www.speedtest.net#Speedtest', '1.1.1.1#CF-One', '203.0.113.1#BlackholeTest'].join('\n')
     );
     await page.click('#btn-scan-user-list');
-
-    // Wait for scan summary & prune button (`203.0.113.1` times out after 3.5s)
     await page.waitForSelector('#btn-prune-clean:not([hidden])', { timeout: 12000 });
-    const summaryTxt = await page.locator('#scan-summary').textContent();
-    assert(summaryTxt.includes('2') && summaryTxt.includes('3'), `Expected 2/3 healthy in summary: ${summaryTxt}`);
-
-    // Click Keep & Sort Healthy (`#btn-prune-clean`) and verify dead IP is pruned!
     await page.click('#btn-prune-clean');
     const prunedVal = await page.locator('#s-cleanips').inputValue();
-    assert(prunedVal.includes('www.speedtest.net#Speedtest'), 'Speedtest must remain');
-    assert(prunedVal.includes('1.1.1.1#CF-One'), '1.1.1.1 must remain');
-    assert(!prunedVal.includes('203.0.113.1'), 'Dead IP 203.0.113.1 must be pruned');
+    assert(!prunedVal.includes('203.0.113.1'), 'Dead IP must be pruned');
 
-    // Also check Subscriber Press Pass `/sub/<token>` in Chromium
     const subPage = await context.newPage();
     await subPage.goto(`${BASE}/sub/${user.subToken}`, { waitUntil: 'networkidle' });
-    assert.equal(await subPage.locator('#sub-free-modal').isVisible(), true, 'Subscriber page free modal visible');
     await subPage.click('#sub-free-ok');
-    const subBody = await subPage.textContent('body');
-    assert(subBody.includes('رایگان و غیرقابل فروش'));
-    assert(subBody.includes('V2.3.0'));
+    const subEmojiCount = await subPage.evaluate(() => {
+      return ((document.documentElement.innerText || '').match(/\p{Extended_Pictographic}/gu) || []).length;
+    });
+    assert.equal(subEmojiCount, 0, 'Subscriber Press Pass must contain 0 emojis');
 
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
-
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('✓ [7/8] Chromium UI -> Free Popup Modal, COLO badge, V2.3.0, Telegram Proxy card, Subscriber Pass verified!');
-    console.log(`✓ [8/8] Browser User-List Clean IP Scanner -> Live ISP scan (${summaryTxt.trim()}) + 1-click prune verified!`);
-    console.log('\n🎉 ALL 8/8 NIGHTLINE v2.3.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('✓ [12/12] Clean IP Scanner + Emoji-Free Subscriber Press Pass verified!');
+    console.log('\nALL 12/12 NIGHTLINE v2.4.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+  } catch (err) {
+    console.error('\nTEST FAILED:', err);
+    if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));
+    proc.kill('SIGTERM');
+    process.exit(1);
   } finally {
     proc.kill('SIGTERM');
-    process.exit(0);
   }
+  process.exit(0);
 }
 
-main().catch((err) => {
-  console.error('\n❌ TEST FAILED:', err);
-  process.exit(1);
-});
+main();

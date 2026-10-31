@@ -65,6 +65,109 @@ function extractColo(request) {
   return 'CF-GLOBAL';
 }
 
+const ISP_FRIENDLY_MAP = [
+  [/mobile communication company of iran|mci\b|hamrah/i, 'همراه اول (MCI)', 'MCI (Hamrah-e Aval)'],
+  [/irancell|mtn irancell/i, 'ایرانسل (Irancell)', 'MTN Irancell'],
+  [/iran telecommunication|tci\b|mokhaberat/i, 'مخابرات ایران (TCI)', 'TCI (Mokhaberat)'],
+  [/rightel|tamin telecom/i, 'رایتل (Rightel)', 'Rightel'],
+  [/aria shatel|shatel/i, 'شاتل (Shatel)', 'Shatel'],
+  [/asiatech/i, 'آسیاتک (Asiatech)', 'Asiatech'],
+  [/mobinnet/i, 'مبین‌نت (Mobinnet)', 'Mobinnet'],
+  [/hiweb|danehe|pars ارتباط|novin net/i, 'های‌وب (HiWEB)', 'HiWEB'],
+  [/pars online|parsonline/i, 'پارس‌آنلاین (ParsOnline)', 'ParsOnline'],
+  [/zitel/i, 'زیتل (Zitel)', 'Zitel'],
+  [/pishgaman/i, 'پیشگامان (Pishgaman)', 'Pishgaman'],
+  [/afranet/i, 'افرانت (Afranet)', 'Afranet'],
+  [/respina/i, 'رسپینا (Respina)', 'Respina'],
+  [/fanava/i, 'فن‌آوا (Fanava)', 'Fanava'],
+  [/aptel|samantel|lotustel/i, 'اپراتور مجازی موبایل (MVNO)', 'Iran MVNO'],
+];
+
+function classifyIsp(rawOrg = '', asn = '') {
+  const org = String(rawOrg || '').trim();
+  for (const [rx, fa, en] of ISP_FRIENDLY_MAP) {
+    if (rx.test(org)) return { fa, en, isIranIsp: true };
+  }
+  if (org) {
+    return { fa: org, en: org, isIranIsp: false };
+  }
+  if (asn) {
+    return { fa: `AS${asn}`, en: `AS${asn}`, isIranIsp: false };
+  }
+  return { fa: 'شبکه محلی / نامشخص', en: 'Local / Direct Network', isIranIsp: false };
+}
+
+const COUNTRY_MAP = {
+  IR: ['ایران', 'Iran'],
+  NL: ['هلند', 'Netherlands'],
+  DE: ['آلمان', 'Germany'],
+  US: ['آمریکا', 'United States'],
+  GB: ['بریتانیا', 'United Kingdom'],
+  FR: ['فرانسه', 'France'],
+  TR: ['ترکیه', 'Turkey'],
+  AE: ['امارات', 'UAE'],
+  FI: ['فنلاند', 'Finland'],
+  SE: ['سوئد', 'Sweden'],
+  CA: ['کانادا', 'Canada'],
+  SG: ['سنگاپور', 'Singapore'],
+  JP: ['ژاپن', 'Japan'],
+  RU: ['روسیه', 'Russia'],
+  CN: ['چین', 'China'],
+};
+
+function extractClientInfo(request, url) {
+  const cf = request.cf || {};
+  const rawIp =
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-real-ip') ||
+    (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+    '127.0.0.1';
+  const hdrCountry = String(request.headers.get('cf-ipcountry') || '').trim().toUpperCase();
+  const isLoopback = rawIp === '127.0.0.1' || rawIp === '::1';
+  const country = hdrCountry || (isLoopback ? 'XX' : String(cf.country || 'XX').trim().toUpperCase());
+  const cNames = COUNTRY_MAP[country] || [country === 'XX' ? 'محلی' : country, country === 'XX' ? 'Local' : country];
+  const city = isLoopback && !hdrCountry ? '' : String(cf.city || '').trim();
+  const region = isLoopback && !hdrCountry ? '' : String(cf.region || '').trim();
+  const asnNum = isLoopback && !hdrCountry ? 0 : (Number(cf.asn) || 0);
+  const asOrg = isLoopback && !hdrCountry ? '' : String(cf.asOrganization || '').trim();
+  const isp = classifyIsp(asOrg, asnNum ? String(asnNum) : '');
+  return {
+    host: url.host,
+    origin: url.origin,
+    colo: extractColo(request),
+    clientIp: rawIp,
+    country,
+    countryNameFa: cNames[0],
+    countryNameEn: cNames[1],
+    city,
+    region,
+    asn: asnNum,
+    ispRaw: asOrg,
+    asOrganization: asOrg,
+    ispFa: isp.fa,
+    ispEn: isp.en,
+    isIranIsp: isp.isIranIsp || country === 'IR',
+    httpProtocol: cf.httpProtocol || 'HTTP/2',
+    tlsVersion: cf.tlsVersion || 'TLSv1.3',
+  };
+}
+
+let speedBuf64K = null;
+function getSpeedBuffer(byteLen) {
+  if (!speedBuf64K) {
+    speedBuf64K = new Uint8Array(65536);
+    for (let i = 0; i < 65536; i++) speedBuf64K[i] = (i * 73 + 19) & 0xff;
+  }
+  const clamped = Math.max(1024, Math.min(262144, Number(byteLen) || 32768));
+  if (clamped <= 65536) return speedBuf64K.subarray(0, clamped);
+  const out = new Uint8Array(clamped);
+  for (let off = 0; off < clamped; off += 65536) {
+    const slice = speedBuf64K.subarray(0, Math.min(65536, clamped - off));
+    out.set(slice, off);
+  }
+  return out;
+}
+
 export default {
   async fetch(request, env = {}, ctx = {}) {
     try {
@@ -198,10 +301,8 @@ export default {
 async function handleApi(request, url, env, runtime) {
   const path = url.pathname;
   const method = request.method.toUpperCase();
-  const clientIp =
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-forwarded-for') ||
-    'local';
+  const cfInfo = extractClientInfo(request, url);
+  const clientIp = cfInfo.clientIp;
 
   if (method === 'OPTIONS') {
     return new Response(null, {
@@ -214,21 +315,29 @@ async function handleApi(request, url, env, runtime) {
     });
   }
 
+  // ---- GET /api/client-info ----
+  if (path === '/api/client-info' && method === 'GET') {
+    return json({ ok: true, cf: cfInfo, ts: Date.now() }, 200, { 'access-control-allow-origin': '*' });
+  }
+
+  // ---- GET /api/speed-probe ----
+  if (path === '/api/speed-probe' && method === 'GET') {
+    const reqBytes = Number(url.searchParams.get('bytes')) || 32768;
+    const payload = getSpeedBuffer(reqBytes);
+    return new Response(payload, {
+      status: 200,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'cache-control': 'no-store, no-transform',
+        'content-length': String(payload.byteLength),
+        'access-control-allow-origin': '*',
+      },
+    });
+  }
+
   // ---- GET /api/bootstrap ----
   if (path === '/api/bootstrap' && method === 'GET') {
     const authed = await isAuthenticated(request, runtime);
-    const colo = extractColo(request);
-    const cfInfo = {
-      host: url.host,
-      origin: url.origin,
-      colo,
-      country: request.cf?.country || '',
-      asn: request.cf?.asn || '',
-      asOrganization: request.cf?.asOrganization || '',
-      clientIp,
-      httpProtocol: request.cf?.httpProtocol || 'HTTP/2',
-      tlsVersion: request.cf?.tlsVersion || 'TLSv1.3',
-    };
 
     if (!runtime.kvBound) {
       return json({
@@ -320,14 +429,6 @@ async function handleApi(request, url, env, runtime) {
       created.auth.secret
     );
 
-    const cfInfo = {
-      host: url.host,
-      origin: url.origin,
-      colo: extractColo(request),
-      country: request.cf?.country || '',
-      clientIp,
-    };
-
     return json(buildFullAdminPayload(created, url.host, cfInfo), 200, {
       'set-cookie': formatSessionCookie(token, url.protocol === 'https:'),
     });
@@ -372,14 +473,6 @@ async function handleApi(request, url, env, runtime) {
       fresh.auth.secret
     );
 
-    const cfInfo = {
-      host: url.host,
-      origin: url.origin,
-      colo: extractColo(request),
-      country: request.cf?.country || '',
-      clientIp,
-    };
-
     return json(buildFullAdminPayload(fresh, url.host, cfInfo), 200, {
       'set-cookie': formatSessionCookie(token, url.protocol === 'https:'),
     });
@@ -418,7 +511,7 @@ async function handleApi(request, url, env, runtime) {
       state.settings.killSwitch ? 'کلید قطع اضطراری فعال شد' : 'کلید قطع اضطراری غیرفعال شد'
     );
     const saved = await saveRuntimeState(env, state);
-    return json(buildFullAdminPayload(saved, url.host));
+    return json(buildFullAdminPayload(saved, url.host, cfInfo));
   }
 
   // ---- PUT /api/settings ----
@@ -429,7 +522,7 @@ async function handleApi(request, url, env, runtime) {
     state.settings = sanitizeSettings(patch, state.settings);
     appendLog(state, 'settings', 'تنظیمات هسته و مسیریابی به‌روزرسانی شد');
     const saved = await saveRuntimeState(env, state);
-    return json(buildFullAdminPayload(saved, url.host));
+    return json(buildFullAdminPayload(saved, url.host, cfInfo));
   }
 
   // ---- POST /api/password ----
@@ -485,7 +578,7 @@ async function handleApi(request, url, env, runtime) {
     state.users.push(newUser);
     appendLog(state, 'user:add', `مشترک جدید ساخته شد: ${newUser.name}`);
     const saved = await saveRuntimeState(env, state);
-    return json({ ...buildFullAdminPayload(saved, url.host), createdId: newUser.id });
+    return json({ ...buildFullAdminPayload(saved, url.host, cfInfo), createdId: newUser.id });
   }
 
   // ---- GET /api/users/:id/nodes ----
@@ -519,7 +612,7 @@ async function handleApi(request, url, env, runtime) {
       const removed = state.users.splice(idx, 1)[0];
       appendLog(state, 'user:del', `مشترک حذف شد: ${removed.name}`);
       const saved = await saveRuntimeState(env, state);
-      return json(buildFullAdminPayload(saved, url.host));
+      return json(buildFullAdminPayload(saved, url.host, cfInfo));
     }
 
     if (method === 'PUT' || method === 'POST') {
@@ -573,7 +666,7 @@ async function handleApi(request, url, env, runtime) {
       }
 
       const saved = await saveRuntimeState(env, state);
-      return json(buildFullAdminPayload(saved, url.host));
+      return json(buildFullAdminPayload(saved, url.host, cfInfo));
     }
   }
 
@@ -585,7 +678,7 @@ async function handleApi(request, url, env, runtime) {
     );
     appendLog(state, 'tgproxy', 'کلید مخفی پروکسی تلگرام بازتولید شد');
     const saved = await saveRuntimeState(env, state);
-    return json(buildFullAdminPayload(saved, url.host));
+    return json(buildFullAdminPayload(saved, url.host, cfInfo));
   }
 
   // ---- POST /api/tools/probe-proxy & /api/test-proxyip ----
@@ -636,7 +729,7 @@ async function handleApi(request, url, env, runtime) {
     }
     appendLog(state, 'restore', 'نسخه پشتیبان با موفقیت بازیابی شد');
     const saved = await saveRuntimeState(env, state);
-    return json(buildFullAdminPayload(saved, url.host));
+    return json(buildFullAdminPayload(saved, url.host, cfInfo));
   }
 
   return json({ ok: false, error: 'مسیر API یافت نشد.' }, 404);

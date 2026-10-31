@@ -15,9 +15,9 @@ import { enrichUserView, PANEL_BRAND, PANEL_VERSION } from './storage.js';
 import { parseEndpoint } from './protocols.js';
 import { buildTgProxyLinks } from './tgproxy.js';
 
-export const FREE_NOTICE_FA = '🆓 این سرویس کاملاً رایگان و غیرقابل فروش است';
+export const FREE_NOTICE_FA = '[رایگان] این سرویس کاملاً رایگان و غیرقابل فروش است';
 export const FREE_NOTICE_FULL =
-  '🆓 این سرویس کاملاً رایگان و متن‌باز است — هرگونه خرید و فروش آن ممنوع است.\nThis service is 100% free & open-source — strictly not for sale.';
+  '[FREE] این سرویس کاملاً رایگان و متن‌باز است — هرگونه خرید و فروش آن ممنوع است.\nThis service is 100% free & open-source — strictly not for sale.';
 
 export function formatBytes(bytes) {
   const n = Number(bytes) || 0;
@@ -299,8 +299,8 @@ export function buildUriLines(userView, settings, requestHost) {
       : (userView.startOnFirstUse && userView.expiryDays > 0
           ? `${userView.expiryDays} روز (شروع با اتصال اول)`
           : 'بدون انقضا');
-    const info1 = `📰 ${userView.name} · مصرف: ${used} / ${total}`;
-    const info2 = `⏳ اعتبار: ${expLabel}`;
+    const info1 = `${userView.name} · مصرف: ${used} / ${total}`;
+    const info2 = `اعتبار: ${expLabel}`;
     lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(info1)}`);
     lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(info2)}`);
   }
@@ -336,7 +336,7 @@ export function buildXrayConfigs(userView, settings, requestHost) {
 
   return nodes.map((node) => {
     const useFrag = Boolean(settings.enableFragment);
-    const remarks = useFrag ? `⚡ ${node.name} [Fragment]` : node.name;
+    const remarks = useFrag ? `${node.name} [Fragment]` : node.name;
 
     const proxyOutbound = {
       tag: 'proxy',
@@ -553,7 +553,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     routeRules.push({ domain_suffix: settings.customBlockDomains, outbound: 'block' });
   }
   if (settings.sanctionBypass && settings.customProxyDomains?.length) {
-    routeRules.push({ domain_suffix: settings.customProxyDomains, outbound: '📰 NIGHTLINE' });
+    routeRules.push({ domain_suffix: settings.customProxyDomains, outbound: 'NIGHTLINE' });
   }
   if (directSuffixes.length) {
     routeRules.push({ domain_suffix: directSuffixes, outbound: 'direct' });
@@ -567,7 +567,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
           tag: 'dns-remote',
           address: remoteDoH,
           address_resolver: 'dns-direct',
-          detour: '📰 NIGHTLINE',
+          detour: 'NIGHTLINE',
         },
         {
           tag: 'dns-direct',
@@ -593,13 +593,13 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     outbounds: [
       {
         type: 'selector',
-        tag: '📰 NIGHTLINE',
-        outbounds: ['⚡ Auto Best', ...nodeTags, 'direct'],
-        default: '⚡ Auto Best',
+        tag: 'NIGHTLINE',
+        outbounds: ['Auto Best', ...nodeTags, 'direct'],
+        default: 'Auto Best',
       },
       {
         type: 'urltest',
-        tag: '⚡ Auto Best',
+        tag: 'Auto Best',
         outbounds: nodeTags,
         url: 'https://www.gstatic.com/generate_204',
         interval: '3m',
@@ -613,7 +613,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     route: {
       auto_detect_interface: true,
       rules: routeRules,
-      final: '📰 NIGHTLINE',
+      final: 'NIGHTLINE',
     },
   };
 }
@@ -690,7 +690,7 @@ export function buildClashYaml(userView, settings, requestHost) {
   }
   if (settings.sanctionBypass) {
     for (const d of settings.customProxyDomains || []) {
-      rules.push(`  - DOMAIN-SUFFIX,${d.replace(/^\./, '')},📰 NIGHTLINE`);
+      rules.push(`  - DOMAIN-SUFFIX,${d.replace(/^\./, '')},NIGHTLINE`);
     }
   }
   for (const d of settings.customDirectDomains || []) {
@@ -702,7 +702,7 @@ export function buildClashYaml(userView, settings, requestHost) {
   }
   if (settings.bypassChina) rules.push('  - GEOIP,CN,DIRECT,no-resolve');
   if (settings.bypassRussia) rules.push('  - GEOIP,RU,DIRECT,no-resolve');
-  rules.push('  - MATCH,📰 NIGHTLINE');
+  rules.push('  - MATCH,NIGHTLINE');
 
   return [
     'mixed-port: 7890',
@@ -727,13 +727,13 @@ export function buildClashYaml(userView, settings, requestHost) {
     'proxies:',
     ...proxyLines,
     'proxy-groups:',
-    '  - name: "📰 NIGHTLINE"',
+    '  - name: "NIGHTLINE"',
     '    type: select',
     '    proxies:',
-    '      - "⚡ Auto Best"',
+    '      - "Auto Best"',
     ...names,
     '      - DIRECT',
-    '  - name: "⚡ Auto Best"',
+    '  - name: "Auto Best"',
     '    type: url-test',
     '    url: https://www.gstatic.com/generate_204',
     '    interval: 180',
@@ -816,7 +816,7 @@ export function serveSubscription(request, user, settings = {}, assets = {}) {
         expired: 'مهلت زمانی اشتراک به پایان رسیده است (Expired)',
         quota: 'حجم اشتراک به پایان رسیده است (Quota Reached)',
       };
-      const msg = `⚠️ ${userView.name}: ${reasonMap[userView.status] || 'غیرفعال'}`;
+      const msg = `[!] ${userView.name}: ${reasonMap[userView.status] || 'غیرفعال'}`;
       const deadUri = `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(msg)}`;
       if (fmt === 'raw') {
         return new Response(deadUri + '\n', { headers: { ...headers, 'content-type': 'text/plain; charset=utf-8' } });
@@ -937,11 +937,16 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
     nodes: nodes.map((n) => ({ name: n.name, protocol: n.protocol.toUpperCase(), port: n.port, uri: n.uri })),
   }).replace(/</g, '\\u003c');
 
+  const svgSend = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>';
+  const svgShield = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>';
+  const svgSun = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+  const svgMoon = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
   const tgHtmlBlock = tgInfo.tgUrl
     ? `
       <p class="kicker" style="margin-top:20px"><span class="fa">پروکسیِ رسمیِ تلگرام (بدون نیاز به برنامه‌جانبی)</span><span class="en">OFFICIAL TELEGRAM WEB PROXY</span></p>
       <div class="actions" style="margin-top:8px">
-        <a class="btn primary sm-btn" href="${esc(tgInfo.tgUrl)}"><span class="fa">✈️ اتصال یک‌ضرب در تلگرام</span><span class="en">✈️ CONNECT IN TELEGRAM</span></a>
+        <a class="btn primary sm-btn" href="${esc(tgInfo.tgUrl)}">${svgSend}<span class="fa">اتصال یک‌ضرب در تلگرام</span><span class="en">CONNECT IN TELEGRAM</span></a>
         <button class="btn ghost sm-btn cp" type="button" data-val="${esc(tgInfo.tmeUrl)}"><span class="fa">کپی لینک اشتراک تلگرام</span><span class="en">COPY t.me LINK</span></button>
         <button class="btn ghost sm-btn qr-pick" type="button" data-q="${esc(tgInfo.tmeUrl)}" data-l="Telegram Web Proxy">Telegram QR</button>
       </div>`
@@ -960,7 +965,7 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
 <div class="grain" aria-hidden="true"></div>
 <div class="modal-backdrop" id="sub-free-modal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true">
-    <p class="kicker"><span class="fa">✦ اطلاعیهٔ رسمی و دائمی</span><span class="en">✦ OFFICIAL NON-COMMERCIAL NOTICE</span></p>
+    <p class="kicker">${svgShield} <span class="fa">اطلاعیهٔ رسمی و دائمی</span><span class="en">OFFICIAL NON-COMMERCIAL NOTICE</span></p>
     <h3 class="card-h" style="margin-top:4px">
       <span class="fa">این سرویس کاملاً رایگان و غیرقابل فروش است</span>
       <span class="en">100% Free &amp; Open-Source — Strictly Not For Sale</span>
@@ -979,11 +984,11 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
     <div class="topline">
       <span class="tick mono">PRESS PASS · V${PANEL_VERSION}</span>
       <span class="bar"></span>
-      <button class="sw" id="s-free-btn" type="button">🆓 <span class="fa">رایگان و غیرقابل فروش</span><span class="en">FREE · NOT FOR SALE</span></button>
+      <button class="sw" id="s-free-btn" type="button">${svgShield}<span class="fa">رایگان و غیرقابل فروش</span><span class="en">FREE · NOT FOR SALE</span></button>
       <button class="sw" id="s-lang" type="button">EN</button>
       <div class="theme-grp">
-        <button class="sw st-pick" data-th="light" type="button" title="روشن">☀</button>
-        <button class="sw st-pick" data-th="dark" type="button" title="دارک">☾</button>
+        <button class="sw st-pick" data-th="light" type="button" title="روشن">${svgSun}</button>
+        <button class="sw st-pick" data-th="dark" type="button" title="دارک">${svgMoon}</button>
       </div>
     </div>
     <h1 class="mast-title">${PANEL_BRAND}</h1>
@@ -996,7 +1001,7 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
   </header>
 
   <div class="free-ribbon">
-    <span>🆓</span>
+    ${svgShield}
     <span class="fa"><b>این سرویس کاملاً رایگان و غیرقابل فروش است</b> — پروژهٔ آزاد و متن‌باز NIGHTLINE</span>
     <span class="en"><b>100% FREE &amp; STRICTLY NOT FOR SALE</b> — Open-Source NIGHTLINE Project</span>
   </div>
@@ -1124,7 +1129,7 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
   document.querySelectorAll('.cp').forEach(function(b){
     b.onclick=function(){
       safeCopy(b.getAttribute('data-val'));
-      var old=b.innerHTML; b.textContent=lang==='fa'?'رونوشت شد ✦':'COPIED ✦';
+      var old=b.innerHTML; b.textContent=lang==='fa'?'رونوشت شد':'COPIED';
       setTimeout(function(){b.innerHTML=old;},1400);
     };
   });
@@ -1149,7 +1154,7 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
         var qEl=document.getElementById('s-qr');
         if(qEl&&qEl.scrollIntoView){ try{ qEl.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
       };
-      btnCp.onclick=function(){safeCopy(n.uri);btnCp.textContent='✦';setTimeout(function(){btnCp.textContent='COPY';},1200);};
+      btnCp.onclick=function(){safeCopy(n.uri);btnCp.textContent='OK';setTimeout(function(){btnCp.textContent='COPY';},1200);};
       actsDiv.appendChild(btnQr); actsDiv.appendChild(btnCp);
       row.appendChild(titleDiv); row.appendChild(actsDiv);
       list.appendChild(row);

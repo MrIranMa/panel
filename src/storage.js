@@ -14,7 +14,7 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'NIGHTLINE';
-export const PANEL_VERSION = '2.3.0';
+export const PANEL_VERSION = '2.4.0';
 export const STATE_KEY = 'nl:state:v2';
 const CACHE_TTL_MS = 15_000;
 const USAGE_FLUSH_INTERVAL_MS = 45_000;

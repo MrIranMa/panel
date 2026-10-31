@@ -1053,11 +1053,14 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
   .sheet{max-width:760px;margin:0 auto;background:var(--paper);border:2px solid var(--line);box-shadow:6px 6px 0 var(--line);padding:24px;}
   .top{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:3px double var(--line);padding-bottom:12px;margin-bottom:16px;flex-wrap:wrap;}
   .brand{font-family:Georgia,serif;font-weight:900;font-size:1.5rem;letter-spacing:.08em;}
-  .badge{display:inline-block;padding:4px 10px;border:1.5px solid var(--line);font-weight:700;font-size:.82rem;background:${ok ? 'var(--ok-bg)' : 'var(--bad-bg)'};color:${ok ? 'var(--ok)' : 'var(--bad)'};}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1.5px solid var(--line);font-weight:700;font-size:.82rem;background:${ok ? 'var(--ok-bg)' : 'var(--bad-bg)'};color:${ok ? 'var(--ok)' : 'var(--bad)'};}
   .url-box{direction:ltr;text-align:left;font-family:ui-monospace,Consolas,monospace;font-size:.86rem;background:var(--bg);border:1.5px solid var(--line);padding:12px;word-break:break-all;margin:12px 0;}
-  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
-  button,a.btn{cursor:pointer;background:var(--ink);color:var(--paper);border:1.5px solid var(--line);padding:8px 14px;font-weight:700;font-size:.85rem;text-decoration:none;display:inline-block;}
-  button.sec,a.btn.sec{background:transparent;color:var(--ink);}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  button,a.btn{cursor:pointer;background:var(--ink);color:var(--paper);border:1.5px solid var(--line);padding:8px 14px;font-weight:700;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;--sh-d:3px;box-shadow:var(--sh-d) var(--sh-d) 0 0 var(--line);transform:translate3d(0,0,0);transition:transform .16s cubic-bezier(.22,1,.36,1),box-shadow .16s cubic-bezier(.22,1,.36,1);}
+  button:hover,a.btn:hover{transform:translate3d(-1px,-1px,0);box-shadow:calc(var(--sh-d) + 1px) calc(var(--sh-d) + 1px) 0 0 var(--line);}
+  button:active,a.btn:active{transform:translate3d(var(--sh-d),var(--sh-d),0);box-shadow:0 0 0 0 var(--line);transition-duration:.06s;}
+  button.sec,a.btn.sec{background:var(--paper);color:var(--ink);}
+  .ic{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0 18px;}
   .kv{border:1px solid var(--line);padding:10px;background:var(--bg);}
   .kv small{display:block;color:var(--muted);font-size:.75rem;}
@@ -1066,7 +1069,7 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
   ul{padding-right:20px;font-size:.9rem;}
   li{margin-bottom:7px;}
   code{font-family:ui-monospace,Consolas,monospace;background:var(--bg);padding:1px 5px;border:1px solid var(--line);direction:ltr;display:inline-block;font-size:.82rem;}
-  .foot{margin-top:20px;padding-top:10px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .foot{margin-top:20px;padding-top:10px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
 </style>
 </head>
 <body>
@@ -1077,8 +1080,8 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
         <div style="font-size:.82rem;color:var(--muted)">سرور اختصاصی DNS-over-HTTPS (ضد تحریم و ضد مسمومیت DNS) · V${PANEL_VERSION}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <span class="badge">${ok ? `✓ فعال و آماده (${rttMs}ms)` : '⚠ خطای ارتباط بالادستی'}</span>
-        <button class="sec" type="button" id="th-btn">☾ / ☀</button>
+        <span class="badge">${ok ? `<svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> فعال و آماده (${rttMs}ms)` : `<svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> خطای ارتباط بالادستی`}</span>
+        <button class="sec" type="button" id="th-btn" title="تغییر تم"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
       </div>
     </div>
 
@@ -1086,8 +1089,8 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
 
     <div class="url-box" id="doh-url">${safeUrl}</div>
     <div class="btns">
-      <button type="button" id="copy-btn">کپی آدرس DoH اختصاصی</button>
-      <a class="btn sec" href="${safeUrl}?name=example.com&type=A" target="_blank" rel="noopener">تست زندهٔ JSON DNS (example.com) ↗</a>
+      <button type="button" id="copy-btn"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="1"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span id="copy-lbl">کپی آدرس DoH اختصاصی</span></button>
+      <a class="btn sec" href="${safeUrl}?name=example.com&type=A" target="_blank" rel="noopener"><span>تست زندهٔ JSON DNS (example.com)</span><svg class="ic" viewBox="0 0 24 24"><path d="M7 17L17 7M7 7h10v10"/></svg></a>
     </div>
 
     <div class="grid">
@@ -1105,7 +1108,7 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
     </ul>
 
     <div class="foot">
-      <span>🆓 سرویس کاملاً رایگان و متن‌باز — غیرقابل فروش (100% Free &amp; Not For Sale)</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> سرویس کاملاً رایگان و متن‌باز — غیرقابل فروش (100% Free &amp; Not For Sale)</span>
       <span dir="ltr">NIGHTLINE V${PANEL_VERSION}</span>
     </div>
   </div>
@@ -1120,10 +1123,10 @@ function renderDoHGuideHtml({ dohUrl, upstream, ok, rttMs, sampleIp }) {
         localStorage.setItem('nl_theme',next);
       };
       document.getElementById('copy-btn').onclick=function(){
-        var btn=this;
+        var lbl=document.getElementById('copy-lbl');
         navigator.clipboard.writeText(document.getElementById('doh-url').textContent).then(function(){
-          btn.textContent='✓ کپی شد!';
-          setTimeout(function(){btn.textContent='کپی آدرس DoH اختصاصی';},1800);
+          lbl.textContent='کپی شد';
+          setTimeout(function(){lbl.textContent='کپی آدرس DoH اختصاصی';},1800);
         });
       };
     })();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.3.0 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
+ * NIGHTLINE v2.4.0 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
  */
 
 import { spawn } from 'node:child_process';
@@ -29,7 +29,6 @@ try {
     await sleep(300);
   }
 
-  // Initialize panel with clean demo subscribers for documentation screenshots
   const setupRes = await fetch(`${BASE}/api/setup`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -51,10 +50,24 @@ try {
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1360, height: 920 }, deviceScaleFactor: 1.5 });
+  await context.route('https://speed.cloudflare.com/meta', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        clientIp: '198.51.100.42',
+        country: 'IR',
+        city: 'Tehran',
+        asn: 197207,
+        asOrganization: 'Mobile Communication Company of Iran PLC',
+        colo: 'FRA',
+      }),
+    });
+  });
   const page = await context.newPage();
 
   await page.goto(`${BASE}/panel`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(450);
 
   // 1) Free & Non-Commercial Popup Modal screenshot
   await page.screenshot({ path: `${OUT_DIR}/06-free-notice-popup.png` });
@@ -64,20 +77,32 @@ try {
   await page.fill('#login-pass', 'DemoPassword2026!');
   await page.click('#f-login button[type="submit"]');
   await page.waitForSelector('#v-admin:not([hidden])');
-  await page.waitForTimeout(450);
+  await page.click('#btn-speed-burst');
+  await page.waitForTimeout(900);
 
-  // 2) Dashboard (FA Light)
+  // 2) Dashboard (FA Light) — with Visitor IP/ISP Blur Strip + Live Monochrome Chart!
   await page.screenshot({ path: `${OUT_DIR}/01-dashboard-light-fa.png`, fullPage: true });
 
-  // 3) Dashboard (EN Dark)
+  // 3) Dashboard (EN Dark) — with IP Blurred + Subscriber Usage Hatched Bar Chart!
   await page.click('#lang');
   await page.click('.t-pick[data-th="dark"]');
-  await page.waitForTimeout(300);
+  await page.click('#btn-ip-blur');
+  await page.click('#chart-mode-usage');
+  await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT_DIR}/02-dashboard-dark-en.png`, fullPage: true });
 
-  // Restore FA Light & capture Tab 3 (Network, Ports, Live Scanner, Telegram Proxy)
+  // Restore FA Light & capture Smart ISP Advisor (`03-smart-isp-advisor.png` + `03-network-scanner-tgproxy.png`)
   await page.click('#lang');
   await page.click('.t-pick[data-th="light"]');
+  await page.click('#btn-ip-blur');
+
+  await page.click('.tab-btn[data-tab="advisor"]');
+  await page.waitForSelector('#pane-advisor:not([hidden])');
+  await page.click('#btn-adv-run');
+  await page.waitForSelector('#btn-adv-apply:not([hidden])', { timeout: 15000 });
+  await page.waitForTimeout(350);
+  await page.screenshot({ path: `${OUT_DIR}/07-smart-isp-advisor.png`, fullPage: true });
+
   await page.click('.tab-btn[data-tab="net"]');
   await page.waitForSelector('#pane-net:not([hidden])');
   await page.fill(
@@ -107,7 +132,7 @@ try {
   await dohPage.screenshot({ path: `${OUT_DIR}/05-private-doh-guide.png`, fullPage: true });
 
   await browser.close();
-  console.log('✓ Generated all 6 high-resolution screenshots in docs/screenshots/');
+  console.log('✓ Generated all 7 high-resolution v2.4.0 screenshots in docs/screenshots/');
 } finally {
   proc.kill('SIGTERM');
   process.exit(0);
