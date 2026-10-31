@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.1 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
+ * NIGHTLINE v2.5.2 — Automated Screenshot Generator for GitHub Documentation (`docs/screenshots/`)
  */
 
 import { spawn } from 'node:child_process';
@@ -20,6 +20,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mockSrv = http.createServer((req, res) => {
   const u = new URL(req.url, MOCK_BASE);
   res.setHeader('content-type', 'application/json');
+  if (u.pathname === '/official-ips') {
+    return res.end(fs.readFileSync(new URL('./fixtures/cloudflare-ips.json', import.meta.url)));
+  }
   if (u.pathname === '/cf/user/tokens/verify') {
     return res.end(JSON.stringify({ success: true, result: { status: 'active' } }));
   }
@@ -67,6 +70,8 @@ const proc = spawn(
     `/tmp/nl-shot-kv-${Date.now()}`,
     '--var',
     `NL_CF_API_BASE:${MOCK_BASE}/cf`,
+    '--var',
+    `NL_CF_IP_RANGES_TEST_URL:${MOCK_BASE}/official-ips`,
   ],
   { stdio: 'ignore' }
 );
@@ -96,6 +101,7 @@ try {
 
   // Seed realistic traffic on User 1 (12.4 GB / 50 GB) while adding User 2 with 0 B / ∞ (verifying 0% bar!)
   const backupData = await (await fetch(`${BASE}/api/backup`, { headers: { cookie } })).json();
+  backupData.settings.cleanIPs = ['www.speedtest.net#Speedtest', '172.67.73.163#US|CF-Scan'];
   backupData.users[0].trafficLimitGB = 50;
   backupData.users[0].usedDownBytes = Math.round(12.4 * 1073741824);
   backupData.users[0].connections = 38;
@@ -142,7 +148,7 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/06-free-notice-popup.png` });
   await page.click('#btn-free-close');
 
-  // Sponsor dispatch on the login page — Light FA and Dark EN, both theme-native
+  // Login has no sponsor; the animated Telegram dock appears only inside the admin panel
   await page.waitForSelector('#v-login:not([hidden])');
   await page.screenshot({ path: `${OUT_DIR}/08-login-light-fa.png`, fullPage: true });
   await page.click('#lang');
@@ -179,18 +185,24 @@ try {
   await page.click('.tab-btn[data-tab="advisor"]');
   await page.waitForSelector('#pane-advisor:not([hidden])');
   await page.click('#btn-adv-run');
-  await page.waitForSelector('#btn-adv-apply:not([hidden])', { timeout: 15000 });
+  await page.waitForSelector('#adv-recs:not([hidden])', { timeout: 15000 });
   await page.waitForTimeout(350);
   await page.screenshot({ path: `${OUT_DIR}/07-smart-isp-advisor.png`, fullPage: true });
 
   await page.click('.tab-btn[data-tab="net"]');
   await page.waitForSelector('#pane-net:not([hidden])');
-  await page.fill(
-    '#s-cleanips',
-    ['www.speedtest.net#Speedtest', 'cp.cloudflare.com#CF-Captive', '1.1.1.1#CF-One'].join('\n')
-  );
-  await page.click('#btn-scan-user-list');
-  await page.waitForSelector('#btn-prune-clean:not([hidden])', { timeout: 10000 });
+  await context.route('https://ipwho.is/**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({ success: true, country_code: 'US' }),
+  }));
+  await page.click('#btn-scan-clean');
+  await page.waitForSelector('#cf-ranges-panel:not([hidden])');
+  await page.locator('.range-samples').evaluateAll((inputs) => {
+    inputs.forEach((x, i) => { x.value = i === 0 ? '1' : '0'; });
+  });
+  await page.click('#btn-scan-ranges');
+  await page.waitForSelector('#scan-results .range-result', { timeout: 12000 });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT_DIR}/03-network-scanner-tgproxy.png`, fullPage: true });
 
@@ -212,7 +224,7 @@ try {
   await dohPage.screenshot({ path: `${OUT_DIR}/05-private-doh-guide.png`, fullPage: true });
 
   await browser.close();
-  console.log('✓ Generated all 9 high-resolution v2.5.1 screenshots in docs/screenshots/');
+  console.log('✓ Generated all 9 high-resolution v2.5.2 screenshots in docs/screenshots/');
 } catch (err) {
   console.error('SHOT FAILED:', err);
   proc.kill('SIGTERM');

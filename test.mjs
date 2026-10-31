@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.1 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
+ * NIGHTLINE v2.5.2 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -129,6 +129,12 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
     }
     const auth = req.headers.authorization || '';
 
+    // Snapshot of the public Cloudflare IP API — only the E2E harness overrides the feed URL.
+    if (u.pathname === '/official-ips') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(fs.readFileSync(new URL('./fixtures/cloudflare-ips.json', import.meta.url)));
+    }
+
     // Cloudflare REST + GraphQL Mock (strictly enforces Bearer token like real api.cloudflare.com)
     if (u.pathname.startsWith('/cf/')) {
       if (auth !== 'Bearer cf_valid_test_token_1234567890') {
@@ -231,7 +237,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.5.1 Full Live Verification Suite (15/15) ═══');
+  console.log('═══ NIGHTLINE v2.5.2 Full Live Verification Suite (15/15) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -248,6 +254,8 @@ async function main() {
       `/tmp/nl-v25-kv-${Date.now()}`,
       '--var',
       `NL_CF_API_BASE:${MOCK_BASE}/cf`,
+      '--var',
+      `NL_CF_IP_RANGES_TEST_URL:${MOCK_BASE}/official-ips`,
       '--var',
       `NL_GH_API_BASE:${MOCK_BASE}/gh`,
       '--var',
@@ -271,9 +279,9 @@ async function main() {
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.1) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.2) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.5.1', 'Health version must be 2.5.1');
+    assert.equal(health.version, '2.5.2', 'Health version must be 2.5.2');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -289,7 +297,12 @@ async function main() {
     assert.equal(spRes.status, 200);
     const spBuf = await spRes.arrayBuffer();
     assert.equal(spBuf.byteLength, 65536, 'Speed probe must return exact requested byte count');
-    console.log(`✓ [1/15] /health + /api/client-info + /api/speed-probe -> version=${health.version}, IP/Country OK, 64KB probe OK`);
+    const spUpRes = await fetch(`${BASE}/api/speed-probe`, { method: 'POST', body: new Uint8Array(65536) });
+    assert.equal(spUpRes.status, 200);
+    assert.equal((await spUpRes.json()).receivedBytes, 65536, 'Upload probe must count exact bytes');
+    const spTooLarge = await fetch(`${BASE}/api/speed-probe`, { method: 'POST', body: new Uint8Array(131073) });
+    assert.equal(spTooLarge.status, 413, 'Upload probe must reject bodies above 128 KiB');
+    console.log(`✓ [1/15] /health + /api/client-info + /api/speed-probe -> version=${health.version}, 64KB down/up + upload limit OK`);
 
     // ── TEST 2: Setup Panel & Verify No remarkPrefix + Default ProxyIPs + TgProxy ──
     const setupRes = await fetch(`${BASE}/api/setup`, {
@@ -301,7 +314,7 @@ async function main() {
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.5.1');
+    assert.equal(boot.version, '2.5.2');
     assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
     assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -312,6 +325,14 @@ async function main() {
     assert(boot.tgProxy.tgUrl.startsWith('tg://webproxy?server='), 'tg://webproxy URL ready');
     console.log(`✓ [2/15] Setup & Defaults -> 0 remarkPrefix, ${boot.settings.proxyIPs.length} ProxyIPs, tg://webproxy ready`);
 
+    const rangeGuest = await fetch(`${BASE}/api/cf/ip-ranges`);
+    assert.equal(rangeGuest.status, 401, 'Official CIDRs must be served only to authenticated admin');
+    const rangeRes = await fetch(`${BASE}/api/cf/ip-ranges`, { headers: { cookie } });
+    assert.equal(rangeRes.status, 200);
+    const officialRanges = await rangeRes.json();
+    assert.equal(officialRanges.ipv4.length, 15, 'Cloudflare fixture should include 15 IPv4 CIDRs');
+    assert.equal(officialRanges.ipv6.length, 7, 'Cloudflare fixture should include 7 IPv6 CIDRs');
+    assert.equal(officialRanges.ipv4[0], '173.245.48.0/20');
     const user = boot.users[0];
 
     // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Zero-Emoji Free Notice in Subscriptions ──
@@ -417,45 +438,10 @@ async function main() {
     assert.equal(await page.locator('#free-notice-modal').isVisible(), true);
     await page.click('#btn-free-close');
 
-    // Theme-native, animated & clickable sponsor placement on the login page
+    // Sponsor is deliberately absent from the login view; only visible inside admin.
     await page.waitForSelector('#v-login:not([hidden])');
     const sponsor = page.locator('#sponsor-telegram');
-    assert.equal(await sponsor.isVisible(), true, 'Sponsor link must be visible before login');
-    assert.equal(await sponsor.getAttribute('href'), 'https://t.me/BlueKnight_Net');
-    assert.equal(await sponsor.getAttribute('target'), '_blank');
-    assert((await sponsor.getAttribute('rel')).includes('noopener'));
-    assert.equal(await sponsor.locator('.sponsor-icon use').getAttribute('href'), '#i-telegram');
-    const iconAnimation = await sponsor.locator('.sponsor-icon .ic').evaluate((el) => getComputedStyle(el).animationName);
-    assert(iconAnimation.includes('sponsor-flight'), 'Telegram icon must have the themed animation');
-    const lightBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
-    await page.click('.t-pick[data-th="dark"]');
-    await page.waitForFunction((previous) => {
-      const card = document.getElementById('sponsor-telegram');
-      return document.documentElement.dataset.theme === 'dark' &&
-        getComputedStyle(card).backgroundColor !== previous;
-    }, lightBackground);
-    const darkBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
-    assert.notEqual(lightBackground, darkBackground, 'Sponsor card must adapt to the active theme');
-    await page.click('#lang');
-    assert.equal(await sponsor.locator('.sponsor-kicker .en').isVisible(), true);
-    await page.setViewportSize({ width: 390, height: 844 });
-    const sponsorBox = await sponsor.boundingBox();
-    assert(sponsorBox.x >= -1 && sponsorBox.x + sponsorBox.width <= 391, 'Sponsor must fit mobile viewport');
-    await page.setViewportSize({ width: 1400, height: 920 });
-    await page.click('#lang');
-    await page.click('.t-pick[data-th="light"]');
-    await context.route('https://t.me/BlueKnight_Net', (route) => route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body: '<title>Telegram sponsor link verified</title>',
-    }));
-    const sponsorPopup = page.waitForEvent('popup');
-    await sponsor.click();
-    const openedSponsor = await sponsorPopup;
-    await openedSponsor.waitForLoadState('domcontentloaded');
-    assert.equal(openedSponsor.url(), 'https://t.me/BlueKnight_Net', 'Sponsor must open the active Telegram channel');
-    await openedSponsor.close();
-    console.log('✓ [login] Sponsor Telegram channel -> exact link, monochrome icon, animation, themes, mobile & clickable popup');
+    assert.equal(await sponsor.isVisible(), false, 'Sponsor must not appear on login');
 
     // ── TEST 7: Visitor IP, Country, ISP Strip + BLUR Toggle BEFORE & AFTER Login ──
     await page.waitForFunction(() => {
@@ -479,6 +465,38 @@ async function main() {
     await page.fill('#login-pass', 'AdminPassword24!');
     await page.click('#f-login button[type="submit"]');
     await page.waitForSelector('#v-admin:not([hidden])');
+
+    // Theme-native floating sponsor: only in admin, usable on both themes/mobile.
+    assert.equal(await sponsor.isVisible(), true);
+    assert.equal(await sponsor.getAttribute('href'), 'https://t.me/BlueKnight_Net');
+    assert.equal(await sponsor.getAttribute('target'), '_blank');
+    assert((await sponsor.getAttribute('rel')).includes('noopener'));
+    assert.equal(await sponsor.locator('.sponsor-float-icon use').getAttribute('href'), '#i-telegram');
+    const iconAnimation = await sponsor.locator('.sponsor-float-icon').evaluate((el) => getComputedStyle(el).animationName);
+    assert(iconAnimation.includes('sponsor-wing'), 'Floating Telegram icon must have motion');
+    const lightBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await page.click('.t-pick[data-th="dark"]');
+    await page.waitForFunction((previous) => {
+      const badge = document.getElementById('sponsor-telegram');
+      return document.documentElement.dataset.theme === 'dark' && getComputedStyle(badge).backgroundColor !== previous;
+    }, lightBackground);
+    const darkBackground = await sponsor.evaluate((el) => getComputedStyle(el).backgroundColor);
+    assert.notEqual(lightBackground, darkBackground, 'Floating sponsor must adapt to theme');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sponsorBox = await sponsor.boundingBox();
+    assert(sponsorBox.x >= 0 && sponsorBox.x + sponsorBox.width <= 390, 'Floating sponsor must fit mobile viewport');
+    await page.setViewportSize({ width: 1400, height: 920 });
+    await page.click('.t-pick[data-th="light"]');
+    await context.route('https://t.me/BlueKnight_Net', (route) => route.fulfill({
+      status: 200, contentType: 'text/html', body: '<title>Telegram sponsor link verified</title>',
+    }));
+    const sponsorPopup = page.waitForEvent('popup');
+    await sponsor.click();
+    const openedSponsor = await sponsorPopup;
+    await openedSponsor.waitForLoadState('domcontentloaded');
+    assert.equal(openedSponsor.url(), 'https://t.me/BlueKnight_Net');
+    await openedSponsor.close();
+    console.log('✓ [login/admin] Sponsor absent on login, floating only in panel; exact link, animation, themes, mobile & popup');
 
     // ── TEST 8: Zero-Emoji Live DOM Audit + Custom Monochrome SVG Icons ──
     const emojiCheck = await page.evaluate(() => {
@@ -525,7 +543,16 @@ async function main() {
     assert.equal(shadowAudit.btnMovedX, 3, 'Small button must translate +3px X onto its shadow');
     assert.equal(shadowAudit.btnMovedY, 3, 'Small button must translate +3px Y onto its shadow');
     assert(shadowAudit.shadowDriftX < 0.5 && shadowAudit.shadowDriftY < 0.5, `Shadow must stay stationary! Drift: ${JSON.stringify(shadowAudit)}`);
-    console.log(`✓ [9/15] Stationary-Shadow Button Physics -> Button moved (+${shadowAudit.btnMovedX}px, +${shadowAudit.btnMovedY}px), shadow drift = 0.0px!`);
+    await page.hover('#cp-b64');
+    const hoverAudit = await page.evaluate(() => ({
+      btnTransform: getComputedStyle(document.getElementById('cp-b64')).transform,
+      neighborFilter: getComputedStyle(document.querySelector('#pane-sub .node-title')).filter,
+      eagerLayer: getComputedStyle(document.getElementById('cp-b64')).willChange,
+    }));
+    assert(['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(hoverAudit.btnTransform), 'Text button must not move to fractional pixels on hover');
+    assert.equal(hoverAudit.neighborFilter, 'none', 'Neighbor text must not receive a blur filter');
+    assert.equal(hoverAudit.eagerLayer, 'auto', 'Buttons must not force eager GPU layers on nearby text');
+    console.log(`✓ [9/15] Stationary-Shadow Press + Crisp Hover -> (+${shadowAudit.btnMovedX}px, +${shadowAudit.btnMovedY}px) press, no fractional hover blur`);
 
     // ── TEST 10: Dynamic Theme-Native Monochrome Speed/RTT & Subscriber Usage Chart ──
     await page.click('#btn-speed-burst');
@@ -552,40 +579,103 @@ async function main() {
     await page.click('#chart-mode-live');
     console.log(`✓ [10/15] Monochrome Live Speed & Usage Chart -> Burst=${kpiSpd.trim()}, canvas=${canvasOk.width}x${canvasOk.height} verified`);
 
-    // ── TEST 11: Smart Browser-Based ISP & Connectivity Advisor + 1-Click Auto-Apply ──
+    // ── TEST 11: Conservative Advisor + bounded upload/download + Normal URI save ──
     await page.click('.tab-btn[data-tab="advisor"]');
     await page.waitForSelector('#pane-advisor:not([hidden])');
+    // Simulate an inconclusive upload POST while the real Worker download still works.
+    await page.route(/\/api\/speed-probe\?/, async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false}' });
+      } else await route.continue();
+    });
     await page.click('#btn-adv-run');
+    await page.waitForSelector('#adv-recs:not([hidden])', { timeout: 15000 });
     await page.waitForSelector('#btn-adv-apply:not([hidden])', { timeout: 15000 });
     const advCells = await page.locator('#adv-grid .adv-item').count();
-    assert.equal(advCells, 12, 'Advisor must probe and render all 12 connectivity targets');
+    assert.equal(advCells, 12, 'Advisor must render all 12 browser observations');
     const recsCount = await page.locator('#adv-recs li').count();
-    assert(recsCount >= 2, 'Advisor must render concrete ISP tuning recommendations');
+    assert(recsCount >= 4, 'Advisor must explain uncertainty and transferable settings');
+    assert.equal(await page.locator('#adv-path-metrics').isVisible(), true);
+    assert((await page.locator('#adv-up').textContent()).includes('بی‌پاسخ'), 'Upload failure must be visible without claiming an ISP cap');
+    const verdictBadges = await page.locator('#adv-grid').innerText();
+    assert(!verdictBadges.includes('FILTERED') && !verdictBadges.includes('GEO-SANCTION'), 'Opaque browser probes must not claim filtering or sanctions');
     await page.click('#btn-adv-apply');
-    await sleep(300);
-    console.log(`✓ [11/15] Smart Browser Network Advisor -> 12/12 live browser probes + ${recsCount} recommendations + 1-click Auto-Apply verified`);
+    await sleep(350);
+    await page.unroute(/\/api\/speed-probe\?/);
+    const afterAdvisor = await (await fetch(`${BASE}/api/bootstrap`, { headers: { cookie } })).json();
+    assert.equal(afterAdvisor.settings.earlyData, 0, 'Inconclusive upload should conservatively disable WS Early Data');
+    const rawAfterAdvisor = await (await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text();
+    assert(!rawAfterAdvisor.includes('%3Fed%3D2048'), 'Normal URI must reflect advisor-saved Early Data change');
+    const fragAfterAdvisorRes = await fetch(`${BASE}/sub/${user.subToken}?format=xray`);
+    assert(fragAfterAdvisorRes.headers.get('content-type').startsWith('application/json'), 'Fragment output format must remain JSON');
+    const fragAfterAdvisor = await fragAfterAdvisorRes.json();
+    assert(Array.isArray(fragAfterAdvisor) && fragAfterAdvisor.length > 0 && fragAfterAdvisor[0].outbounds, 'Fragment JSON structure must be preserved');
+    console.log(`✓ [11/15] Advisor -> 12 observations, bounded upload/download, no false diagnosis; Early Data change saved in Normal, Fragment remains JSON`);
 
-    // ── TEST 12: Clean IP Scanner + Balanced Layout Zero-Emoji Subscriber Press Pass ──
+    // ── TEST 12: Official CIDR selector + approximate country flags ONLY in node names ──
     await page.click('.tab-btn[data-tab="net"]');
     await page.waitForSelector('#pane-net:not([hidden])');
-    await page.fill(
-      '#s-cleanips',
-      ['www.speedtest.net#Speedtest', '1.1.1.1#CF-One', '203.0.113.1#BlackholeTest'].join('\n')
-    );
+    await context.route('https://ipwho.is/**', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ success: true, country_code: 'US' }),
+    }));
+    await page.fill('#s-cleanips', ['www.speedtest.net#Speedtest', '1.1.1.1#CF-One', '203.0.113.1#BlackholeTest'].join(String.fromCharCode(10)));
     await page.click('#btn-scan-user-list');
-    await page.waitForSelector('#btn-prune-clean:not([hidden])', { timeout: 12000 });
-    await page.click('#btn-prune-clean');
-    const prunedVal = await page.locator('#s-cleanips').inputValue();
-    assert(!prunedVal.includes('203.0.113.1'), 'Dead IP must be pruned');
+    await page.waitForFunction(() => document.querySelectorAll('#scan-results .scan-item').length === 3, null, { timeout: 16000 });
+    assert((await page.locator('#scan-summary').textContent()).includes('نامزدِ تأییدنشده'), 'Raw IP must be labeled unverified, not healthy');
+    if (await page.locator('#btn-prune-clean').isVisible()) await page.click('#btn-prune-clean');
+    assert((await page.locator('#s-cleanips').inputValue()).includes('203.0.113.1'), 'TLS errors must not silently prune unverified IPs');
+    // The user-list probe must NOT turn a reserved TEST-NET address into a fake country flag.
+    assert(!(await page.locator('#s-cleanips').inputValue()).includes('203.0.113.1#US|'));
+
+    await page.fill('#s-cleanips', 'www.speedtest.net#Speedtest');
+    await page.click('#btn-scan-clean');
+    await page.waitForSelector('#cf-ranges-panel:not([hidden])', { timeout: 12000 });
+    assert.equal(await page.locator('#cf-range-list .range-row').count(), 22, 'Official API must expose 15 IPv4 + 7 IPv6 source ranges');
+    assert((await page.locator('#cf-range-list .range-row').first().innerText()).includes('4,096'), '/20 contains 4,096 IPv4 addresses');
+    const officialSource = await page.locator('#cf-ranges-panel a.inline-link').getAttribute('href');
+    assert.equal(officialSource, 'https://api.cloudflare.com/client/v4/ips');
+    await page.locator('.range-samples').evaluateAll((inputs) => {
+      inputs.forEach((x, i) => { x.value = i === 0 || i === 15 ? '1' : '0'; });
+    });
+    await page.click('#btn-scan-ranges');
+    await page.waitForFunction(() => document.querySelectorAll('#scan-results .range-result').length === 2, null, { timeout: 16000 });
+    assert((await page.locator('#scan-results').innerText()).includes(':'), 'IPv6 CIDR sample must also be generated as a browser candidate');
+    const firstRangeRow = page.locator('#scan-results .range-result').first();
+    const firstManual = firstRangeRow.locator('.range-manual-cc');
+    if (await firstManual.count()) await firstManual.fill('US');
+    await firstRangeRow.locator('button').click();
+    assert((await page.locator('#s-cleanips').inputValue()).includes('#US|'), 'Adding a scanned candidate stores country code in the remark');
+    await page.click('#save-net');
+    await sleep(300);
+    const rawFlagged = (await (await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text()).trim().split(String.fromCharCode(10));
+    const namedNodes = rawFlagged.map((line) => decodeURIComponent(line.split('#')[1] || ''));
+    assert(namedNodes.some((name) => name.includes('🇺🇸 US ·') && /^VLESS/.test(name)), 'Only generated node names must have an ISO-2 code and matching flag');
+    assert(!rawFlagged.some((line) => line.split('?')[0].includes('🇺🇸')), 'Flag must not be placed in raw endpoint addresses');
+
+    await page.click('.tab-btn[data-tab="sub"]');
+    const directory = page.locator('#pane-sub .client-directory');
+    assert.equal(await directory.isVisible(), true, 'Official app directory must belong to the subscription tab');
+    assert.equal(await directory.locator('.client-os').count(), 5, 'Directory must group Windows, Linux, Android, macOS, iOS');
+    assert.equal(await directory.locator('a[href="https://github.com/2dust/v2rayN"]').count(), 3);
+    assert.equal(await directory.locator('a[href="https://apps.apple.com/us/app/shadowrocket/id932747118"]').count(), 1);
+    assert((await directory.locator('.client-logo').first().getAttribute('src')).startsWith('data:image/'), 'Official client icons must be embedded');
 
     const subPage = await context.newPage();
     await subPage.goto(`${BASE}/sub/${user.subToken}`, { waitUntil: 'networkidle' });
     await subPage.click('#sub-free-ok');
-    const subEmojiCount = await subPage.evaluate(() => {
-      return ((document.documentElement.innerText || '').match(/\p{Extended_Pictographic}/gu) || []).length;
+    const passAudit = await subPage.evaluate(() => {
+      const flags = (document.documentElement.innerText || '').match(/\p{Regional_Indicator}{2}/gu) || [];
+      const nodeFlags = Array.from(document.querySelectorAll('#s-nodes .node-title strong'))
+        .flatMap((el) => el.textContent.match(/\p{Regional_Indicator}{2}/gu) || []);
+      const nonNodeText = (document.documentElement.innerText || '').replace(/\p{Regional_Indicator}{2}/gu, '');
+      return { flags: flags.length, nodeFlags: nodeFlags.length, otherEmoji: (nonNodeText.match(/\p{Extended_Pictographic}/gu) || []).length };
     });
-    assert.equal(subEmojiCount, 0, 'Subscriber Press Pass must contain 0 emojis');
-    console.log('✓ [12/15] Clean IP Scanner + Emoji-Free Subscriber Press Pass verified!');
+    assert(passAudit.flags > 0 && passAudit.flags === passAudit.nodeFlags, 'All flags on subscriber page must appear in node names only');
+    assert.equal(passAudit.otherEmoji, 0, 'Subscriber Press Pass must remain otherwise emoji-free');
+    await subPage.close();
+    console.log(`✓ [12/15] Official 22 CIDRs + selectable sampling, no false raw-IP health, GeoIP flag in node names, Normal URI & 5-OS official directory`);
 
     // ── TEST 13: New User Zero-Traffic & Progress Bar Isolation + Duplicate UUID Guard ──
     // Note: `user` (سردبیر اصلی) already accrued real bytes from VLESS + Trojan E2E tunnels in Tests 4–5!
@@ -637,9 +727,15 @@ async function main() {
         hasDashLink: links.some((h) => h.includes('dash.cloudflare.com/profile/api-tokens')),
         hasDocsLink: links.some((h) => h.includes('developers.cloudflare.com')),
         permItems: pop.querySelectorAll('.perm-list li').length,
+        readPermissions: JSON.parse(new URL(pop.querySelector('#cf-template-read').href).searchParams.get('permissionGroupKeys')),
+        updatePermissions: JSON.parse(new URL(pop.querySelector('#cf-template-update').href).searchParams.get('permissionGroupKeys')),
       };
     });
-    assert(guideHasLinks.hasDashLink && guideHasLinks.hasDocsLink && guideHasLinks.permItems === 3, 'Mini guide popup must contain hyperlinked token permissions');
+    assert(guideHasLinks.hasDashLink && guideHasLinks.hasDocsLink && guideHasLinks.permItems === 3, 'Mini guide popup must contain official pre-filled links');
+    assert.deepEqual(guideHasLinks.readPermissions, [
+      { key: 'account_analytics', type: 'read' }, { key: 'account_settings', type: 'read' },
+    ], 'Read-only template must not request Worker edit permission');
+    assert.deepEqual(guideHasLinks.updatePermissions[2], { key: 'workers_scripts', type: 'edit' }, 'Self-update permission must be optional');
     await page.click('#btn-cf-guide-close');
 
     // Test invalid token rejection first
@@ -719,7 +815,7 @@ async function main() {
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 15/15 NIGHTLINE v2.5.1 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 NIGHTLINE v2.5.2 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));

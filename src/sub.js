@@ -43,6 +43,18 @@ function parseCleanEntry(raw) {
   };
 }
 
+// Scanner stores an approximate GeoIP ISO-2 tag after #, e.g. 172.67.73.163#NL|Scan.
+// The flag is intentionally confined to subscription NODE NAMES; no connection field changes.
+function cleanIpNodeLabel(entry) {
+  const match = String(entry.remark || '').match(/^([A-Z]{2})\|(.*)$/i);
+  const isIp = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(entry.address) || entry.address.includes(':');
+  if (!match || !isIp) return entry.remark || entry.address;
+  const cc = match[1].toUpperCase();
+  const flag = String.fromCodePoint(...[...cc].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65));
+  const note = match[2].trim();
+  return `${flag} ${cc} · ${entry.address}${note ? ` · ${note}` : ''}`;
+}
+
 export function buildWsPath(settings) {
   const base = (settings.wsPath || '/').split('?')[0] || '/';
   if (settings.earlyData && Number(settings.earlyData) > 0) {
@@ -151,7 +163,7 @@ export function buildNodeDescriptors(user, settings, requestHost) {
       address: parsed.address,
       sni: hostOnly,
       hostHeader: hostOnly,
-      tagLabel: parsed.remark || parsed.address,
+      tagLabel: cleanIpNodeLabel(parsed),
       ports: parsed.portOverride ? [parsed.portOverride] : allTlsPorts,
       tls: true,
     });
@@ -182,7 +194,7 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         address: parsed.address,
         sni: '',
         hostHeader: hostOnly,
-        tagLabel: parsed.remark || parsed.address,
+        tagLabel: cleanIpNodeLabel(parsed),
         ports: parsed.portOverride ? [parsed.portOverride] : allHttpPorts,
         tls: false,
       });

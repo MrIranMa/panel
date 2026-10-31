@@ -186,7 +186,16 @@ const minCss = (await esbuild.transform(rawStyle, { loader: 'css', minify: true 
 const minQr = (await esbuild.transform(read(P('src/ui/vendor/qrcode.js')), { loader: 'js', minify: true })).code.trim();
 const minApp = (await esbuild.transform(read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
 
-const indexTemplate = read(P('src/ui/index.html')).replaceAll('{{VERSION}}', VERSION);
+let indexTemplate = read(P('src/ui/index.html')).replaceAll('{{VERSION}}', VERSION);
+// Embed original icons from each application's official repository: no runtime CDN dependency.
+for (const [key, file] of Object.entries({
+  HIDDIFY: 'hiddify.svg', CLASH: 'clash-verge.svg', SINGBOX: 'sing-box.svg',
+  V2RAYNG: 'v2rayng.png', V2RAYN: 'v2rayn.png',
+})) {
+  const mime = file.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+  const data = fs.readFileSync(P('src/ui/assets', file)).toString('base64');
+  indexTemplate = indexTemplate.replaceAll(`{{ICON_${key}}}`, `data:${mime};base64,${data}`);
+}
 const fullPreviewHtml = indexTemplate
   .replace('{{SEAL_SMALL}}', () => sealSvg)
   .replace('{{CONFIG}}', () => JSON.stringify({ host: config.host, tunnelPath: config.tunnelPath }))

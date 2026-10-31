@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.1 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.2 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -793,17 +793,12 @@
 
   async function probeAdvisorTarget(t) {
     if (isSandboxPreview) {
-      var blockedInIr = t.kind === 'social';
-      return {
-        target: t,
-        ok: !blockedInIr,
-        sanctioned: t.kind === 'ai' && STATE.cf.country === 'IR',
-        ms: blockedInIr ? 3200 : (45 + Math.floor(Math.random() * 90))
-      };
+      var noSignal = t.kind === 'social';
+      return { target: t, ok: !noSignal, ms: noSignal ? 3200 : (45 + Math.floor(Math.random() * 90)) };
     }
     var timeoutMs = 3200;
     var ctrl = new AbortController();
-    var tid = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeoutMs);
+    var tid = setTimeout(function () { ctrl.abort(); }, timeoutMs);
     var t0 = performance.now();
     try {
       var sep = t.url.indexOf('?') >= 0 ? '&' : '?';
@@ -811,15 +806,41 @@
         ? { mode: 'cors', headers: { accept: 'application/dns-json' }, cache: 'no-store', signal: ctrl.signal }
         : { mode: 'no-cors', cache: 'no-store', credentials: 'omit', signal: ctrl.signal };
       var resp = await fetch(t.url + sep + '_nl=' + Date.now(), fetchOpts);
-      clearTimeout(tid);
       var ms = Math.max(1, Math.round(performance.now() - t0));
-      if (t.corsJson && !resp.ok) return { target: t, ok: false, sanctioned: false, ms: ms };
-      var isSanctioned = (t.kind === 'ai' && STATE.cf.country === 'IR');
-      return { target: t, ok: true, sanctioned: isSanctioned, ms: ms };
+      // no-cors success is an opaque TLS/transport response, NOT proof of service access.
+      return { target: t, ok: t.corsJson ? resp.ok : true, ms: ms };
     } catch (e) {
-      clearTimeout(tid);
-      return { target: t, ok: false, sanctioned: false, ms: timeoutMs };
+      // DNS, TLS, CORS, network denial and timeouts are indistinguishable here.
+      return { target: t, ok: false, ms: Math.max(1, Math.round(performance.now() - t0)) };
+    } finally { clearTimeout(tid); }
+  }
+
+  async function probeAdvisorTransfer(method, bytes) {
+    if (isSandboxPreview) {
+      return method === 'GET'
+        ? { ok: true, bytes: bytes, ms: 230, mbps: 4.56 }
+        : { ok: true, bytes: bytes, ms: 1100, mbps: 0.95 };
     }
+    var ctrl = new AbortController();
+    var tid = setTimeout(function () { ctrl.abort(); }, 6500);
+    var t0 = performance.now();
+    try {
+      var options = { method: method, signal: ctrl.signal, cache: 'no-store', credentials: 'same-origin' };
+      if (method === 'POST') {
+        options.body = new Uint8Array(bytes);
+        options.headers = { 'content-type': 'application/octet-stream' };
+      }
+      var response = await fetch('/api/speed-probe?bytes=' + bytes + '&_=' + Date.now(), options);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      var actual = method === 'GET'
+        ? (await response.arrayBuffer()).byteLength
+        : Number((await response.json()).receivedBytes);
+      if (actual !== bytes) throw new Error('Probe size mismatch');
+      var ms = Math.max(1, Math.round(performance.now() - t0));
+      return { ok: true, bytes: actual, ms: ms, mbps: Math.round((bytes * 8 / (ms * 1000)) * 100) / 100 };
+    } catch (e) {
+      return { ok: false, bytes: 0, ms: Math.round(performance.now() - t0) };
+    } finally { clearTimeout(tid); }
   }
 
   function renderAdvisorSkeleton() {
@@ -846,151 +867,133 @@
   async function runSmartAdvisor() {
     if (advisorRunning) return;
     advisorRunning = true;
+    lastAdvisorPatch = null;
     renderAdvisorSkeleton();
     var ic = $('adv-run-ic');
     if (ic) ic.classList.add('ic-spin');
     if ($('btn-adv-apply')) $('btn-adv-apply').hidden = true;
-
+    if ($('adv-path-metrics')) $('adv-path-metrics').hidden = true;
     ADV_TARGETS.forEach(function (t) {
       var b = $('adv-bdg-' + t.id);
       if (b) { b.className = 'badge mono'; b.textContent = 'TESTING'; }
     });
 
-    var results = await Promise.all(ADV_TARGETS.map(probeAdvisorTarget));
-    var byId = {};
-    results.forEach(function (r) {
-      byId[r.target.id] = r;
-      var b = $('adv-bdg-' + r.target.id);
-      var m = $('adv-ms-' + r.target.id);
-      var bar = $('adv-bar-' + r.target.id);
-      if (b) {
-        if (!r.ok) {
-          b.className = 'badge bad';
-          b.textContent = tr('فیلتر / مسدود', 'FILTERED');
-        } else if (r.sanctioned) {
-          b.className = 'badge';
-          b.textContent = tr('تحریم IP ایران', 'GEO-SANCTION');
-        } else {
-          b.className = 'badge ok';
-          b.textContent = tr('باز · مستقیم', 'OPEN');
+    try {
+      // Concurrent host observations; bounded sequential download/upload to THIS Worker.
+      var diagnostic = await Promise.all([
+        Promise.all(ADV_TARGETS.map(probeAdvisorTarget)),
+        (async function () {
+          var down = await probeAdvisorTransfer('GET', 131072);
+          var up = await probeAdvisorTransfer('POST', 131072);
+          return { down: down, up: up };
+        })()
+      ]);
+      var results = diagnostic[0], transfer = diagnostic[1], byId = {};
+      results.forEach(function (r) {
+        byId[r.target.id] = r;
+        var b = $('adv-bdg-' + r.target.id);
+        var m = $('adv-ms-' + r.target.id);
+        var bar = $('adv-bar-' + r.target.id);
+        if (b) {
+          b.className = r.ok ? 'badge ok' : 'badge';
+          b.textContent = r.ok
+            ? (r.target.corsJson ? tr('HTTP پاسخ', 'HTTP REPLY') : tr('TLS پاسخ', 'TLS REPLY'))
+            : tr('نامشخص', 'NO SIGNAL');
+        }
+        if (m) m.textContent = r.ok ? (r.ms + ' ms') : '—';
+        if (bar) bar.style.width = r.ok ? Math.max(15, Math.min(100, Math.round(100 - r.ms / 18))) + '%' : '6%';
+      });
+
+      var pathBox = $('adv-path-metrics');
+      if (pathBox) pathBox.hidden = false;
+      function metricText(m) {
+        return m.ok ? ('~' + m.mbps.toFixed(2) + ' Mbps · ' + m.ms + 'ms') : tr('بی‌پاسخ', 'NO RESPONSE');
+      }
+      $('adv-down').textContent = metricText(transfer.down);
+      $('adv-up').textContent = metricText(transfer.up);
+
+      var coreReply = Boolean((byId.google && byId.google.ok) || (byId.cf_edge && byId.cf_edge.ok));
+      var cfReply = Boolean(byId.cf_edge && byId.cf_edge.ok);
+      var socialNoSignal = ['youtube', 'telegram', 'x_social'].filter(function (k) { return !byId[k] || !byId[k].ok; }).length;
+      var aiNoSignal = ['chatgpt', 'claude', 'gemini'].filter(function (k) { return !byId[k] || !byId[k].ok; }).length;
+      var portResponses = [8443, 2053].filter(function (port) {
+        return byId['cf_' + port] && byId['cf_' + port].ok;
+      });
+      var ispLabelFa = STATE.cf.ispFa || 'اینترنت فعلی';
+      var ispLabelEn = STATE.cf.ispEn || 'current network';
+      var verdictFa = coreReply
+        ? 'حداقل یک مسیر پایه به درخواست مرورگر پاسخ داد؛ ' + socialNoSignal + ' شبکهٔ اجتماعی و ' + aiNoSignal + ' سرویس AI در این نمونه پاسخی ندادند. علت خطا یا مجازبودن خدمت با no-cors معلوم نیست.'
+        : 'مسیرهای پایه در این آزمون پاسخ قطعی ندادند؛ نمی‌توان فیلتر، تحریم یا سلامت تونل را از آن استنباط کرد.';
+      var verdictEn = coreReply
+        ? 'At least one core transport replied; ' + socialNoSignal + ' social and ' + aiNoSignal + ' AI probes had no visible transport response. No-CORS cannot identify HTTP availability or the cause.'
+        : 'Core routes produced no usable observation; this does not prove censorship, geo restriction, or tunnel failure.';
+      $('adv-verdict').innerHTML =
+        '<span class="fa">بررسی روی <strong>' + esc(ispLabelFa) + '</strong>: ' + esc(verdictFa) + '</span>' +
+        '<span class="en">Observation on <strong>' + esc(ispLabelEn) + '</strong>: ' + esc(verdictEn) + '</span>';
+
+      var recsFa = [], recsEn = [], patch = {};
+      recsFa.push('نمونهٔ ۱۲۸ کیلوبایتی تا همین Worker اندازه‌گیری شد؛ این عدد سقف سرعت اینترنت یا محدودیت قطعی آپلود/دانلود را تعیین نمی‌کند. برای نتیجهٔ قابل‌اعتماد، چند بار و با کلاینت واقعی بررسی کنید.');
+      recsEn.push('A 128 KiB transfer to this Worker is a short sample, not a verified ISP upload/download cap. Repeat measurements and test with the actual client.');
+      if (transfer.down.ok && !transfer.up.ok) {
+        recsFa.push('دانلود تا Worker پاسخ داد اما POST آپلود این بار کامل نشد؛ دلیل آن نامشخص است. برای کاهش دادهٔ آغازین WS می‌توان Early Data را موقتاً صفر کرد؛ این تغییر در لینک Normal قابل‌انتقال است.');
+        recsEn.push('Worker download replied but this upload POST did not finish; cause unknown. Setting WS Early Data to 0 is a conservative URI-compatible experiment reflected in Normal.');
+        if (Number((STATE.settings || {}).earlyData) > 0) patch.earlyData = 0;
+      } else if (transfer.down.ok && transfer.up.ok &&
+                 transfer.down.ms >= 60 && transfer.up.ms >= 120 &&
+                 transfer.up.mbps < Math.min(1.5, transfer.down.mbps * 0.3)) {
+        recsFa.push('در نمونهٔ کوتاه، آپلود به‌مراتب کندتر از دانلود بود؛ کاهش Early Data به صفر یک آزمایش محافظه‌کارانه برای نودهای Normal است، نه تضمین افزایش سرعت.');
+        recsEn.push('Upload was markedly slower in this short sample; reducing Early Data to 0 is a conservative Normal-URI experiment, not a speed guarantee.');
+        if (Number((STATE.settings || {}).earlyData) > 0) patch.earlyData = 0;
+      } else if (!transfer.down.ok) {
+        recsFa.push('دانلود از خود Worker هم در این آزمون کامل نشد؛ از این داده‌ها محدودیت اپراتور یا سرعت نهایی قابل‌استنباط نیست.');
+        recsEn.push('Even the Worker download did not complete; no ISP cap or final connection speed can be inferred.');
+      } else {
+        recsFa.push('آپلود و دانلود نمونه‌ای به Worker انجام شد؛ برای همین آزمون تغییری در Early Data پیشنهاد نمی‌شود.');
+        recsEn.push('Both short Worker transfers completed; no Early Data change is justified by this sample.');
+      }
+
+      if ((STATE.settings || {}).alpn === 'h3') {
+        patch.alpn = 'http/1.1';
+        recsFa.push('برای نودهای WebSocket، ALPN برابر http/1.1 سازگارتر از h3 است؛ این تنظیم در URIهای Normal قابل‌انتقال است.');
+        recsEn.push('For WebSocket nodes, http/1.1 is more interoperable than h3; this ALPN change is carried by Normal URIs.');
+      }
+      if (coreReply && (socialNoSignal || aiNoSignal)) {
+        recsFa.push('بی‌پاسخ‌بودن بعضی میزبان‌ها «فیلتر قطعی» یا «تحریم IP» نیست. اگر اتصال کلاینت واقعی خطا دارد، Fragment ملایم را در پروفایل JSON جداگانه امتحان کنید؛ URI عادی آن را حمل نمی‌کند.');
+        recsEn.push('A missing browser response does not prove filtering or sanctions. If the actual client fails, try mild Fragment in a separate JSON profile; a standard URI cannot carry it.');
+      }
+      if (cfReply && aiNoSignal >= 2 && (STATE.settings || {}).sanctionBypass === false) {
+        patch.sanctionBypass = true;
+        recsFa.push('برای دامنه‌های AI بی‌پاسخ، مسیر تونل را به‌عنوان انتخاب مدیریتی روشن می‌کنیم؛ این تصمیم مسیریابی در پروفایل‌های ساختاری است و وضعیت HTTP یا تحریم را ثابت نمی‌کند.');
+        recsEn.push('Optionally prefer tunnel routing for unresponsive AI domains. This affects structured profile routing, not Normal URI transport, and does not prove geo restrictions.');
+      }
+      recsFa.push(portResponses.length
+        ? ('پاسخ TLS فقط روی میزبان‌های آزمایشی پورت‌های ' + portResponses.join(' و ') + ' دیده شد؛ پورت‌های ۲۰۸۳، ۲۰۸۷ و ۲۰۹۶ اصلاً آزموده نشدند. هیچ پورتی خودکار به اشتراک اضافه یا حذف نمی‌شود.')
+        : 'پورت‌های جایگزین این بار پاسخ قابل‌اتکایی ندادند؛ ۲۰۸۳، ۲۰۸۷ و ۲۰۹۶ آزموده نشده‌اند. فهرست پورت‌های قبلی بی‌دلیل تغییر نمی‌کند.');
+      recsEn.push(portResponses.length
+        ? ('TLS replied on test hosts for port(s) ' + portResponses.join(', ') + ' only; 2083/2087/2096 were NOT tested. No port is auto-added or removed from subscriptions.')
+        : 'No alternate port was confirmed in this sample; 2083/2087/2096 were NOT tested. Existing port choices are left intact.');
+      recsFa.push('نتیجه فقط شبکهٔ مدیر را نشان می‌دهد؛ تنظیمات قابل‌انتقال URI پس از اعمال/ذخیره در همان لینک Normal منعکس می‌شوند. IPهای اسکن‌شده را پیش از انتشار در کلاینت واقعی بررسی کنید.');
+      recsEn.push('Observations apply to the admin network only. URI-compatible changes appear in the existing Normal link after Apply/Save. Test scanned IP candidates in a real client before publishing.');
+
+      var ul = $('adv-recs');
+      if (ul) {
+        ul.hidden = false;
+        ul.innerHTML = '';
+        for (var k = 0; k < recsFa.length; k++) {
+          var li = document.createElement('li');
+          li.innerHTML = '<span class="fa">' + esc(recsFa[k]) + '</span><span class="en">' + esc(recsEn[k]) + '</span>';
+          ul.appendChild(li);
         }
       }
-      if (m) m.textContent = r.ok ? (r.ms + ' ms') : 'TIMEOUT';
-      if (bar) bar.style.width = r.ok ? Math.max(15, Math.min(100, Math.round(100 - (r.ms / 18)))) + '%' : '6%';
-    });
-
-    // Analyze ISP profile & build tailored prescription
-    var socialBlocked = ['youtube', 'telegram', 'x_social'].filter(function (k) { return !byId[k] || !byId[k].ok; }).length;
-    var aiBlocked = ['chatgpt', 'claude', 'gemini'].filter(function (k) { return !byId[k] || !byId[k].ok || byId[k].sanctioned; }).length;
-    var cfDohOk = byId.cf_doh && byId.cf_doh.ok;
-    var openPorts = [443];
-    if (byId.cf_8443 && byId.cf_8443.ok) openPorts.push(8443);
-    if (byId.cf_2053 && byId.cf_2053.ok) openPorts.push(2053);
-    openPorts.push(2083, 2087, 2096);
-
-    var hasDpiBlocking = socialBlocked >= 1;
-    var hasAiRestriction = STATE.cf.country === 'IR' || aiBlocked >= 1;
-    var ispLabelFa = STATE.cf.ispFa || 'اینترنت فعلی شما';
-    var ispLabelEn = STATE.cf.ispEn || 'your current ISP';
-    var isMobileIsp = /همراه اول|ایرانسل|رایتل|MCI|Irancell|Rightel/i.test(ispLabelFa + ' ' + ispLabelEn);
-
-    var recsFa = [];
-    var recsEn = [];
-
-    if (hasDpiBlocking || STATE.cf.country === 'IR') {
-      var fragMode = isMobileIsp ? '1-1' : 'tlshello';
-      var fpRec = isMobileIsp ? 'randomized' : 'chrome';
-      var statusDescFa = hasDpiBlocking
-        ? ('فیلترینگ SNI/DPI فعال است (' + socialBlocked + ' از ۳ شبکهٔ اجتماعی مسدود و ' + aiBlocked + ' سرویس هوش مصنوعی محدود)')
-        : ('مسیر پایه باز است امّا IP ایران و محدودیت تحریم/اپراتور تشخیص داده شد (' + aiBlocked + ' سرویس هوش مصنوعی نیازمند تونل)');
-      var statusDescEn = hasDpiBlocking
-        ? ('Active DPI/SNI filtering detected (' + socialBlocked + '/3 social networks blocked; ' + aiBlocked + ' AI services restricted)')
-        : ('Core route reachable, but Iran IP geo-sanctions & ISP policies detected (' + aiBlocked + ' AI platforms require tunnel)');
-
-      $('adv-verdict').innerHTML =
-        '<span class="fa">نتیجهٔ تحلیل روی <strong>' + esc(ispLabelFa) + '</strong>: ' + esc(statusDescFa) + '.</span>' +
-        '<span class="en">Diagnosis on <strong>' + esc(ispLabelEn) + '</strong>: ' + esc(statusDescEn) + '.</span>';
-
-      recsFa.push('سایت‌های پایه (گوگل و کلادفلر) روی خط شما در دسترس‌اند؛ برای باز شدن بدون خطای ChatGPT، Claude و Gemini حتماً «عبور اجباری سرویس‌های تحریمی و هوش مصنوعی» فعال بماند.');
-      recsFa.push('برای اپراتور «' + ispLabelFa + '»، فعال‌سازی Fragment در حالت ' + fragMode + ' (طول 10-20) به‌همراه اثرانگشت TLS «' + fpRec + '» و «مسدودسازی QUIC» بیشترین پایداری و کمترین پینگ را می‌دهد.');
-      recsFa.push(cfDohOk
-        ? 'سرور Cloudflare DoH روی خط شما باز است (' + byId.cf_doh.ms + 'ms) و «Private DoH اختصاصی ورکر» نیز از شنود یا مسمومیت DNS جلوگیری کامل می‌کند.'
-        : 'دسترسی مستقیم به Cloudflare DoH روی اپراتور شما محدود است؛ گزینهٔ «Private DoH اختصاصی روی همین ورکر» را فعال نگه دارید.');
-
-      recsEn.push('Google & Cloudflare Anycast reach your browser; keep "Force Sanctioned / AI Domains via Tunnel" enabled for ChatGPT, Claude, and Gemini.');
-      recsEn.push('For ' + ispLabelEn + ', enabling Fragment (' + fragMode + ', length 10-20), uTLS "' + fpRec + '", and Block QUIC prevents TLS resets.');
-      recsEn.push('Private Worker DoH (/dns-query/<token>) eliminates DNS poisoning on this network.');
-
-      lastAdvisorPatch = {
-        enableFragment: true,
-        fragmentPackets: fragMode,
-        fragmentLength: '10-20',
-        fragmentInterval: '10-20',
-        fingerprint: fpRec,
-        blockQuic: true,
-        bypassIran: true,
-        sanctionBypass: true,
-        remoteDnsMode: 'private-doh',
-        tlsPorts: openPorts
-      };
-    } else if (hasAiRestriction) {
-      $('adv-verdict').innerHTML =
-        '<span class="fa">نتیجهٔ تحلیل روی <strong>' + esc(ispLabelFa) + '</strong>: شبکه‌های اجتماعی باز هستند امّا برخی سرویس‌های هوش مصنوعی محدودیت دسترسی دارند.</span>' +
-        '<span class="en">Diagnosis on <strong>' + esc(ispLabelEn) + '</strong>: Social media opens directly, while ' + aiBlocked + ' AI endpoint(s) require tunnel routing.</span>';
-
-      recsFa.push('گوگل، یوتیوب، تلگرام و X مستقیماً روی اینترنت شما باز هستند و نیازی به Fragment سنگین نیست.');
-      recsFa.push('گزینهٔ «عبور اجباری سرویس‌های تحریمی و هوش مصنوعی» را روشن بگذارید تا ChatGPT و Claude از تونل کلادفلر عبور کنند.');
-      recsEn.push('Google, YouTube, Telegram, and X open directly — heavy TLS Fragmentation is not required.');
-      recsEn.push('Keep Sanction/AI Bypass enabled so AI platforms route seamlessly via NIGHTLINE.');
-
-      lastAdvisorPatch = {
-        enableFragment: false,
-        fingerprint: 'chrome',
-        blockQuic: false,
-        sanctionBypass: true,
-        remoteDnsMode: cfDohOk ? 'cloudflare' : 'private-doh',
-        tlsPorts: openPorts
-      };
-    } else {
-      $('adv-verdict').innerHTML =
-        '<span class="fa">نتیجهٔ تحلیل روی <strong>' + esc(ispLabelFa) + '</strong>: اینترنتِ شما آزاد و بدون فیلترینگ شدید DPI است (اکثر سرویس‌ها و هوش مصنوعی مستقیم باز می‌شوند).</span>' +
-        '<span class="en">Diagnosis on <strong>' + esc(ispLabelEn) + '</strong>: Unrestricted connection detected — Google, AI platforms, and social media open directly with low latency.</span>';
-
-      recsFa.push('گوگل، یوتیوب، تلگرام و پلتفرم‌های هوش مصنوعی مستقیماً از مرورگر شما باز هستند (' + (aiBlocked === 0 ? 'بدون تحریم IP' : 'برخی نیازمند تونل') + ').');
-      recsFa.push('روی این اینترنت نیازی به تکه کردن بسته‌ها (Fragment شدید) نیست؛ خاموش گذاشتن Fragment یا حالت ملایم باعث حداکثر سرعت دانلود و پینگ پایین‌تر می‌شود.');
-      recsFa.push('پورت‌های چندگانهٔ TLS کلادفلر (' + openPorts.slice(0, 3).join(', ') + ') باز هستند و می‌توانند برای مشترکین در اشتراک قرار گیرند.');
-
-      recsEn.push('Direct access to Google, YouTube, Telegram, and AI platforms is healthy from this browser.');
-      recsEn.push('Heavy TLS Fragmentation is unnecessary on this ISP — disabling Fragment maximizes raw WebSocket throughput.');
-      recsEn.push('Cloudflare multi-port TLS (' + openPorts.slice(0, 3).join(', ') + ') and Cloudflare DoH are reachable.');
-
-      lastAdvisorPatch = {
-        enableFragment: false,
-        fingerprint: 'chrome',
-        blockQuic: false,
-        sanctionBypass: true,
-        remoteDnsMode: cfDohOk ? 'cloudflare' : 'private-doh',
-        tlsPorts: openPorts
-      };
+      lastAdvisorPatch = Object.keys(patch).length ? patch : null;
+      if ($('btn-adv-apply')) $('btn-adv-apply').hidden = STATE.mode !== 'admin' || !lastAdvisorPatch;
+    } catch (err) {
+      $('adv-verdict').textContent = tr('نتیجهٔ آزمون ناقص بود؛ هیچ تنظیمی اعمال نشد.', 'Diagnostic incomplete; no settings were applied.');
+      lastAdvisorPatch = null;
+    } finally {
+      advisorRunning = false;
+      if (ic) ic.classList.remove('ic-spin');
     }
-
-    var ul = $('adv-recs');
-    if (ul) {
-      ul.hidden = false;
-      ul.innerHTML = '';
-      for (var i = 0; i < recsFa.length; i++) {
-        var li = document.createElement('li');
-        li.innerHTML = '<span class="fa">' + esc(recsFa[i]) + '</span><span class="en">' + esc(recsEn[i]) + '</span>';
-        ul.appendChild(li);
-      }
-    }
-
-    if ($('btn-adv-apply') && STATE.mode === 'admin') {
-      $('btn-adv-apply').hidden = false;
-    }
-
-    advisorRunning = false;
-    if (ic) ic.classList.remove('ic-spin');
   }
 
   if ($('btn-adv-run')) {
@@ -1004,7 +1007,12 @@
         var merged = Object.assign({}, collectSettingsFromForms(), lastAdvisorPatch);
         var res = await api('/api/settings', 'PUT', merged);
         ingestBootstrap(res);
-        showToast('تنظیمات بهینهٔ اپراتور با موفقیت روی پنل اعمال شد', 'Optimal ISP settings applied to panel');
+        var uriChanged = Object.prototype.hasOwnProperty.call(lastAdvisorPatch, 'earlyData') ||
+          Object.prototype.hasOwnProperty.call(lastAdvisorPatch, 'alpn');
+        showToast(
+          uriChanged ? 'تغییرات سازگار با URI ذخیره شد و در لینک اشتراک Normal قابل دریافت است' : 'تغییر مسیریابی ذخیره شد؛ URI اشتراک Normal بدون تغییر است',
+          uriChanged ? 'URI-compatible settings saved; refresh the same Normal subscription URL' : 'Structured routing saved; Normal URI unchanged'
+        );
       } catch (err) {
         showToast(err.message, err.message);
       }
@@ -1122,7 +1130,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.1',
+      version: '2.5.2',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1142,7 +1150,7 @@
         httpPorts: [80, 8080, 8880, 2052, 2082, 2086, 2095],
         enableHttpPorts: false,
         fingerprint: 'chrome', alpn: 'http/1.1',
-        cleanIPs: ['www.speedtest.net#Speedtest', '172.67.73.163#CF-MCI'],
+        cleanIPs: ['www.speedtest.net#Speedtest', '172.67.73.163#US|CF-MCI'],
         customDomains: [],
         proxyIPs: ['ProxyIP.NL.CMLiussss.net', 'ProxyIP.DE.CMLiussss.net', 'ProxyIP.US.CMLiussss.net', 'nima.nscl.ir'],
         enableNAT64: true,
@@ -1160,7 +1168,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.1)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.2)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1173,7 +1181,15 @@
     var targets = [{ addr: host, label: host }].concat(
       (s.cleanIPs || []).map(function (c) {
         var p = c.split('#');
-        return { addr: p[0].trim(), label: (p[1] || p[0]).trim() };
+        var addr = p[0].trim();
+        var label = (p[1] || addr).trim();
+        var geo = label.match(/^([A-Z]{2})\|(.*)$/i);
+        if (geo && (/^\d{1,3}(\.\d{1,3}){3}$/.test(addr) || addr.indexOf(':') >= 0)) {
+          var cc = geo[1].toUpperCase();
+          var flag = String.fromCodePoint.apply(String, cc.split('').map(function (ch) { return 0x1f1e6 + ch.charCodeAt(0) - 65; }));
+          label = flag + ' ' + cc + ' · ' + addr + (geo[2].trim() ? ' · ' + geo[2].trim() : '');
+        }
+        return { addr: addr, label: label };
       })
     );
     var path = (s.wsPath || '/') + (s.earlyData ? '?ed=' + s.earlyData : '');
@@ -1210,6 +1226,13 @@
       if (path === '/api/killswitch') {
         ds.settings.killSwitch = !ds.settings.killSwitch;
         return JSON.parse(JSON.stringify(ds));
+      }
+      if (path === '/api/cf/ip-ranges') {
+        return {
+          ok: true, source: 'https://api.cloudflare.com/client/v4/ips', fetchedAt: Date.now(),
+          ipv4: ['104.16.0.0/13', '172.64.0.0/13', '162.158.0.0/15', '198.41.128.0/17'],
+          ipv6: ['2606:4700::/32', '2a06:98c0::/29'], cached: true
+        };
       }
       if (path.indexOf('/api/cf/usage') === 0) {
         if (!ds.cfIntegration.hasToken) return { ok: false, needsToken: true, cfIntegration: ds.cfIntegration };
@@ -1252,11 +1275,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.1',
-          latestVersion: '2.5.1',
+          currentVersion: '2.5.2',
+          latestVersion: '2.5.2',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.1 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.2 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1266,8 +1289,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.1',
-          targetVersion: '2.5.1',
+          previousVersion: '2.5.2',
+          targetVersion: '2.5.2',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -2145,14 +2168,16 @@
     var bare = host.replace(/^\[|\]$/g, '');
     var isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(bare);
     var isIpv6 = bare.indexOf(':') >= 0;
-    var isOne = bare === '1.1.1.1' || bare === '1.0.0.1';
+    var geoMatch = remark.match(/^([A-Z]{2})\|(.*)$/i);
     return {
       rawLine: line,
+      addrPart: addrPart,
       host: host,
       bareHost: bare,
       port: port,
       remark: remark || bare,
-      isRawIp: (isIpv4 || isIpv6) && !isOne
+      countryCode: geoMatch ? geoMatch[1].toUpperCase() : '',
+      isRawIp: isIpv4 || isIpv6
     };
   }
 
@@ -2189,16 +2214,12 @@
     }
 
     var first = await singleAttempt();
+    // no-cors cannot reveal HTTP status, and raw IP TLS has no useful Worker SNI.
+    // A certificate error or a slow rejection is NOT proof that the IP works.
     if (first.resolved) {
       return { entry: entry, ms: Math.max(1, first.ms), ok: true };
     }
-    if (entry.isRawIp && !first.aborted && first.ms >= 14 && first.ms < timeoutMs - 150) {
-      var second = await singleAttempt();
-      if (!second.aborted && second.ms >= 10 && second.ms < timeoutMs - 150) {
-        return { entry: entry, ms: Math.round((first.ms + second.ms) / 2), ok: true };
-      }
-    }
-    return { entry: entry, ms: 9999, ok: false };
+    return { entry: entry, ms: 9999, ok: false, inconclusive: true };
   }
 
   async function probeBatch(entries, concurrency) {
@@ -2218,55 +2239,85 @@
     return out;
   }
 
+  var geoCountryCache = Object.create(null);
+  function attachCountryToEntry(entry, cc) {
+    if (!/^[A-Z]{2}$/.test(cc || '') || !entry.isRawIp) return;
+    var note = entry.remark.replace(/^[A-Z]{2}\|/i, '').trim();
+    if (note === entry.bareHost) note = 'Scan';
+    entry.countryCode = cc;
+    entry.rawLine = entry.addrPart + '#' + cc + '|' + (note || 'Scan');
+  }
+
+  async function enrichScanCountries(results) {
+    var targets = results.filter(function (r) { return r.entry.isRawIp && !r.entry.countryCode; }).slice(0, 48);
+    var pos = 0;
+    async function work() {
+      while (pos < targets.length) {
+        var entry = targets[pos++].entry;
+        var ip = entry.bareHost;
+        if (/^(?:127\.|10\.|192\.168\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|169\.254\.|0\.|22[4-9]\.|23\d\.|24\d\.|25\d\.)/.test(ip) ||
+            /^172\.(?:1[6-9]|2\d|3[01])\./.test(ip) || /^(?:fe80:|fc|fd|::1$)/i.test(ip)) continue;
+        var cc = Object.prototype.hasOwnProperty.call(geoCountryCache, ip) ? geoCountryCache[ip] : '';
+        if (!cc && !Object.prototype.hasOwnProperty.call(geoCountryCache, ip)) {
+          if (isSandboxPreview) cc = 'US';
+          else {
+            var ctrl = new AbortController();
+            var tid = setTimeout(function () { ctrl.abort(); }, 3000);
+            try {
+              var geo = await fetch('https://ipwho.is/' + encodeURIComponent(ip) + '?fields=success,country_code', {
+                signal: ctrl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
+              });
+              var data = geo.ok ? await geo.json() : null;
+              cc = data && data.success === true && /^[A-Z]{2}$/.test(data.country_code || '') ? data.country_code : '';
+            } catch (e) { cc = ''; }
+            finally { clearTimeout(tid); }
+          }
+          geoCountryCache[ip] = cc;
+        }
+        if (cc) attachCountryToEntry(entry, cc);
+      }
+    }
+    await Promise.all([work(), work(), work()]);
+  }
+
   if ($('btn-scan-user-list')) {
     $('btn-scan-user-list').onclick = async function () {
       var rawLines = textToLines($('s-cleanips').value);
       var parsedList = rawLines.map(parseUserCleanLine).filter(Boolean);
       if (!parsedList.length) {
-        showToast('ابتدا چند IP یا دامنه در کادر بالا وارد کنید', 'Enter at least one IP or domain above');
+        showToast('ابتدا چند IP یا دامنه وارد کنید', 'Enter IPs or domains first');
         return;
       }
-
       var box = $('scan-results');
       var sumEl = $('scan-summary');
       var pruneBtn = $('btn-prune-clean');
       box.hidden = false;
+      box.innerHTML = '';
       if (pruneBtn) pruneBtn.hidden = true;
-      if (sumEl) {
-        sumEl.hidden = false;
-        sumEl.textContent = tr(
-          'در حال تست زندهٔ ' + parsedList.length + ' مورد روی اینترنت فعلی مرورگر شما…',
-          'Testing ' + parsedList.length + ' listed endpoints from your browser…'
-        );
-      }
-      box.innerHTML = '';
-
+      sumEl.hidden = false;
+      sumEl.textContent = tr('در حال بررسی مرورگری و دریافت کشور تقریبی IPها…', 'Probing browser reachability and looking up approximate IP country…');
       var results = await probeBatch(parsedList, 6);
+      await enrichScanCountries(results);
+      var taggedLines = parsedList.map(function (p) { return p.rawLine; });
+      if (taggedLines.join('\n') !== rawLines.join('\n')) $('s-cleanips').value = taggedLines.join('\n');
       results.sort(function (a, b) { return a.ms - b.ms; });
-
-      lastUserScanHealthy = results.filter(function (r) { return r.ok; });
-      if (sumEl) {
-        sumEl.textContent = tr(
-          'نتیجهٔ اسکن لیست شما: ' + lastUserScanHealthy.length + ' سالم از ' + results.length + ' مورد' +
-            (lastUserScanHealthy.length ? (' · سریع‌ترین: ' + lastUserScanHealthy[0].entry.bareHost + ' (' + lastUserScanHealthy[0].ms + 'ms)') : ''),
-          'Your list scan: ' + lastUserScanHealthy.length + ' / ' + results.length + ' reachable' +
-            (lastUserScanHealthy.length ? (' · fastest: ' + lastUserScanHealthy[0].entry.bareHost + ' (' + lastUserScanHealthy[0].ms + 'ms)') : '')
-        );
-      }
-      if (pruneBtn && lastUserScanHealthy.length > 0) {
-        pruneBtn.hidden = false;
-      }
-
-      box.innerHTML = '';
+      lastUserScanHealthy = results.filter(function (r) { return r.ok && !r.entry.isRawIp; });
+      var candidateCount = results.filter(function (r) { return r.entry.isRawIp; }).length;
+      sumEl.textContent = tr(
+        'پاسخ مرورگری دامنه‌ها: ' + lastUserScanHealthy.length + ' · IP خام: ' + candidateCount + ' نامزدِ تأییدنشده. کشور GeoIP تقریبی است؛ برای درج برچسب در اشتراک Normal، تنظیمات را ذخیره کنید. هیچ IPی با خطای TLS حذف نمی‌شود.',
+        'Domain browser responses: ' + lastUserScanHealthy.length + ' · raw IPs: ' + candidateCount + ' unverified candidates. GeoIP is approximate; save settings to update Normal subscription node labels. No IP is removed after a TLS error.'
+      );
+      if (pruneBtn && lastUserScanHealthy.length) pruneBtn.hidden = false;
       results.forEach(function (r) {
         var item = document.createElement('div');
         item.className = 'scan-item';
         var labelStr = r.entry.bareHost + (r.entry.port !== 443 ? (':' + r.entry.port) : '');
-        item.innerHTML =
-          '<span>' + esc(labelStr) + ' <small style="opacity:.7">(' + esc(r.entry.remark) + ')</small></span>' +
-          (r.ok
-            ? '<span class="badge ok">' + svgIcon('check', 'ic-sm') + ' ' + r.ms + ' ms</span>'
-            : '<span class="badge bad">' + svgIcon('x', 'ic-sm') + ' TIMEOUT</span>');
+        var verdict = r.entry.isRawIp
+          ? (r.ok ? 'TLS ONLY · ' + r.ms + 'ms' : 'UNVERIFIED')
+          : (r.ok ? 'FETCH OK · ' + r.ms + 'ms' : 'INCONCLUSIVE');
+        item.innerHTML = '<span class="scan-entry" dir="ltr">' + esc(labelStr) +
+          (r.entry.isRawIp ? ' <small>' + esc(r.entry.countryCode || 'CC ?') + '</small>' : '') + '</span>' +
+          '<span class="badge' + (r.ok && !r.entry.isRawIp ? ' ok' : '') + '">' + esc(verdict) + '</span>';
         box.appendChild(item);
       });
     };
@@ -2275,70 +2326,172 @@
   if ($('btn-prune-clean')) {
     $('btn-prune-clean').onclick = function () {
       if (!lastUserScanHealthy.length) return;
-      $('s-cleanips').value = lastUserScanHealthy.map(function (r) { return r.entry.rawLine; }).join('\n');
+      var current = textToLines($('s-cleanips').value);
+      var priority = new Set(lastUserScanHealthy.map(function (r) { return r.entry.addrPart; }));
+      var first = [], rest = [];
+      current.forEach(function (line) {
+        var address = line.split('#')[0].trim();
+        (priority.has(address) ? first : rest).push(line);
+      });
+      $('s-cleanips').value = first.concat(rest).join('\n');
       $('btn-prune-clean').hidden = true;
-      showToast('فقط موارد سالم به ترتیب سرعت مرتب شدند؛ دکمهٔ ذخیره را بزنید', 'Kept & sorted healthy IPs — click Save');
+      showToast('پاسخگوها اولویت گرفتند؛ هیچ IPی حذف نشد. برای اعمال در Normal ذخیره کنید', 'Prioritized responses; kept all IPs. Save to update Normal');
     };
   }
 
+  // Cloudflare's own published IPv4/IPv6 lists are loaded through the same-origin Worker.
+  // The browser cannot establish the subscription's Host/SNI by fetching a raw IP.
+  var officialRanges = null;
+  function sampleCidrAddresses(cidr, count, family) {
+    var pair = cidr.split('/');
+    var bits = Number(pair[1]);
+    var output = [];
+    if (family === 4) {
+      var octets = pair[0].split('.').map(Number);
+      if (octets.length !== 4 || bits < 0 || bits > 32) return output;
+      var ipNumber = (((octets[0] * 256 + octets[1]) * 256 + octets[2]) * 256 + octets[3]) >>> 0;
+      var total = Math.pow(2, 32 - bits);
+      var net = (ipNumber & (bits ? (0xffffffff << (32 - bits)) : 0)) >>> 0;
+      var seen = new Set();
+      for (var i = 0; i < count; i++) {
+        var offset = Math.floor(((i + Math.random()) / count) * total);
+        if (total > 2) offset = Math.max(1, Math.min(total - 2, offset));
+        var v = (net + offset) >>> 0;
+        if (seen.has(v)) continue;
+        seen.add(v);
+        output.push([v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join('.'));
+      }
+      return output;
+    }
+    if (bits < 0 || bits > 128 || pair[0].split('::').length > 2) return output;
+    var sides = pair[0].split('::');
+    var lhs = sides[0] ? sides[0].split(':') : [];
+    var rhs = sides.length === 2 && sides[1] ? sides[1].split(':') : [];
+    var zeros = 8 - lhs.length - rhs.length;
+    if (zeros < 0 || (sides.length === 1 && zeros !== 0)) return output;
+    var words = lhs.concat(Array(zeros).fill('0'), rhs);
+    var base = words.reduce(function (acc, h) { return (acc << 16n) + BigInt('0x' + h); }, 0n);
+    var hostBits = BigInt(128 - bits);
+    var size = 1n << hostBits;
+    var network = (base >> hostBits) << hostBits;
+    var seenV6 = new Set();
+    for (var j = 0; j < count && BigInt(j) < size; j++) {
+      var span = size / BigInt(count);
+      var rand = new Uint32Array(4);
+      crypto.getRandomValues(rand);
+      var entropy = rand.reduce(function (acc, word) { return (acc << 32n) + BigInt(word); }, 0n);
+      var offsetV6 = span > 0n ? BigInt(j) * span + (entropy % span) : BigInt(j);
+      var v6 = network + offsetV6;
+      var v6str = Array.from({ length: 8 }, function (_, k) {
+        return Number((v6 >> BigInt((7 - k) * 16)) & 65535n).toString(16);
+      }).join(':');
+      if (!seenV6.has(v6str)) { seenV6.add(v6str); output.push('[' + v6str + ']'); }
+    }
+    return output;
+  }
+
   $('btn-scan-clean').onclick = async function () {
+    var loadBtn = $('btn-scan-clean');
+    loadBtn.disabled = true;
     try {
-      var box = $('scan-results');
-      var sumEl = $('scan-summary');
-      if ($('btn-prune-clean')) $('btn-prune-clean').hidden = true;
-      box.hidden = false;
-      if (sumEl) {
-        sumEl.hidden = false;
-        sumEl.textContent = tr('در حال اسکن رنج‌های منتخب کلادفلر روی اینترنت شما…', 'Scanning Cloudflare preset ranges…');
-      }
-      box.innerHTML = '';
+      var data = await api('/api/cf/ip-ranges');
+      if (!data || !Array.isArray(data.ipv4) || !Array.isArray(data.ipv6) || !data.ipv4.length) throw new Error('Official range feed is unavailable');
+      officialRanges = data;
+      var rows = $('cf-range-list');
+      rows.innerHTML = '';
+      var ipv4Total = 0;
+      data.ipv4.concat(data.ipv6).forEach(function (cidr, i) {
+        var ipv4 = i < data.ipv4.length;
+        var mask = Number(cidr.split('/')[1]);
+        var countText = ipv4 ? Math.pow(2, 32 - mask).toLocaleString('en-US') : ('2^' + (128 - mask));
+        if (ipv4) ipv4Total += Math.pow(2, 32 - mask);
+        var row = document.createElement('label');
+        row.className = 'range-row';
+        row.innerHTML = '<span class="range-key"><span class="badge">IPv' + (ipv4 ? '4' : '6') + '</span> ' +
+          '<span class="mono" dir="ltr">' + esc(cidr) + '</span></span>' +
+          '<span class="range-count mono" dir="ltr">' + esc(countText) + ' IP</span>' +
+          '<input type="number" class="range-samples" min="0" max="12" step="1" value="' + (i < 3 ? '4' : '0') + '" data-cidr="' + esc(cidr) + '" data-family="' + (ipv4 ? '4' : '6') + '" aria-label="Samples for ' + esc(cidr) + '">';
+        rows.appendChild(row);
+      });
+      $('cf-ranges-total').textContent = data.ipv4.length + ' IPv4 + ' + data.ipv6.length + ' IPv6 · ' + ipv4Total.toLocaleString('en-US') + ' IPv4 IPs';
+      $('cf-ranges-panel').hidden = false;
+      $('scan-summary').hidden = false;
+      $('scan-summary').textContent = tr(
+        'فهرست ' + (data.stale ? 'کش‌شدهٔ قدیمیِ ' : '') + 'رسمی کلادفلر بارگذاری شد. ابتدا تعداد نمونهٔ هر رنج را مشخص کنید؛ IP خام فقط نامزد آزمایش در کلاینت است.',
+        (data.stale ? 'An older cached ' : 'The ') + 'official Cloudflare list is loaded. Choose a count per CIDR; raw IPs remain unverified client-test candidates.'
+      );
+    } catch (err) {
+      $('cf-ranges-panel').hidden = true;
+      showToast('دریافت رنج رسمی ناموفق بود؛ از رنج حدسی استفاده نشد', 'Official range feed unavailable; no guessed fallback');
+    } finally { loadBtn.disabled = false; }
+  };
 
-      var presetRaw = [
-        'www.speedtest.net#Speedtest',
-        'cp.cloudflare.com#CF-Captive',
-        'radar.cloudflare.com#CF-Radar',
-        'cdnjs.cloudflare.com#CDNJS',
-        '1.1.1.1#CF-One',
-        '104.16.132.229#CF-104-16',
-        '104.18.2.14#CF-104-18',
-        '172.67.73.163#CF-172-67',
-        '162.159.135.42#CF-162-159',
-        '172.64.80.1#CF-172-64'
-      ];
-      var entries = presetRaw.map(parseUserCleanLine).filter(Boolean);
-      var results = await probeBatch(entries, 6);
+  $('btn-scan-ranges').onclick = async function () {
+    if (!officialRanges) return;
+    var fields = Array.from($('cf-range-list').querySelectorAll('input.range-samples'));
+    var selections = [], requested = 0;
+    for (var i = 0; i < fields.length; i++) {
+      var n = Number(fields[i].value);
+      if (!Number.isInteger(n) || n < 0 || n > 12) {
+        showToast('تعداد هر رنج باید عدد صحیح ۰ تا ۱۲ باشد', 'Samples per CIDR must be an integer between 0 and 12'); return;
+      }
+      if (n) { requested += n; selections.push({ cidr: fields[i].dataset.cidr, family: Number(fields[i].dataset.family), count: n }); }
+    }
+    if (!requested || requested > 48) {
+      showToast('مجموع نمونه‌ها باید بین ۱ و ۴۸ باشد', 'Total samples must be between 1 and 48'); return;
+    }
+    var btn = $('btn-scan-ranges'), box = $('scan-results'), summary = $('scan-summary');
+    btn.disabled = true;
+    if ($('btn-prune-clean')) $('btn-prune-clean').hidden = true;
+    box.hidden = false; box.innerHTML = ''; summary.hidden = false;
+    summary.textContent = tr('در حال بررسی ' + requested + ' نامزد و دریافت کد کشور تقریبی…', 'Probing ' + requested + ' candidates and looking up approximate countries…');
+    try {
+      var raw = [];
+      selections.forEach(function (sel) {
+        sampleCidrAddresses(sel.cidr, sel.count, sel.family).forEach(function (ip) {
+          var item = parseUserCleanLine(ip + '#CF-Scan');
+          if (item) raw.push(item);
+        });
+      });
+      var results = await probeBatch(raw, 6);
+      await enrichScanCountries(results);
       results.sort(function (a, b) { return a.ms - b.ms; });
-
-      var okCount = results.filter(function (r) { return r.ok; }).length;
-      if (sumEl) {
-        sumEl.textContent = tr(
-          okCount + ' مورد از رنج‌های پیشنهادی روی اینترنت شما باز است:',
-          okCount + ' preset Cloudflare endpoints reachable on your ISP:'
-        );
-      }
-
-      box.innerHTML = '';
+      var tlsCount = results.filter(function (r) { return r.ok; }).length;
+      var ccCount = results.filter(function (r) { return r.entry.countryCode; }).length;
+      summary.textContent = tr(
+        results.length + ' نمونه از رنج‌های رسمی · ' + tlsCount + ' پاسخ مرورگری (فقط TLS) · ' + ccCount + ' کد کشورِ تقریبی. این نتیجه اتصال Worker را تأیید نمی‌کند؛ پس از افزودن، در کلاینت واقعی آزمایش و برای انتشار در Normal ذخیره کنید.',
+        results.length + ' official-range samples · ' + tlsCount + ' browser TLS responses · ' + ccCount + ' approximate country codes. This does NOT verify the Worker connection; add and test in your actual client, then save for the Normal subscription.'
+      );
       results.forEach(function (r) {
         var item = document.createElement('div');
-        item.className = 'scan-item';
-        var msText = r.ok ? (r.ms + ' ms') : 'TIMEOUT';
-        item.innerHTML =
-          '<span>' + esc(r.entry.bareHost) + ' <b style="opacity:.7">(' + esc(msText) + ')</b></span>' +
-          (r.ok ? '<button class="btn ghost sm-btn" type="button">' + svgIcon('plus', 'ic-sm') + '<span>ADD</span></button>' : '<span class="badge bad">FAIL</span>');
+        item.className = 'scan-item range-result';
+        item.innerHTML = '<span class="scan-entry mono" dir="ltr">' + esc(r.entry.bareHost) +
+          ' <small>' + esc(r.entry.countryCode || 'CC ?') + '</small></span>' +
+          '<span class="badge">' + (r.ok ? 'TLS ONLY ' + r.ms + 'ms' : 'UNVERIFIED') + '</span>' +
+          (r.entry.countryCode ? '' : '<input class="range-manual-cc mono" type="text" maxlength="2" placeholder="CC" aria-label="ISO country code for ' + esc(r.entry.bareHost) + '">') +
+          '<button class="btn ghost sm-btn" type="button">' + svgIcon('plus', 'ic-sm') + '<span>ADD</span></button>';
         var addBtn = item.querySelector('button');
-        if (addBtn) {
-          addBtn.onclick = function () {
-            var cur = textToLines($('s-cleanips').value);
-            if (cur.indexOf(r.entry.rawLine) < 0) cur.push(r.entry.rawLine);
-            $('s-cleanips').value = cur.join('\n');
-            addBtn.innerHTML = svgIcon('check', 'ic-sm') + '<span>OK</span>';
-          };
-        }
+        addBtn.onclick = function () {
+          var manual = item.querySelector('.range-manual-cc');
+          var cc = r.entry.countryCode || (manual ? manual.value.trim().toUpperCase() : '');
+          if (!/^[A-Z]{2}$/.test(cc)) {
+            showToast('برای برچسب پرچم، کد دوحرفی کشور را وارد کنید', 'Enter a two-letter country code before adding');
+            if (manual) manual.focus();
+            return;
+          }
+          attachCountryToEntry(r.entry, cc);
+          var cur = textToLines($('s-cleanips').value).filter(function (line) { return line.split('#')[0].trim() !== r.entry.addrPart; });
+          cur.push(r.entry.rawLine);
+          $('s-cleanips').value = cur.join('\n');
+          addBtn.disabled = true;
+          addBtn.innerHTML = svgIcon('check', 'ic-sm') + '<span>ADDED</span>';
+          showToast('نامزد اضافه شد؛ بعد از آزمایش واقعی، تنظیمات را ذخیره کنید', 'Candidate added; client-test it, then save settings');
+        };
         box.appendChild(item);
       });
     } catch (err) {
-      showToast(err.message, err.message);
-    }
+      summary.textContent = tr('بررسی به نتیجه نرسید؛ هیچ IPی تأیید نشده است.', 'Probe incomplete; no IP was verified.');
+    } finally { btn.disabled = false; }
   };
 
   $('btn-test-proxyip').onclick = async function () {
@@ -2681,7 +2834,7 @@
   /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
 
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.1';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.2';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if ($('gh-upd-dot')) {

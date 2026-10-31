@@ -1,17 +1,17 @@
 <div align="center">
 
-# NIGHTLINE · V2.5.1
+# NIGHTLINE · V2.5.2
 
 **پنل آزاد، رایگان و متن‌باز مدیریت اشتراک VLESS، Trojan و پروکسی رسمی تلگرام روی شبکهٔ ابری کلادفلر**  
 *Free & Open-Source Serverless VLESS, Trojan, Fragment, Smart ISP Advisor, Live Monochrome Telemetry, Private DoH & Official Telegram Web Proxy Panel on Cloudflare Workers & Pages*
 
-[![Version](https://img.shields.io/badge/Version-2.5.1-111111?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/Version-2.5.2-111111?style=flat-square)](#)
 [![Runtime](https://img.shields.io/badge/Cloudflare-Workers%20%26%20Pages-111111?style=flat-square)](#)
 [![License](https://img.shields.io/badge/Free%20%26%20Open--Source-Not%20For%20Sale-14532d?style=flat-square)](#اطلاعیه-مهم-رایگان-و-غیرقابل-فروش)
 
 </div>
 
-[یادداشت انتشار V2.5.1 / Release Notes](RELEASE_NOTES_v2.5.1.md) · [مخزن رسمی / Official Repository](https://github.com/youdidking/NightLine)
+[یادداشت انتشار V2.5.2 / Release Notes](RELEASE_NOTES_v2.5.2.md) · [یادداشت V2.5.1](RELEASE_NOTES_v2.5.1.md) · [مخزن رسمی / Official Repository](https://github.com/youdidking/NightLine)
 
 ---
 
@@ -21,7 +21,7 @@
 
 ---
 
-## پیش‌نمایش محیط پنل (Screenshots — V2.5.1)
+## پیش‌نمایش محیط پنل (Screenshots — V2.5.2)
 
 ### ۱. پیشخوان مدیریت — تم روزنامهٔ روشن (فارسی) با نوار شناسایی IP/اپراتور و نوسان‌نگار تک‌رنگ سرعت
 ![NIGHTLINE Dashboard Light FA](docs/screenshots/01-dashboard-light-fa.png)
@@ -29,10 +29,10 @@
 ### ۲. پیشخوان مدیریت — تم تاریک (انگلیسی) با مخفی‌سازی IP (`BLUR`) و نمودار هاشورخوردهٔ مصرف مشترکین
 ![NIGHTLINE Dashboard Dark EN](docs/screenshots/02-dashboard-dark-en.png)
 
-### ۳. مشاور هوشمند اینترنت مرورگر (`Smart ISP Advisor`) و اعمال خودکار تنظیمات اپراتور
+### ۳. مشاور محتاط اینترنت مرورگر و سنجش محدود آپلود/دانلود تا Worker
 ![NIGHTLINE Smart ISP Advisor](docs/screenshots/07-smart-isp-advisor.png)
 
-### ۴. تنظیمات شبکه، پورت‌ها، اسکنر زندهٔ IP تمیز در مرورگر و پروکسی رسمی تلگرام
+### ۴. رنج‌های رسمی Cloudflare، نمونه‌گیری IPهای نامزد و پروکسی رسمی تلگرام
 ![NIGHTLINE Network Scanner & Telegram Web Proxy](docs/screenshots/03-network-scanner-tgproxy.png)
 
 ### ۵. صفحهٔ اختصاصی هر مشترک (`/sub/<token>`) و راهنمای سرور DoH اختصاصی (`/dns-query/<token>`)
@@ -46,6 +46,10 @@
 ![NIGHTLINE Login Dark EN](docs/screenshots/09-login-dark-en.png)
 
 ---
+
+## نسخهٔ `V2.5.2`
+
+بهبود عملکرد کلی.
 
 ## نسخهٔ `V2.5.1`
 
@@ -64,24 +68,36 @@
 
 ### امکانات پایه از نسخه‌های پیشین
 
-- **مشاور هوشمند اینترنت مرورگر و تنظیم خودکار (`Smart Browser ISP Advisor`):** بررسی زندهٔ وضعیت دسترسی مستقیم مرورگر شما به گوگل، سرویس‌های هوش مصنوعی (`ChatGPT`, `Claude`, `Gemini`)، گیت‌هاب، شبکه‌های اجتماعی (`YouTube`, `Telegram`, `X`)، سرورهای `DoH` و پورت‌های جایگزین کلادفلر؛ تشخیص نوع محدودیت اپراتور و اعمال خودکار بهینه‌ترین تنظیمات Fragment، پورت و مسیریابی با یک کلیک.
+- **مشاور اینترنت مرورگر (`Smart Browser ISP Advisor`):** مشاهدهٔ پاسخ شبکهٔ میزبان‌ها و سنجش نمونهٔ ۱۲۸ کیلوبایتی آپلود/دانلود تا خود Worker. پاسخ مبهم به معنی فیلتر قطعی یا تحریم نیست؛ پورت‌های آزمایش‌نشده باز فرض نمی‌شوند. تنها پیشنهادهای دارای پشتوانه با تأیید مدیر ذخیره می‌شوند؛ تغییرات سازگار با URI مانند Early Data و ALPN در لینک موجود Normal منعکس می‌شوند، نه Fragment واقعی.
 - **تشخیص خودکار IP، کشور و اپراتور بازدیدکننده + کلید مخفی‌سازی (`BLUR`):** نمایش فوری آدرس IP، کشور/شهر، اپراتور اینترنت (همراه اول، ایرانسل، مخابرات، شاتل، آسیاتک، رایتل و...) و دیتاسنتر کلادفلر به محض ورود به پنل همراه با دکمهٔ محوسازی آنی IP (`BLUR / SHOW`).
 - **تلگراف و نمودار زندهٔ تک‌رنگ (`Monochrome Live Speed, RTT & Quota Chart`):** نوسان‌نگار ۶۰ فریم‌برثانیهٔ سرعت انتقال لبه (`Mbps`)، پینگ و جیتر (`ms`) + تست سرعت لحظه‌ای (`Burst Speed Test`) و نمودار ستونی هاشورخوردهٔ مصرف مشترکین، کاملاً وفادار به پالت تک‌رنگ روزنامه در هر دو تم روشن و تاریک.
-- **سیستم آیکون‌های برداری اختصاصی و فیزیک دکمه‌های سایه‌ثابت:** حذف کامل ایموجی‌ها و جایگزینی با آیکون‌های برداری تک‌رنگ (`SVG Sprite`) و انیمیشن نرم دکمه‌ها با سایهٔ کاملاً ثابت روی کاغذ هنگام کلیک.
+- **سیستم آیکون‌های برداری اختصاصی و فیزیک دکمه‌های سایه‌ثابت:** حذف ایموجی‌ها از رابط کاربری (به‌جز پرچم در نام نودهای اشتراک) و جایگزینی با آیکون‌های برداری تک‌رنگ (`SVG Sprite`) و انیمیشن نرم دکمه‌ها با سایهٔ کاملاً ثابت روی کاغذ هنگام کلیک.
 - **دو پروتکل همزمان بدون نیاز به سرور مجازی:** پشتیبانی همزمان از **VLESS** و **Trojan** روی WebSocket با مصرف پردازندهٔ بهینه‌شده برای پلن رایگان کلادفلر (`Free Tier`).
 - **پروکسی رسمی تلگرام (`Telegram Web Proxy`):** پیاده‌سازی کامل پروتکل رسمی `tg://webproxy` (مبتنی بر MTProto سرتاسری) برای اتصال یک‌ضرب در **Telegram Desktop** و **Telegram Android** بدون نیاز به روشن کردن فیلترشکن.
 - **مدیریت چندکاربره با فضای `KV`:** تعریف تا ۲۰۰ مشترک مجزا با سقف حجم مصرفی (`GB`)، تاریخ انقضا، شمارش اعتبار از **اولین اتصال واقعی (`Start on First Connect`)**، توقف موقت، ریست ترافیک و تعویض یک‌کلیکی کلیدها.
 - **خروجی هوشمند چندکلاینته با یک لینک واحد:** تشخیص خودکار برنامه و تولید کانفیگ استاندارد برای **v2rayNG**، **MahsaNG**، **v2rayN**، **Hiddify**، **Sing-box**، **Clash Meta / Mihomo**، **Streisand** و **Shadowrocket**.
-- **رفع کامل محدودیت سایت‌های پشت کلادفلر (مانند `speedtest.net`) و سرور `Private DoH`:** مجهز به بافر بازپخش چندفریمی (`Multi-Frame Replay`)، لیست `ProxyIP` و `NAT64` و سرور اختصاصی `/dns-query/<token>` سازگار با `RFC 8484` و `JSON DNS`.
+- **بهبود سازگاری با برخی سایت‌های پشت کلادفلر (مانند `speedtest.net`) و سرور `Private DoH`:** مجهز به بافر بازپخش چندفریمی (`Multi-Frame Replay`)، لیست `ProxyIP` و `NAT64` و سرور اختصاصی `/dns-query/<token>` سازگار با `RFC 8484` و `JSON DNS`.
 
 ---
 
-## راهنمای سقف روزانهٔ Cloudflare و توکن API (`V2.5.0`)
+## راهنمای سقف روزانهٔ Cloudflare و توکن API
 
-1. در پنل، روی نشان **سقف روزانه CF** کلیک کنید و سپس گزینهٔ «دسترسی‌های موردنیاز» را باز کنید. برای ساخت توکن وارد [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) شوید و **Create Custom Token** را بزنید.
-2. در محدودهٔ **حساب خودتان** این دسترسی‌ها را به توکن بدهید: `Account · Account Analytics · Read` برای نمودار تعداد درخواست‌ها؛ `Account · Account Settings · Read` برای پیدا کردن شناسهٔ حساب؛ و اگر قصد بروزرسانی درون پنل دارید، `Account · Workers Scripts · Edit` نیز برای ورکر مقصد. سطح `Edit` برای **فقط خواندن سهمیه** لازم نیست. به [راهنمای رسمی ساخت توکن](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) مراجعه کنید.
-3. توکن را در کادر پنل بچسبانید، نام دقیق ورکر را (اگر خودکار تشخیص داده نشد) وارد کنید و **بررسی اتصال توکن** و سپس **ذخیره و فعال‌سازی** را بزنید. درخواست‌های GraphQL امروز و نام حساب به‌طور زنده بررسی می‌شوند. توکن در `KV` همان پنل ذخیره می‌شود، نه در URL یا خروجی عمومی. برای قطع دسترسی از همین پنجره توکن را حذف یا از داشبورد Cloudflare باطل کنید.
-4. عدد **۱۰۰٬۰۰۰ درخواست در روز** یک **آستانهٔ پیش‌فرض قابل تنظیم برای نمایش در پنل** است، نه تضمین سقف رسمی یا باقی‌ماندهٔ واقعی پلن Cloudflare شما. عدد نمایش‌داده‌شده مجموع درخواست‌های ورکرهای حساب در روز جاری UTC است؛ آمار Cloudflare ممکن است با تأخیر به‌روزرسانی شود. شمارنده در `00:00 UTC` بازنشانی می‌شود و داده‌ها برای کاهش فراخوانی API حدود ۴۵ ثانیه در حافظه ذخیره می‌گردند.
+1. از نشان **سقف روزانه CF** در پنل وارد راهنمای توکن شوید. تمپلیت رسمی و ازپیش‌پرشدهٔ [فقط خواندن آمار و تنظیمات](https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=NIGHTLINE%20Analytics) فقط `Account Analytics: Read` و `Account Settings: Read` دارد. اگر **بروزرسانی مستقیم Worker** می‌خواهید، تمپلیت [به‌علاوهٔ Workers Scripts: Edit](https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=*&zoneId=all&name=NIGHTLINE%20Analytics%20and%20Self-Update) را به‌صورت اختیاری انتخاب کنید.
+2. در **داشبورد خود Cloudflare** حساب مورد نظر و دامنهٔ دسترسی را بازبینی و تأیید کنید؛ توکن در همان داشبورد به خودتان نمایش داده می‌شود و به‌طور خودکار به پنل ارسال نمی‌شود. [مستندات رسمی تمپلیت توکن](https://developers.cloudflare.com/fundamentals/api/how-to/account-owned-token-template/) و [راهنمای ساخت توکن](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) را ببینید.
+3. توکن را شخصاً در کادر پنل وارد کنید، نام دقیق Worker را (اگر تشخیص داده نشد) بنویسید و **بررسی اتصال توکن**، سپس **ذخیره و فعال‌سازی** را بزنید. توکن در `KV` همین پنل ذخیره و فقط مقدار پوشیده‌شده به UI برمی‌گردد؛ برای قطع دسترسی، آن را از پنل حذف یا در Cloudflare باطل کنید.
+4. عدد پیش‌فرض **۱۰۰٬۰۰۰ درخواست/روز** یک آستانهٔ قابل‌تغییر برای نمایش است؛ طرح Free در مستندات Cloudflare سقف روزانهٔ متعلق به **اکانت** دارد، نه هر توکن. آمار گراف‌کیوال حساب ممکن است با تأخیر برسد و مقدار نمایش‌داده‌شده لزوماً باقی‌ماندهٔ قابل‌مصرف را تضمین نمی‌کند.
+
+### چند حساب Cloudflare
+
+چند توکن یا چند Worker زیر یک حساب، سقف همان حساب را جمع نمی‌کنند. چند حساب مستقل ممکن است سهمیهٔ مستقل داشته باشند، اما سهمیه‌ها به یک Worker یا `KV` مشترک منتقل نمی‌شوند؛ استقرارهای مستقل به مدیریت کلید/داده/دامنه و هماهنگی جداگانه نیاز دارند. بهینه‌سازی تعداد درخواست یا طرح پولی ساده‌تر است؛ قوانین Cloudflare را رعایت کنید.
+
+### اسکن رنج رسمی و معنای کد کشور
+
+رنج‌های IPv4/IPv6 از [API عمومی رسمی Cloudflare](https://api.cloudflare.com/client/v4/ips) از طریق خود Worker دریافت می‌شوند. تعداد آدرس هر CIDR و امکان انتخاب **۰ تا ۱۲ نمونه برای هر رنج** (مجموع حداکثر **۴۸**) در تب شبکه نمایش دارد. GeoIP با استعلام IP از سرویس شخص ثالث `ipwho.is` کد کشورِ **تقریبی** می‌دهد؛ این کد مکان قطعی Edge در شبکهٔ Anycast نیست. برچسب `#US|Scan` هنگام ذخیره فقط نام نود اشتراک را به‌شکل `🇺🇸 US · IP` نمایش می‌دهد. IP خام در مرورگر به‌دلیل TLS/SNI قابل تأیید قطعی برای دامنهٔ Worker نیست؛ فقط نامزد را در کلاینت واقعی آزمایش و بعد منتشر کنید. نتیجهٔ مشاور شبکهٔ مدیر را نباید به همهٔ مشترکان تعمیم داد.
+
+### محدودیت روش‌های SNI و MITM
+
+[SNI-Spoofing](https://github.com/patterniha/SNI-Spoofing) و [MITM-DomainFronting](https://github.com/patterniha/MITM-DomainFronting) به دست‌کاری محلی اتصال یا نصب CA مورد اعتماد کاربر متکی‌اند؛ تنظیم قابل‌اعمال روی یک Worker نیستند. ناهماهنگی Host/SNI در لبهٔ Cloudflare ممکن است با HTTP 421 رد شود؛ بنابراین این روش‌ها در پنل به‌عنوان قابلیت ادعایی اضافه نشده‌اند. خروجی `?format=xray` همچنان **JSON** است و Normal فقط تنظیمات قابل‌انتقال در URI استاندارد را حمل می‌کند.
 
 ### بروزرسانی با یک کلیک از مخزن رسمی (فقط Workers)
 
@@ -167,7 +183,8 @@ npm run dev
 
 | برنامه / پلتفرم | لینک پیشنهادی برای کپی از پنل | توضیح |
 | :--- | :--- | :--- |
-| **v2rayNG / MahsaNG / v2rayN** (با ضد فیلتر Fragment) | دکمهٔ **اشتراک Fragment (Xray)** | لینک را در بخش *Subscription Group* برنامه اضافه و آپدیت کنید. |
+| **برنامه‌های سازگار با Xray JSON** (Fragment) | دکمهٔ **اشتراک Fragment (Xray)** | خروجی، فایل کانفیگ JSON است؛ در کلاینتی که واردکردن کانفیگ کامل را می‌پذیرد استفاده کنید. URI معمول Fragment واقعی را منتقل نمی‌کند. |
+| **v2rayNG / MahsaNG / v2rayN** (لینک‌های استاندارد) | دکمهٔ **اشتراک عمومی (Base64 / Normal)** | لینک را به گروه اشتراک استاندارد برنامه بدهید؛ تنظیمات سازگار با URI پس از ذخیره اعمال می‌شوند. |
 | **Hiddify / Sing-box** (اندروید، ویندوز، iOS، مک) | دکمهٔ **اشتراک Sing-box / Hiddify** | شامل پروفایل کامل مسیریابی ایران و انتخاب خودکار سریع‌ترین نود. |
 | **Clash Meta / Mihomo / FlClash** | دکمهٔ **اشتراک Clash / Mihomo** | فایل YAML کامل با گروه `Auto Best` و قوانین مسیریابی. |
 | **Streisand / V2Box / Shadowrocket / کلاینت‌های عمومی** | دکمهٔ **اشتراک عمومی (Base64)** | سازگار با تمامی برنامه‌های استاندارد VLESS و Trojan. |
@@ -178,7 +195,7 @@ npm run dev
 
 ## Quick Start (English)
 
-**NIGHTLINE v2.5.1** is a 100% free, non-commercial, open-source serverless panel for **Cloudflare Workers & Pages**, combining **VLESS + Trojan over WebSocket**, **Xray & Sing-box TLS Fragmentation**, **Official Telegram Web Proxy (`tg://webproxy`)**, **Smart Browser ISP Advisor & 1-Click Auto-Tuner**, **Visitor IP/Country/ISP Detection with Privacy Blur**, **Dynamic Monochrome Telemetry & Quota Charts**, and **RFC 8484 Private DoH**.
+**NIGHTLINE v2.5.2** is a 100% free, non-commercial, open-source serverless panel for **Cloudflare Workers & Pages**, combining **VLESS + Trojan over WebSocket**, **Xray & Sing-box TLS Fragmentation**, **Official Telegram Web Proxy (`tg://webproxy`)**, **Conservative Browser ISP Advisor with bounded Worker upload/download probes**, **Visitor IP/Country/ISP Detection with Privacy Blur**, **Dynamic Monochrome Telemetry & Quota Charts**, and **RFC 8484 Private DoH**.
 
 1. **Create a KV Namespace** in your Cloudflare Dashboard (`Storage & Databases → KV`) named `nightline-kv`.
 2. **Create a Worker** (`Workers & Pages → Create → Start with Hello World! → Deploy → Edit code`), replace the editor contents with **`worker-single-file.js`**, and click **Deploy**.
@@ -187,7 +204,7 @@ npm run dev
 5. **Optional daily request counter:** Open **CF Daily** in the dashboard and create a scoped Cloudflare API Token with `Account Analytics: Read` and `Account Settings: Read`. Add `Workers Scripts: Edit` **only** if you want in-panel Worker updates. Verify and save the token in the panel. The default `100,000` is an editable **display threshold, not an assertion of your account's official Cloudflare plan limit**; the counter measures the account's UTC-day Worker requests.
 6. **Optional Worker updater:** Open **Update**, check [`youdidking/NightLine`](https://github.com/youdidking/NightLine), confirm your target Worker name, and apply. The deployment preserves existing bindings and compatibility settings; make a backup first. **Pages users** should redeploy the new `nightline-pages.zip` instead. A published Worker bundle is required for this action.
 
-Developers: run `npm ci && npm run build && npm test` (install Playwright Chromium and OS dependencies first when needed). The `15/15` E2E suites use local mock Cloudflare/GitHub APIs for token, quota, and updater flows; they do not make changes to a production Cloudflare account.
+Developers: run `npm ci && npm run build && npm test` (install Playwright Chromium and OS dependencies first when needed). The `15/15` E2E suites use local mock Cloudflare/GitHub APIs and a captured official CIDR fixture for token, quota, and updater flows; they do not make changes to a production Cloudflare account.
 
 ---
 

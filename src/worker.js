@@ -53,6 +53,8 @@ import { getInlineAssets, getPanelHtml } from './generated/ui.js';
 const SESSION_COOKIE = 'nl_sess';
 const SESSION_TTL_MS = 7 * 86_400_000;
 const MAX_JSON_BODY_BYTES = 2 * 1024 * 1024;
+const CF_IP_RANGES_URL = 'https://api.cloudflare.com/client/v4/ips';
+let cfIpRangesCache = null;
 const FAVICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#141311"/><rect x="4" y="4" width="56" height="56" fill="none" stroke="#f2ede3" stroke-width="2"/><text x="32" y="45" text-anchor="middle" font-family="monospace" font-weight="700" font-size="36" fill="#f2ede3">N</text></svg>';
 
@@ -338,6 +340,29 @@ async function handleApi(request, url, env, runtime) {
     });
   }
 
+  // ---- POST /api/speed-probe (bounded same-origin upload observation) ----
+  if (path === '/api/speed-probe' && method === 'POST') {
+    const maxBytes = 131072;
+    const declared = Number(request.headers.get('content-length') || 0);
+    if (declared > maxBytes) return json({ ok: false, error: 'Probe too large' }, 413);
+    const reader = request.body?.getReader();
+    if (!reader) return json({ ok: false, error: 'Empty upload probe' }, 400);
+    let received = 0;
+    try {
+      while (received <= maxBytes) {
+        const { value, done } = await reader.read();
+        if (done) return json({ ok: true, receivedBytes: received });
+        received += value?.byteLength || 0;
+      }
+      await reader.cancel();
+      return json({ ok: false, error: 'Probe too large' }, 413);
+    } catch {
+      return json({ ok: false, error: 'Upload probe failed' }, 400);
+    } finally {
+      try { reader.releaseLock(); } catch {}
+    }
+  }
+
   // ---- GET /api/bootstrap ----
   if (path === '/api/bootstrap' && method === 'GET') {
     const authed = await isAuthenticated(request, runtime);
@@ -496,6 +521,32 @@ async function handleApi(request, url, env, runtime) {
   }
 
   const state = await loadRuntimeState(env, true);
+
+  // ---- GET /api/cf/ip-ranges: official public Cloudflare CIDRs, no CF token ----
+  if (path === '/api/cf/ip-ranges' && method === 'GET') {
+    if (cfIpRangesCache && Date.now() - cfIpRangesCache.fetchedAt < 6 * 3600_000) {
+      return json({ ok: true, ...cfIpRangesCache, cached: true });
+    }
+    // Only the local E2E harness sets this override; production uses Cloudflare's public API.
+    const feedUrl = env?.NL_CF_IP_RANGES_TEST_URL || CF_IP_RANGES_URL;
+    const upstream = await fetchJsonWithTimeout(feedUrl, {}, 6500);
+    const raw = upstream.data?.result;
+    const ipv4 = Array.isArray(raw?.ipv4_cidrs) ? raw.ipv4_cidrs.filter((cidr) => {
+      const parts = String(cidr).split('/');
+      const bytes = parts[0].split('.').map(Number);
+      return parts.length === 2 && bytes.length === 4 && bytes.every((x) => Number.isInteger(x) && x >= 0 && x < 256) &&
+        /^(?:[0-9]|[12][0-9]|3[0-2])$/.test(parts[1]);
+    }).slice(0, 48) : [];
+    const ipv6 = Array.isArray(raw?.ipv6_cidrs) ? raw.ipv6_cidrs.filter((cidr) =>
+      /^[0-9a-f:]+\/(?:\d{1,2}|1[01]\d|12[0-8])$/i.test(String(cidr)) && String(cidr).includes(':')
+    ).slice(0, 32) : [];
+    if (!upstream.ok || upstream.data?.success !== true || !ipv4.length || !ipv6.length) {
+      if (cfIpRangesCache) return json({ ok: true, ...cfIpRangesCache, cached: true, stale: true });
+      return json({ ok: false, error: 'منبع رسمی رنج‌های کلادفلر در دسترس نیست؛ هیچ رنج حدسی جایگزین نشد.' }, 502);
+    }
+    cfIpRangesCache = { ipv4, ipv6, source: feedUrl, etag: String(raw.etag || ''), fetchedAt: Date.now() };
+    return json({ ok: true, ...cfIpRangesCache, cached: false });
+  }
 
   // ---- POST /api/killswitch ----
   if (path === '/api/killswitch' && method === 'POST') {

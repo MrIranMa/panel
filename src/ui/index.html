@@ -117,8 +117,8 @@
           <span class="en">CLOUDFLARE API TOKEN</span>
         </label>
         <div class="cf-help-links">
-          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">
-            <span class="fa">ساخت توکن در کلادفلر</span><span class="en">Create API Token</span>
+          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics" target="_blank" rel="noopener noreferrer" id="cf-template-quick">
+            <span class="fa">تمپلیت آمادهٔ توکن آماری</span><span class="en">PRE-FILLED READ-ONLY TOKEN</span>
             <svg class="ic ic-sm"><use href="#i-external"/></svg>
           </a>
           <span>·</span>
@@ -133,17 +133,19 @@
       <div class="perm-popover" id="cf-perm-popover" hidden>
         <div class="stat-strip" style="margin-bottom:6px">
           <strong style="font-size:12px">
-            <span class="fa">راهنمای ساخت توکن کمینه در کلادفلر</span>
-            <span class="en">Minimal Cloudflare Token Permissions</span>
+            <span class="fa">تمپلیت‌های کمینهٔ توکن کلادفلر</span>
+            <span class="en">Pre-filled Cloudflare Token Templates</span>
           </strong>
           <button class="inline-link-btn" id="btn-cf-guide-close" type="button">
             <svg class="ic ic-sm"><use href="#i-x"/></svg>
           </button>
         </div>
-        <p style="margin:0 0 6px;font-size:11.5px;line-height:1.65;color:var(--ink-soft)">
-          <span class="fa">در صفحهٔ <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">API Tokens کلادفلر</a> گزینهٔ <code>Create Custom Token</code> را بزنید و این دسترسی‌ها را بدهید:</span>
-          <span class="en">Open <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">Cloudflare API Tokens</a> → <code>Create Custom Token</code> and add:</span>
-        </p>
+        <p class="hint" style="margin:0 0 8px"><span class="fa">روی یکی از تمپلیت‌های رسمی Cloudflare بزنید. دسترسی‌ها از قبل پر شده‌اند؛ حساب مورد نظر را در داشبورد انتخاب کنید، مجوزها را مرور و تأیید کنید و توکنِ نمایش‌داده‌شده را فقط خودتان در کادر زیر وارد کنید. هیچ توکنی از داشبورد به‌صورت خودکار به پنل منتقل نمی‌شود.</span><span class="en">Open an official pre-filled Cloudflare template. Select your account, review permissions and confirm in your own dashboard; copy the displayed token here yourself. No token is silently sent back to this panel.</span></p>
+        <div class="token-templates">
+          <a class="btn ghost sm-btn" id="cf-template-read" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-key"/></svg><span class="fa">فقط آمار و تنظیمات (پیشنهادی)</span><span class="en">ANALYTICS ONLY (RECOMMENDED)</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+          <a class="btn ghost sm-btn" id="cf-template-update" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-cloud-up"/></svg><span class="fa">به‌علاوهٔ مجوز آپدیت Worker (اختیاری)</span><span class="en">+ WORKER SELF-UPDATE (OPTIONAL)</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+        </div>
+        <p class="hint" style="margin:9px 0 6px"><span class="fa">مجوزهای داخل تمپلیت:</span><span class="en">Permissions preselected by the template:</span></p>
         <ul class="perm-list">
           <li><code>Account · Account Analytics · Read</code> — <span class="fa">الزامی برای خواندن آمار روزانه</span><span class="en">Required for daily request count</span></li>
           <li><code>Account · Account Settings · Read</code> — <span class="fa">تشخیص خودکار شناسه اکانت</span><span class="en">Auto-detect Account ID</span></li>
@@ -481,15 +483,6 @@
       </div>
     </div>
 
-    <a class="sponsor-telegram" id="sponsor-telegram" href="https://t.me/BlueKnight_Net" target="_blank" rel="noopener noreferrer">
-      <span class="sponsor-icon" aria-hidden="true"><svg class="ic"><use href="#i-telegram"/></svg></span>
-      <span class="sponsor-copy">
-        <span class="sponsor-kicker"><i class="sponsor-pulse" aria-hidden="true"></i><span class="fa">حامی این شماره · کانال تلگرام</span><span class="en">SPONSORED CHANNEL · TELEGRAM</span></span>
-        <strong class="sponsor-name mono" dir="ltr">@BlueKnight_Net</strong>
-      </span>
-      <span class="sponsor-action"><span class="fa">مشاهدهٔ کانال</span><span class="en">OPEN CHANNEL</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></span>
-    </a>
-
     <figure class="figure">
       {{SKYLINE}}
       <figcaption>
@@ -561,6 +554,11 @@
 
   <!-- ═════════════════════ VIEW 4: FULL ADMIN PANEL ══════════════════════ -->
   <section id="v-admin" hidden>
+    <a class="sponsor-float" id="sponsor-telegram" href="https://t.me/BlueKnight_Net" target="_blank" rel="noopener noreferrer" aria-label="Telegram sponsor · BlueKnight_Net" title="Telegram · @BlueKnight_Net">
+      <svg class="ic sponsor-float-icon" aria-hidden="true"><use href="#i-telegram"/></svg>
+      <span class="sponsor-live" aria-hidden="true"></span>
+      <span class="sponsor-float-tip" aria-hidden="true">@BlueKnight_Net</span>
+    </a>
 
     <!-- Status Ledger Bar -->
     <div class="ledger-bar">
@@ -762,8 +760,8 @@
             </a>
           </div>
           <p class="hint">
-            <span class="fa">نکته: لینکِ اول (عمومی) User-Agent برنامه را خودکار تشخیص می‌دهد. برای فعال شدن Fragment در v2rayNG / MahsaNG / v2rayN حتماً از دکمهٔ <strong>اشتراک Fragment</strong> استفاده کن.</span>
-            <span class="en">Tip: For DPI Fragment in v2rayNG / MahsaNG / v2rayN, import the <strong>Fragment Sub (Xray)</strong> URL as a subscription.</span>
+            <span class="fa">Normal تنظیمات سازگار با URI مانند IP، پورت، مسیر WS و اثرانگشت TLS را می‌برد. خروجی Fragment همچنان JSON مخصوص کلاینت سازگار است؛ URI استاندارد حامل قابل‌اتکای Fragment واقعی نیست. تغییرات مشاور پس از «اعمال و ذخیره» روی لینک Normal منتشر می‌شوند.</span>
+            <span class="en">Normal carries URI-compatible IP, port, WS path and TLS fingerprint settings. Fragment remains a separate JSON config for compatible clients; a standard URI cannot reliably carry true Fragment. Advisor changes reach Normal after Apply &amp; Save.</span>
           </p>
 
           <div class="tg-box mt-auto" id="dash-tg-box">
@@ -803,6 +801,38 @@
           <div class="node-list" id="admin-nodes" style="flex:1;max-height:380px"></div>
         </div>
       </div>
+
+      <section class="card client-directory" aria-label="Official client sources">
+        <p class="kicker"><svg class="ic"><use href="#i-external"/></svg><span class="fa">منابع رسمی برنامه‌ها، دسته‌بندی‌شده بر اساس سیستم‌عامل</span><span class="en">OFFICIAL CLIENT SOURCES BY OPERATING SYSTEM</span></p>
+        <p class="hint"><span class="fa">لینک‌ها به مخزن خودِ توسعه‌دهنده می‌روند؛ برنامه‌های بستهٔ iOS به صفحهٔ رسمی App Store پیوند دارند و بعضی ممکن است پولی باشند. نصب از منابع متفرقه توصیه نمی‌شود. سازگاری فرمت اشتراک را در همان برنامه بررسی کنید.</span><span class="en">Links open the developer's repository; closed-source iOS apps link to their official App Store listing and may be paid. Avoid unofficial downloads; verify subscription format compatibility in each app.</span></p>
+        <div class="client-os-grid">
+          <div class="client-os"><h3>Windows</h3><div class="client-links">
+            <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+          </div></div>
+          <div class="client-os"><h3>Linux</h3><div class="client-links">
+            <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/SagerNet/sing-box" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_SINGBOX}}" width="23" height="23" alt="" loading="lazy"><span>sing-box CLI</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+          </div></div>
+          <div class="client-os"><h3>Android</h3><div class="client-links">
+            <a class="client-link" href="https://github.com/2dust/v2rayNG" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYNG}}" width="23" height="23" alt="" loading="lazy"><span>v2rayNG</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+          </div></div>
+          <div class="client-os"><h3>macOS</h3><div class="client-links">
+            <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+          </div></div>
+          <div class="client-os"><h3>iOS / iPadOS</h3><div class="client-links">
+            <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://apps.apple.com/us/app/shadowrocket/id932747118" target="_blank" rel="noopener noreferrer"><span class="client-store mono" aria-hidden="true">STORE</span><span>Shadowrocket</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+            <a class="client-link" href="https://apps.apple.com/us/app/streisand/id6450534064" target="_blank" rel="noopener noreferrer"><span class="client-store mono" aria-hidden="true">STORE</span><span>Streisand</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+          </div></div>
+        </div>
+      </section>
     </div>
 
     <!-- ─────────────────── TAB 2: SUBSCRIBERS ─────────────────── -->
@@ -993,13 +1023,13 @@
 
           <div class="mt-auto" style="padding-top:0">
             <label class="fld-label" for="s-custom-domains">
-              <span class="fa">دامنه‌های سفارشی متصل به ورکر (Custom Domains — هر ۶ پورت TLS و ۷ پورت HTTP فعال می‌شوند)</span>
-              <span class="en">CUSTOM DOMAINS (UNLOCKS ALL 6 TLS + 7 HTTP PORTS)</span>
+              <span class="fa">دامنه‌های سفارشی متصل به ورکر (پورت‌های انتخابی بالا؛ هر پورت باید جداگانه آزمایش شود)</span>
+              <span class="en">CUSTOM DOMAINS (SELECTED PORTS; VERIFY EACH PORT IN A REAL CLIENT)</span>
             </label>
             <textarea id="s-custom-domains" style="min-height:76px" placeholder="sub.yourdomain.com"></textarea>
             <p class="hint" style="margin-top:8px">
-              <span class="fa">روی همراه اول و ایرانسل که <code>tlshello</code> بسته شده، حالت <code>1-1</code> با طول <code>10-20</code> و اثرانگشت <code>chrome</code> یا <code>randomized</code> پایدارترین اتصال را می‌سازد.</span>
-              <span class="en">Packet mode <code>1-1</code> with length <code>10-20</code> bypasses strict deep-packet SNI inspection.</span>
+              <span class="fa">مقادیر Fragment فقط در کانفیگ JSON کلاینت سازگار معنا دارند؛ بسته به شبکه و برنامه امتحان کنید، نه به‌عنوان راه‌حل قطعی. اشتراک Normal همچنان URI استاندارد است و Fragment واقعی را حمل نمی‌کند.</span>
+              <span class="en">Fragment settings apply to compatible JSON client configs. Test them per network and app; no bypass is guaranteed. Standard Normal URIs do not carry actual Fragment settings.</span>
             </p>
           </div>
         </div>
@@ -1008,8 +1038,8 @@
         <div class="card">
           <p class="kicker"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">IPها و دامنه‌های تمیز کلادفلر + اسکنرِ مرورگر</span><span class="en">CLEAN IPs, DOMAINS &amp; BROWSER SCANNER</span></p>
           <label class="fld-label" for="s-cleanips">
-            <span class="fa">فهرست IP / دامنهٔ تمیز شما (هر خط یک مورد — مثلاً <code>172.67.73.163#MCI</code> یا <code>www.speedtest.net#Speedtest</code>)</span>
-            <span class="en">YOUR CLEAN IPs / DOMAINS (ONE PER LINE, OPTIONAL #REMARK)</span>
+            <span class="fa">فهرست IP / دامنهٔ شما (هر خط یک مورد؛ کد تقریبی کشور برای نام نود: <code>172.67.73.163#US|MCI</code>)</span>
+            <span class="en">YOUR IPs / DOMAINS (ONE PER LINE; APPROX. COUNTRY TAG: <code>172.67.73.163#US|MCI</code>)</span>
           </label>
           <textarea id="s-cleanips" style="flex:1;min-height:120px"></textarea>
 
@@ -1020,16 +1050,25 @@
             </button>
             <button class="btn ghost sm-btn" id="btn-prune-clean" type="button" hidden>
               <svg class="ic ic-sm"><use href="#i-check"/></svg>
-              <span class="fa">نگه‌داشتن فقط سالم‌ها</span><span class="en">KEEP &amp; SORT HEALTHY</span>
+              <span class="fa">اولویت‌بندی پاسخگوها (بدون حذف IP)</span><span class="en">PRIORITIZE RESPONSES (KEEP IPs)</span>
             </button>
             <button class="btn ghost sm-btn" id="btn-scan-clean" type="button">
               <svg class="ic ic-sm"><use href="#i-radar"/></svg>
-              <span class="fa">اسکن رنج‌های پیشنهادی کلادفلر</span><span class="en">SCAN CF PRESET RANGES</span>
+              <span class="fa">رنج‌های رسمی کلادفلر</span><span class="en">OFFICIAL CF RANGES</span>
             </button>
             <button class="btn ghost sm-btn" id="btn-add-presets" type="button">
               <svg class="ic ic-sm"><use href="#i-plus"/></svg>
               <span class="fa">افزودن منتخب‌ها</span><span class="en">ADD PRESETS</span>
             </button>
+          </div>
+          <div class="range-panel" id="cf-ranges-panel" hidden>
+            <div class="stat-strip">
+              <strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" target="_blank" rel="noopener noreferrer">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"/></svg></a></strong>
+              <span class="mono sm" id="cf-ranges-total">—</span>
+            </div>
+            <p class="hint"><span class="fa">آدرس‌های قابل‌اختصاص هر CIDR نمایش داده نمی‌شوند؛ عدد، کل آدرس‌هاست. تعداد نمونهٔ هر رنج: ۰ تا ۱۲، مجموع حداکثر ۴۸. کشورِ GeoIP تقریبی است، نه مکان قطعی Edge. اسکن IP خام در مرورگر با TLS/SNI قادر به تأیید سالم‌بودن اتصال به ورکر نیست؛ موارد فقط نامزد آزمایش در کلاینت‌اند.</span><span class="en">Counts include all addresses per CIDR, not only usable ones. Choose 0–12 samples per range, 48 total max. GeoIP country is approximate, not a proven edge location. Raw-IP browser requests cannot verify Worker connectivity because of TLS/SNI; these are client-test candidates only.</span></p>
+            <div class="range-list" id="cf-range-list"></div>
+            <div class="actions"><button class="btn primary sm-btn" type="button" id="btn-scan-ranges"><svg class="ic ic-sm"><use href="#i-radar"/></svg><span class="fa">نمونه‌گیری و بررسی نامزدها</span><span class="en">SAMPLE &amp; PROBE CANDIDATES</span></button></div>
           </div>
           <p class="hint" id="scan-summary" hidden></p>
           <div id="scan-results" class="scan-grid" hidden></div>
@@ -1209,7 +1248,7 @@
             </button>
             <button class="btn sm-btn" id="btn-adv-apply" type="button" hidden>
               <svg class="ic ic-sm"><use href="#i-check"/></svg>
-              <span class="fa">اعمال خودکار بهترین تنظیمات روی پنل</span><span class="en">AUTO-APPLY OPTIMAL SETTINGS</span>
+              <span class="fa">اعمال پیشنهادهای قابل‌اجرا و ذخیره</span><span class="en">APPLY SUPPORTED CHANGES &amp; SAVE</span>
             </button>
             <button class="btn ghost sm-btn" id="btn-adv-close-guest" type="button" hidden>
               <svg class="ic ic-sm"><use href="#i-x"/></svg>
@@ -1219,14 +1258,18 @@
         </div>
 
         <p class="labor" style="margin:8px 0 0">
-          <span class="fa">این ابزار <strong>مستقیماً از داخل مرورگر شما</strong> وضعیت دسترسی به گوگل، سرویس‌های هوش مصنوعی (ChatGPT، Claude، Gemini)، شبکه‌های فیلترشده (یوتیوب، تلگرام، X)، سرورهای DNS امن و پورت‌های کلادفلر را روی اپراتور فعلی‌تان می‌سنجد و دقیق‌ترین نسخهٔ Fragment، پورت و مسیریابی را تجویز می‌کند.</span>
-          <span class="en">Probes Google, AI platforms (ChatGPT, Claude, Gemini), social/video networks (YouTube, Telegram, X), DoH resolvers, and Cloudflare edge ports directly from your browser, then prescribes optimal Fragment, port, and routing settings for your ISP.</span>
+          <span class="fa">این ابزار از <strong>مرورگر مدیر</strong> پاسخ شبکهٔ چند میزبان را مشاهده می‌کند و مسیر آپلود و دانلود تا همین Worker را با نمونه‌های محدود می‌سنجد. درخواست‌های بدون CORS وضعیت HTTP، تحریم یا علت خطا را ثابت نمی‌کنند؛ پورتِ یک میزبان دیگر نیز سلامت دامنهٔ Worker شما را اثبات نمی‌کند. پیشنهادها برآوردند، نه تضمین شبکهٔ همهٔ مشترکان.</span>
+          <span class="en">This tool observes browser transport responses and samples upload/download to this Worker. Opaque no-CORS requests cannot reveal HTTP status, geo restrictions, or the reason for failure. A port response on a different host does not prove your Worker works there. Recommendations reflect the admin's network, not every subscriber's.</span>
         </p>
 
         <div class="adv-summary" id="adv-summary-box">
           <div class="adv-verdict" id="adv-verdict">
-            <span class="fa">برای تحلیل زندهٔ اپراتور و مشاهدهٔ سایت‌های باز، فیلترشده یا تحریمی روی اینترنت خودتان، دکمهٔ «شروع تست هوشمند اینترنت من» را بزنید.</span>
-            <span class="en">Click "RUN FULL ISP DIAGNOSTIC" to test which services open directly on your ISP and generate tailored anti-DPI settings.</span>
+            <span class="fa">برای بررسی مسیر مرورگر و آزمون محدود آپلود/دانلود تا ورکر، دکمهٔ شروع تست را بزنید؛ نتیجهٔ نامشخص به معنای فیلتر قطعی نیست.</span>
+            <span class="en">Run browser transport and bounded Worker upload/download probes. An inconclusive result does not prove a site is blocked.</span>
+          </div>
+          <div class="adv-path-metrics" id="adv-path-metrics" hidden>
+            <div><span><span class="fa">دریافت از Worker</span><span class="en">WORKER DOWNLOAD</span></span><strong class="mono" id="adv-down">—</strong></div>
+            <div><span><span class="fa">ارسال به Worker</span><span class="en">WORKER UPLOAD</span></span><strong class="mono" id="adv-up">—</strong></div>
           </div>
           <ul class="adv-recs" id="adv-recs" hidden></ul>
         </div>

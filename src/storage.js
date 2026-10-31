@@ -14,7 +14,7 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'NIGHTLINE';
-export const PANEL_VERSION = '2.5.1';
+export const PANEL_VERSION = '2.5.2';
 export const GITHUB_REPO = 'youdidking/NightLine';
 export const GITHUB_REPO_URL = 'https://github.com/youdidking/NightLine';
 export const STATE_KEY = 'nl:state:v2';
