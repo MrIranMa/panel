@@ -1,6 +1,9 @@
-/* NIGHTLINE v2.4 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.0 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
+
+  var OFFICIAL_GITHUB_REPO = 'youdidking/NightLine';
+  var OFFICIAL_GITHUB_URL = 'https://github.com/youdidking/NightLine';
 
   var $ = function (id) { return document.getElementById(id); };
   var html = document.documentElement;
@@ -68,6 +71,9 @@
       colo: '—'
     },
     settings: null,
+    cfIntegration: null,
+    cfUsage: null,
+    ghInfo: null,
     users: [],
     logs: [],
     selectedUserId: '',
@@ -77,6 +83,29 @@
   };
 
   /* ------------------------------------------------- Helpers & Typography */
+
+  function computeUserTrafficPercent(u, allUsers) {
+    var used = Math.max(0, Number(u && u.usedBytes) || 0);
+    if (used <= 0) return 0;
+    var limit = Math.max(0, Number(u && u.limitBytes) || 0);
+    if (limit > 0) {
+      return Math.min(100, Math.max(1, Math.round((used / limit) * 100)));
+    }
+    var refMax = 50 * 1073741824; // 50 GB reference scale for unlimited accounts with >0 traffic
+    if (Array.isArray(allUsers)) {
+      allUsers.forEach(function (x) {
+        if ((x.usedBytes || 0) > refMax) refMax = x.usedBytes;
+      });
+    }
+    return Math.min(100, Math.max(1, Math.round((used / refMax) * 100)));
+  }
+
+  function formatCompactCount(n) {
+    var v = Math.max(0, Number(n) || 0);
+    if (v >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(Math.round(v));
+  }
 
   function tr(fa, en) {
     return lang === 'fa' ? fa : en;
@@ -471,13 +500,10 @@
     chartMode = mode === 'usage' ? 'usage' : 'live';
     if ($('chart-mode-live')) $('chart-mode-live').classList.toggle('active', chartMode === 'live');
     if ($('chart-mode-usage')) $('chart-mode-usage').classList.toggle('active', chartMode === 'usage');
+    if ($('chart-legend-live')) $('chart-legend-live').hidden = chartMode !== 'live';
+    if ($('chart-legend-usage')) $('chart-legend-usage').hidden = chartMode !== 'usage';
     if (chartMode === 'usage') {
       usageAnimProgress = 0;
-      if ($('chart-caption-fa')) $('chart-caption-fa').textContent = 'نمودار ستونیِ هاشورخوردهٔ مصرف و سقف حجم هر مشترک — کاملاً هماهنگ با تم تک‌رنگ روزنامه';
-      if ($('chart-caption-en')) $('chart-caption-en').textContent = 'Monochrome newsprint hatched quota bars per subscriber — dynamically follows Light/Dark ink';
-    } else {
-      if ($('chart-caption-fa')) $('chart-caption-fa').textContent = 'خط ممتد: نرخ انتقال (Mbps) · خط نقطه‌چین: زمان پاسخ لبهٔ کلادفلر (ms) — کاملاً منطبق با تم تک‌رنگ روزنامه';
-      if ($('chart-caption-en')) $('chart-caption-en').textContent = 'Solid trace: Edge Throughput (Mbps) · Dashed trace: Cloudflare Edge RTT (ms) — Strictly monochrome newsprint ink';
     }
   }
 
@@ -677,10 +703,11 @@
           var bx = uPadL + idx * slotW + (slotW - barW) / 2;
           var capBytes = u.limitBytes > 0 ? u.limitBytes : maxBytes;
           var capH = Math.max(10, (capBytes / maxBytes) * plotH) * ease;
-          var usedRatio = Math.max(0.04, Math.min(1, (u.usedBytes || 0) / Math.max(1, maxBytes)));
-          var usedH = Math.max(4, usedRatio * plotH) * ease;
+          var rawUsed = Math.max(0, Number(u.usedBytes) || 0);
+          var usedRatio = rawUsed > 0 ? Math.min(1, rawUsed / Math.max(1, maxBytes)) : 0;
+          var usedH = rawUsed > 0 ? Math.max(3, usedRatio * plotH) * ease : 0;
 
-          // Quota capacity frame (dashed newsprint box)
+          // Quota capacity frame (dashed box)
           ctx.save();
           ctx.strokeStyle = inkFaint;
           ctx.lineWidth = 1;
@@ -688,25 +715,27 @@
           ctx.strokeRect(bx, padT + plotH - capH, barW, capH);
           ctx.restore();
 
-          // Used bytes solid + diagonal paper hatch bar
+          // Used bytes solid + diagonal paper hatch bar (only when usedBytes > 0)
           var by = padT + plotH - usedH;
-          ctx.fillStyle = ink;
-          ctx.fillRect(bx, by, barW, usedH);
+          if (usedH > 0) {
+            ctx.fillStyle = ink;
+            ctx.fillRect(bx, by, barW, usedH);
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(bx + 1.5, by + 1.5, Math.max(0, barW - 3), Math.max(0, usedH - 3));
-          ctx.clip();
-          ctx.strokeStyle = paper;
-          ctx.globalAlpha = 0.25;
-          ctx.lineWidth = 1;
-          for (var d = -plotH; d < barW + plotH; d += 6) {
+            ctx.save();
             ctx.beginPath();
-            ctx.moveTo(bx + d, by);
-            ctx.lineTo(bx + d - usedH, by + usedH);
-            ctx.stroke();
+            ctx.rect(bx + 1.5, by + 1.5, Math.max(0, barW - 3), Math.max(0, usedH - 3));
+            ctx.clip();
+            ctx.strokeStyle = paper;
+            ctx.globalAlpha = 0.25;
+            ctx.lineWidth = 1;
+            for (var d = -plotH; d < barW + plotH; d += 6) {
+              ctx.beginPath();
+              ctx.moveTo(bx + d, by);
+              ctx.lineTo(bx + d - usedH, by + usedH);
+              ctx.stroke();
+            }
+            ctx.restore();
           }
-          ctx.restore();
 
           // Value above bar
           ctx.fillStyle = ink;
@@ -1029,6 +1058,7 @@
       renderAdminHeader();
       renderActiveUserPass();
       renderUsersLedger();
+      syncCfQuotaUI();
     }
   }
 
@@ -1092,9 +1122,19 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.4.0',
+      version: '2.5.0',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
+      cfIntegration: {
+        hasToken: true,
+        maskedToken: '••••••••9f2a',
+        accountId: 'demo_acc_01',
+        accountName: 'Cloudflare Edge Account',
+        scriptName: 'nightline',
+        dailyLimit: 100000,
+        canEditWorkers: true,
+        tokensDashboardUrl: 'https://dash.cloudflare.com/profile/api-tokens'
+      },
       settings: {
         enableVless: true, enableTrojan: true, killSwitch: false,
         wsPath: '/', earlyData: 2048,
@@ -1120,7 +1160,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.4.0)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.0)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1170,6 +1210,67 @@
       if (path === '/api/killswitch') {
         ds.settings.killSwitch = !ds.settings.killSwitch;
         return JSON.parse(JSON.stringify(ds));
+      }
+      if (path.indexOf('/api/cf/usage') === 0) {
+        if (!ds.cfIntegration.hasToken) return { ok: false, needsToken: true, cfIntegration: ds.cfIntegration };
+        return {
+          ok: true,
+          cfIntegration: ds.cfIntegration,
+          usage: {
+            usedToday: 14280,
+            scriptRequests: 12940,
+            dailyLimit: ds.cfIntegration.dailyLimit || 100000,
+            pct: Math.round((14280 / (ds.cfIntegration.dailyLimit || 100000)) * 1000) / 10,
+            resetInSec: 31200
+          }
+        };
+      }
+      if (path === '/api/cf/config') {
+        if (body && body.action === 'clear') {
+          ds.cfIntegration.hasToken = false;
+          ds.cfIntegration.maskedToken = '';
+          return { ok: true, cleared: true, cfIntegration: ds.cfIntegration };
+        }
+        ds.cfIntegration.hasToken = true;
+        ds.cfIntegration.maskedToken = '••••••••' + String(body.token || '9f2a').slice(-4);
+        ds.cfIntegration.scriptName = body.scriptName || 'nightline';
+        ds.cfIntegration.dailyLimit = Number(body.dailyLimit) || 100000;
+        return {
+          ok: true,
+          verified: true,
+          saved: body.action !== 'verify',
+          accountName: 'Cloudflare Edge Account',
+          scriptName: ds.cfIntegration.scriptName,
+          canReadAnalytics: true,
+          canEditWorkers: true,
+          cfIntegration: ds.cfIntegration,
+          usage: { usedToday: 14280, dailyLimit: ds.cfIntegration.dailyLimit, pct: 14.3, resetInSec: 31200 }
+        };
+      }
+      if (path === '/api/update/check') {
+        return {
+          ok: true,
+          repo: OFFICIAL_GITHUB_REPO,
+          repoUrl: OFFICIAL_GITHUB_URL,
+          currentVersion: '2.5.0',
+          latestVersion: '2.5.0',
+          updateAvailable: false,
+          releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
+          releaseNotes: 'NIGHTLINE v2.5.0 — Latest release installed.',
+          cfConfigured: ds.cfIntegration.hasToken,
+          canEditWorkers: true,
+          scriptName: ds.cfIntegration.scriptName || 'nightline'
+        };
+      }
+      if (path === '/api/update/apply') {
+        return {
+          ok: true,
+          updated: true,
+          previousVersion: '2.5.0',
+          targetVersion: '2.5.0',
+          scriptName: (body && body.scriptName) || 'nightline',
+          reloadAfterMs: 1200
+        };
       }
       if (path === '/api/settings') {
         Object.assign(ds.settings, body || {});
@@ -1307,6 +1408,7 @@
       renderAdvisorSkeleton();
 
       STATE.settings = data.settings;
+      if (data.cfIntegration) STATE.cfIntegration = data.cfIntegration;
       STATE.users = data.users || [];
       STATE.logs = data.logs || [];
       $('demo-badge').hidden = !STATE.isDemo;
@@ -1320,11 +1422,18 @@
       renderUsersLedger();
       renderActivityLogs();
       updateTelemetryKpis();
+      syncCfQuotaUI();
+      syncGhUpdaterUI(data.version);
+      if (STATE.cfIntegration && STATE.cfIntegration.hasToken && !STATE.cfUsage && !cfUsageFetching) {
+        refreshCfDailyUsage(false);
+      }
 
       if (data.initialNodes && STATE.users[0] && STATE.selectedUserId === STATE.users[0].id) {
         STATE.currentNodes = data.initialNodes;
         renderActiveUserPass();
       } else {
+        STATE.currentNodes = [];
+        renderActiveUserPass();
         loadUserNodes(STATE.selectedUserId);
       }
     }
@@ -1410,16 +1519,16 @@
   function renderAdminHeader() {
     var s = STATE.settings || {};
     $('st-edge').textContent = STATE.edge;
-    $('st-kv').textContent = STATE.isDemo ? 'DEMO' : 'CONNECTED';
+    $('st-kv').textContent = STATE.isDemo ? 'DEMO' : 'OK';
     var activeCount = STATE.users.filter(function (u) { return u.status === 'active'; }).length;
-    $('st-users').textContent = activeCount + ' / ' + STATE.users.length;
+    $('st-users').textContent = activeCount + '/' + STATE.users.length;
     var totalB = STATE.users.reduce(function (acc, u) { return acc + (u.usedBytes || 0); }, 0);
     $('st-traffic').textContent = formatBytes(totalB);
 
     var killBtn = $('btn-kill');
     var killed = Boolean(s.killSwitch);
     killBtn.classList.toggle('active', killed);
-    $('kill-fa').textContent = killed ? 'تونل متوقف است (بازگشایی)' : 'کلید قطع اضطراری: خاموش';
+    $('kill-fa').textContent = killed ? 'تونل متوقف (بازگشایی)' : 'قطع اضطراری: خاموش';
     $('kill-en').textContent = killed ? 'TUNNEL PAUSED (RESUME)' : 'KILL SWITCH: OFF';
   }
 
@@ -1569,8 +1678,11 @@
     $('u-uuid-cell').textContent = u.uuid;
     $('u-tr-cell').textContent = u.trojanPassword;
 
-    var pct = u.limitBytes > 0 ? Math.min(100, Math.round(((u.usedBytes || 0) / u.limitBytes) * 100)) : 6;
+    var pct = computeUserTrafficPercent(u, STATE.users);
     $('u-meter').style.width = pct + '%';
+    if ($('u-meter').parentElement) {
+      $('u-meter').parentElement.classList.toggle('warn', u.limitBytes > 0 && pct >= 90);
+    }
 
     var base = subBaseUrl(u);
     $('open-pass').href = '/sub/' + encodeURIComponent(u.subToken);
@@ -1710,7 +1822,7 @@
       var card = document.createElement('div');
       card.className = 'user-card';
       var lim = u.limitBytes > 0 ? formatBytes(u.limitBytes) : '∞';
-      var pct = u.limitBytes > 0 ? Math.min(100, Math.round(((u.usedBytes || 0) / u.limitBytes) * 100)) : 4;
+      var pct = computeUserTrafficPercent(u, STATE.users);
 
       card.innerHTML =
         '<div class="user-head">' +
@@ -2323,6 +2435,418 @@
       box.appendChild(row);
     });
   }
+
+  /* ------ Cloudflare Daily Request Quota Bar & Hardcoded GitHub Updater --- */
+
+  var cfUsageFetching = false;
+  var ghChecking = false;
+
+  function inferHostWorkerName() {
+    var h = String(STATE.host || location.hostname || '').split(':')[0].toLowerCase();
+    if (h.slice(-12) === '.workers.dev') {
+      var p = h.split('.');
+      if (p.length >= 4) return p[0];
+    }
+    return '';
+  }
+
+  function formatResetRemain(sec) {
+    var s = Math.max(0, Number(sec) || 0);
+    var hh = Math.floor(s / 3600);
+    var mm = Math.floor((s % 3600) / 60);
+    return tr('ریست سهمیه: ' + hh + 'س ' + mm + 'د', 'Reset in ' + hh + 'h ' + mm + 'm');
+  }
+
+  function syncCfQuotaUI() {
+    var cfg = STATE.cfIntegration || {};
+    var u = STATE.cfUsage;
+    var miniBar = $('cf-mini-bar');
+    var miniTxt = $('cf-mini-txt');
+    var modalBar = $('cf-modal-bar');
+    var modalNums = $('cf-modal-nums');
+    var modalAcc = $('cf-modal-acc');
+    var modalReset = $('cf-modal-reset');
+
+    if (!cfg.hasToken) {
+      if (miniBar) miniBar.style.width = '0%';
+      if (miniTxt) miniTxt.textContent = tr('تنظیم توکن', 'SET TOKEN');
+      if (modalBar) modalBar.style.width = '0%';
+      if (modalNums) modalNums.textContent = '0 / 100,000 (0%)';
+      if (modalAcc) modalAcc.textContent = tr('توکن کلادفلر هنوز ثبت نشده است', 'Cloudflare API token not set');
+      if (modalReset) modalReset.textContent = 'UTC 00:00';
+      if ($('btn-cf-clear')) $('btn-cf-clear').hidden = true;
+      if ($('gh-token-hint')) $('gh-token-hint').textContent = tr('تنظیم توکن کلادفلر', 'Set CF Token');
+      return;
+    }
+
+    if ($('btn-cf-clear')) $('btn-cf-clear').hidden = false;
+    if ($('gh-token-hint')) {
+      $('gh-token-hint').textContent = cfg.canEditWorkers
+        ? tr('توکن آماده بروزرسانی خودکار', 'CF Token Ready')
+        : tr('توکن متصل (ویرایش توکن)', 'CF Token Set');
+    }
+
+    if (!u) {
+      if (miniBar) miniBar.style.width = '0%';
+      if (miniTxt) miniTxt.textContent = '...';
+      if (modalAcc) modalAcc.textContent = (cfg.accountName || cfg.accountId || 'Cloudflare');
+      return;
+    }
+
+    var lim = Math.max(1000, Number(u.dailyLimit || cfg.dailyLimit) || 100000);
+    var used = Math.max(0, Number(u.usedToday) || 0);
+    var pct = used <= 0 ? 0 : Math.min(100, Math.max(1, Math.round((used / lim) * 100)));
+    var pctExact = Math.min(100, Math.round((used / lim) * 1000) / 10);
+
+    if (miniBar) {
+      miniBar.style.width = pct + '%';
+      if (miniBar.parentElement) miniBar.parentElement.classList.toggle('warn', pct >= 85);
+    }
+    if (miniTxt) {
+      miniTxt.textContent = formatCompactCount(used) + '/' + formatCompactCount(lim);
+    }
+    if (modalBar) {
+      modalBar.style.width = pct + '%';
+      if (modalBar.parentElement) modalBar.parentElement.classList.toggle('warn', pct >= 85);
+    }
+    if (modalNums) {
+      modalNums.textContent = used.toLocaleString('en-US') + ' / ' + lim.toLocaleString('en-US') + ' (' + pctExact + '%)';
+    }
+    if (modalAcc) {
+      var accLabel = cfg.accountName || cfg.accountId || 'Cloudflare';
+      if (cfg.scriptName) accLabel += ' · ' + cfg.scriptName;
+      modalAcc.textContent = accLabel;
+    }
+    if (modalReset) {
+      modalReset.textContent = formatResetRemain(u.resetInSec);
+    }
+  }
+
+  async function refreshCfDailyUsage(forceFresh) {
+    if (cfUsageFetching) return;
+    cfUsageFetching = true;
+    try {
+      var res = await api('/api/cf/usage' + (forceFresh ? '?fresh=1' : ''), 'GET');
+      if (res && res.cfIntegration) STATE.cfIntegration = res.cfIntegration;
+      if (res && res.ok && res.usage) {
+        STATE.cfUsage = res.usage;
+      }
+      syncCfQuotaUI();
+      if (forceFresh && res && res.ok) {
+        showToast('آمار روزانه کلادفلر بروز شد', 'Cloudflare daily quota refreshed');
+      }
+    } catch (err) {
+      if (forceFresh) showToast(err.message, err.message);
+    } finally {
+      cfUsageFetching = false;
+    }
+  }
+
+  function showCfMessage(text, isOk) {
+    var box = $('cf-verify-msg');
+    if (!box) return;
+    if (!text) {
+      box.hidden = true;
+      box.textContent = '';
+      return;
+    }
+    box.className = isOk ? 'ok-msg' : 'err';
+    box.textContent = text;
+    box.hidden = false;
+  }
+
+  function openCfModal() {
+    var modal = $('cf-modal');
+    if (!modal) return;
+    var cfg = STATE.cfIntegration || {};
+    showCfMessage('', false);
+    if ($('cf-perm-popover')) $('cf-perm-popover').hidden = true;
+    if ($('cf-inp-token')) {
+      $('cf-inp-token').value = '';
+      $('cf-inp-token').placeholder = cfg.hasToken
+        ? (cfg.maskedToken + ' (' + tr('ذخیره شده — برای تغییر وارد کنید', 'saved — type to replace') + ')')
+        : 'Paste Cloudflare API Token...';
+    }
+    if ($('cf-inp-script')) {
+      $('cf-inp-script').value = cfg.scriptName || inferHostWorkerName();
+    }
+    if ($('cf-inp-limit')) {
+      $('cf-inp-limit').value = String(cfg.dailyLimit || 100000);
+    }
+    syncCfQuotaUI();
+    modal.hidden = false;
+  }
+
+  if ($('btn-cf-quota')) $('btn-cf-quota').onclick = openCfModal;
+  if ($('btn-cf-close')) $('btn-cf-close').onclick = function () { $('cf-modal').hidden = true; };
+  if ($('cf-modal')) {
+    $('cf-modal').addEventListener('click', function (ev) {
+      if (ev.target === $('cf-modal')) $('cf-modal').hidden = true;
+    });
+  }
+  if ($('btn-cf-guide-pop')) {
+    $('btn-cf-guide-pop').onclick = function () {
+      var p = $('cf-perm-popover');
+      if (p) p.hidden = !p.hidden;
+    };
+  }
+  if ($('btn-cf-guide-close')) {
+    $('btn-cf-guide-close').onclick = function () {
+      if ($('cf-perm-popover')) $('cf-perm-popover').hidden = true;
+    };
+  }
+  if ($('btn-cf-refresh')) {
+    $('btn-cf-refresh').onclick = function () {
+      refreshCfDailyUsage(true);
+    };
+  }
+
+  async function submitCfTokenAction(actionMode) {
+    var rawTok = ($('cf-inp-token') ? $('cf-inp-token').value : '').trim();
+    var cfg = STATE.cfIntegration || {};
+    var tokToSend = rawTok || (cfg.hasToken ? '__SAVED__' : '');
+    if (!tokToSend) {
+      showCfMessage(tr('ابتدا توکن API کلادفلر را وارد کنید.', 'Please enter your Cloudflare API Token first.'), false);
+      return;
+    }
+    var scriptName = ($('cf-inp-script') ? $('cf-inp-script').value : '').trim();
+    var dailyLimit = Number($('cf-inp-limit') ? $('cf-inp-limit').value : 100000) || 100000;
+
+    showCfMessage(tr('در حال استعلام و بررسی دسترسی‌های توکن از کلادفلر…', 'Verifying token & permissions with Cloudflare…'), true);
+    try {
+      var res = await api('/api/cf/config', 'POST', {
+        action: actionMode,
+        token: tokToSend,
+        scriptName: scriptName,
+        dailyLimit: dailyLimit
+      });
+      if (res.cfIntegration) STATE.cfIntegration = res.cfIntegration;
+      if (res.usage) STATE.cfUsage = res.usage;
+      if (res.scriptName && $('cf-inp-script')) $('cf-inp-script').value = res.scriptName;
+      if ($('cf-inp-token')) $('cf-inp-token').value = '';
+      syncCfQuotaUI();
+
+      var updPermTxt = res.canEditWorkers
+        ? tr('فعال (آماده آپدیت خودکار)', 'Workers Edit: YES')
+        : tr('فقط خواندن آمار', 'Analytics Read-Only');
+      showCfMessage(
+        tr(
+          (actionMode === 'save' ? 'توکن ذخیره شد · اکانت: ' : 'اتصال برقرار است · اکانت: ') +
+            (res.accountName || res.accountId || 'OK') +
+            ' · مجوز: ' + updPermTxt,
+          (actionMode === 'save' ? 'Token saved · Account: ' : 'Verified · Account: ') +
+            (res.accountName || res.accountId || 'OK') +
+            ' · ' + updPermTxt
+        ),
+        true
+      );
+      if (actionMode === 'save') {
+        showToast('توکن کلادفلر متصل و ذخیره شد', 'Cloudflare token saved');
+      }
+    } catch (err) {
+      showCfMessage(err.message, false);
+    }
+  }
+
+  if ($('btn-cf-verify')) {
+    $('btn-cf-verify').onclick = function () { submitCfTokenAction('verify'); };
+  }
+  if ($('btn-cf-save')) {
+    $('btn-cf-save').onclick = function () { submitCfTokenAction('save'); };
+  }
+  if ($('btn-cf-clear')) {
+    $('btn-cf-clear').onclick = async function () {
+      try {
+        var res = await api('/api/cf/config', 'POST', { action: 'clear' });
+        STATE.cfIntegration = res.cfIntegration || { hasToken: false };
+        STATE.cfUsage = null;
+        if ($('cf-inp-token')) $('cf-inp-token').value = '';
+        syncCfQuotaUI();
+        showCfMessage(tr('توکن از حافظهٔ پنل پاک شد.', 'Token removed from panel.'), true);
+        showToast('توکن کلادفلر حذف شد', 'Cloudflare token removed');
+      } catch (err) {
+        showCfMessage(err.message, false);
+      }
+    };
+  }
+
+  // Refresh Cloudflare quota every 3 minutes when Admin panel is open and token is configured
+  setInterval(function () {
+    if (STATE.mode !== 'admin' || document.hidden) return;
+    if (STATE.cfIntegration && STATE.cfIntegration.hasToken) {
+      refreshCfDailyUsage(false);
+    }
+  }, 180000);
+
+  /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
+
+  function syncGhUpdaterUI(ver) {
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.0';
+    if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
+    if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
+    if ($('gh-upd-dot')) {
+      $('gh-upd-dot').hidden = !(STATE.ghInfo && STATE.ghInfo.updateAvailable);
+    }
+  }
+
+  function showGhMessage(text, isOk) {
+    var box = $('gh-msg');
+    if (!box) return;
+    if (!text) {
+      box.hidden = true;
+      box.textContent = '';
+      return;
+    }
+    box.className = isOk ? 'ok-msg' : 'err';
+    box.textContent = text;
+    box.hidden = false;
+  }
+
+  async function checkGitHubUpdates(silentToast) {
+    if (ghChecking) return;
+    ghChecking = true;
+    var bdg = $('gh-status-badge');
+    if (bdg) {
+      bdg.className = 'badge';
+      bdg.textContent = tr('در حال بررسی…', 'CHECKING…');
+    }
+    try {
+      var res = await api('/api/update/check', 'GET');
+      STATE.ghInfo = res;
+      syncGhUpdaterUI(res.currentVersion);
+
+      if ($('gh-rem-ver')) {
+        $('gh-rem-ver').textContent = res.latestVersion ? ('V' + res.latestVersion) : '—';
+      }
+      if ($('gh-dl-link') && res.releaseUrl) {
+        $('gh-dl-link').href = res.releaseUrl;
+      }
+      if ($('gh-notes-box')) {
+        if (res.releaseNotes && res.releaseNotes.trim()) {
+          $('gh-notes-box').textContent = res.releaseNotes.trim();
+          $('gh-notes-box').hidden = false;
+        } else {
+          $('gh-notes-box').hidden = true;
+        }
+      }
+      if ($('gh-inp-script') && !($('gh-inp-script').value || '').trim() && res.scriptName) {
+        $('gh-inp-script').value = res.scriptName;
+      }
+
+      if (bdg) {
+        if (res.notPublishedYet) {
+          bdg.className = 'badge';
+          bdg.textContent = tr('مخزن آماده انتشار', 'AWAITING RELEASE');
+        } else if (res.updateAvailable) {
+          bdg.className = 'badge inv';
+          bdg.textContent = tr('نسخهٔ جدید آماده نصب', 'UPDATE AVAILABLE');
+        } else {
+          bdg.className = 'badge ok';
+          bdg.textContent = tr('به‌روز است', 'UP TO DATE');
+        }
+      }
+      if (!silentToast) {
+        if (res.updateAvailable) {
+          showToast('نسخهٔ جدید V' + res.latestVersion + ' یافت شد', 'Update V' + res.latestVersion + ' available');
+        } else {
+          showToast('پنل به آخرین نسخه مجهز است', 'Already on latest version');
+        }
+      }
+    } catch (err) {
+      if (bdg) {
+        bdg.className = 'badge bad';
+        bdg.textContent = tr('خطا در اتصال', 'CHECK FAILED');
+      }
+      showGhMessage(err.message, false);
+    } finally {
+      ghChecking = false;
+    }
+  }
+
+  function openGhModal() {
+    var modal = $('gh-modal');
+    if (!modal) return;
+    showGhMessage('', false);
+    var cfg = STATE.cfIntegration || {};
+    if ($('gh-inp-script') && !($('gh-inp-script').value || '').trim()) {
+      $('gh-inp-script').value = cfg.scriptName || inferHostWorkerName();
+    }
+    syncCfQuotaUI();
+    modal.hidden = false;
+    if (!STATE.ghInfo) {
+      checkGitHubUpdates(true);
+    }
+  }
+
+  if ($('btn-gh-updater')) $('btn-gh-updater').onclick = openGhModal;
+  if ($('btn-gh-close')) $('btn-gh-close').onclick = function () { $('gh-modal').hidden = true; };
+  if ($('gh-modal')) {
+    $('gh-modal').addEventListener('click', function (ev) {
+      if (ev.target === $('gh-modal')) $('gh-modal').hidden = true;
+    });
+  }
+  if ($('btn-gh-open-cf')) {
+    $('btn-gh-open-cf').onclick = function () {
+      $('gh-modal').hidden = true;
+      openCfModal();
+    };
+  }
+  if ($('btn-gh-check')) {
+    $('btn-gh-check').onclick = function () {
+      showGhMessage('', false);
+      checkGitHubUpdates(false);
+    };
+  }
+  if ($('btn-gh-apply')) {
+    $('btn-gh-apply').onclick = async function () {
+      var cfg = STATE.cfIntegration || {};
+      if (!cfg.hasToken) {
+        showGhMessage(
+          tr(
+            'برای بروزرسانی خودکار از داخل پنل، ابتدا روی «تنظیم توکن کلادفلر» بزنید و توکن دارای مجوز Workers Scripts: Edit را ثبت کنید.',
+            'Please configure a Cloudflare API Token (with Workers Scripts: Edit permission) first.'
+          ),
+          false
+        );
+        return;
+      }
+      var targetScript = ($('gh-inp-script') ? $('gh-inp-script').value : '').trim();
+      var btn = $('btn-gh-apply');
+      btn.disabled = true;
+      showGhMessage(
+        tr(
+          'در حال دریافت بستهٔ رسمی از github.com/youdidking/NightLine و استقرار روی ورکر کلادفلر (حفظ کامل KV و مشترکین)…',
+          'Downloading official bundle from github.com/youdidking/NightLine & deploying to Cloudflare Worker…'
+        ),
+        true
+      );
+      try {
+        var res = await api('/api/update/apply', 'POST', { scriptName: targetScript });
+        showGhMessage(
+          tr(
+            'هستهٔ پنل با موفقیت به نسخهٔ V' + res.targetVersion + ' بروزرسانی شد! در حال بارگذاری مجدد…',
+            'Successfully updated Worker "' + res.scriptName + '" to V' + res.targetVersion + '! Reloading…'
+          ),
+          true
+        );
+        showToast('بروزرسانی با موفقیت انجام شد', 'Self-update deployed');
+        setTimeout(function () {
+          location.reload();
+        }, res.reloadAfterMs || 2200);
+      } catch (err) {
+        showGhMessage(err.message, false);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') {
+      if ($('cf-modal') && !$('cf-modal').hidden) $('cf-modal').hidden = true;
+      if ($('gh-modal') && !$('gh-modal').hidden) $('gh-modal').hidden = true;
+    }
+  });
 
   /* --------------------------------------------------------------- Boot */
 

@@ -903,9 +903,13 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
   const dohUrl = `https://${requestHost}/dns-query/${encodeURIComponent(userView.subToken)}`;
   const usedStr = formatBytes(userView.usedBytes);
   const limitStr = userView.limitBytes > 0 ? formatBytes(userView.limitBytes) : '∞';
-  const pct = userView.limitBytes > 0
-    ? Math.min(100, Math.round((userView.usedBytes / userView.limitBytes) * 100))
-    : 8;
+  const rawUsed = Math.max(0, Number(userView.usedBytes) || 0);
+  const pct =
+    rawUsed <= 0
+      ? 0
+      : userView.limitBytes > 0
+        ? Math.min(100, Math.max(1, Math.round((rawUsed / userView.limitBytes) * 100)))
+        : Math.min(100, Math.max(1, Math.round((rawUsed / (50 * 1073741824)) * 100)));
 
   const statusFaMap = { active: 'فعال · خط باز', paused: 'متوقف', expired: 'منقضی‌شده', quota: 'اتمام حجم' };
   const statusEnMap = { active: 'ACTIVE · WIRE OPEN', paused: 'PAUSED', expired: 'EXPIRED', quota: 'QUOTA FULL' };

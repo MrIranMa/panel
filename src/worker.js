@@ -18,7 +18,10 @@ import {
   appendLog,
   checkLoginRateLimit,
   clearLoginFailures,
+  clearPendingUsage,
   enrichUserView,
+  GITHUB_REPO,
+  GITHUB_REPO_URL,
   initializePanelState,
   loadRuntimeState,
   normalizeUser,
@@ -564,18 +567,47 @@ async function handleApi(request, url, env, runtime) {
     const body = await readJsonBody(request);
     if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
 
+    const requestedUuid = String(body.uuid || '').trim().toLowerCase();
+    const requestedTrojan = String(body.trojanPassword || '').trim();
+    if (requestedUuid && state.users.some((u) => String(u.uuid || '').toLowerCase() === requestedUuid)) {
+      return json({ ok: false, error: 'این شناسه UUID قبلاً به مشترک دیگری اختصاص یافته است.' }, 400);
+    }
+    if (requestedTrojan && state.users.some((u) => String(u.trojanPassword || '') === requestedTrojan)) {
+      return json({ ok: false, error: 'این گذرواژه Trojan قبلاً به مشترک دیگری اختصاص یافته است.' }, 400);
+    }
+
+    let candidateUuid = requestedUuid || randomUUID();
+    while (state.users.some((u) => String(u.uuid || '').toLowerCase() === candidateUuid.toLowerCase())) {
+      candidateUuid = randomUUID();
+    }
+    let candidateTrojan = requestedTrojan || randomPassword(14);
+    while (state.users.some((u) => String(u.trojanPassword || '') === candidateTrojan)) {
+      candidateTrojan = randomPassword(14);
+    }
+    let candidateSubToken = randomToken(16);
+    while (state.users.some((u) => u.subToken === candidateSubToken)) {
+      candidateSubToken = randomToken(16);
+    }
+
     const newUser = normalizeUser({
+      id: '',
       name: body.name || `مشترک ${state.users.length + 1}`,
       note: body.note || '',
-      uuid: body.uuid || randomUUID(),
-      trojanPassword: body.trojanPassword || randomPassword(14),
-      subToken: randomToken(16),
+      uuid: candidateUuid,
+      trojanPassword: candidateTrojan,
+      subToken: candidateSubToken,
       trafficLimitGB: Number(body.trafficLimitGB || 0),
+      usedUpBytes: 0,
+      usedDownBytes: 0,
+      connections: 0,
+      firstConnectedAt: 0,
+      lastSeenAt: 0,
       expiryDays: Number(body.expiryDays || 0),
       startOnFirstUse: Boolean(body.startOnFirstUse),
       enabled: body.enabled !== false,
     });
-    state.users.push(newUser);
+    clearPendingUsage(newUser.id);
+    state.users = [...state.users, newUser];
     appendLog(state, 'user:add', `مشترک جدید ساخته شد: ${newUser.name}`);
     const saved = await saveRuntimeState(env, state);
     return json({ ...buildFullAdminPayload(saved, url.host, cfInfo), createdId: newUser.id });
@@ -609,7 +641,10 @@ async function handleApi(request, url, env, runtime) {
       if (state.users.length <= 1) {
         return json({ ok: false, error: 'حداقل یک حسابِ مشترک باید در پنل باقی بماند.' }, 400);
       }
-      const removed = state.users.splice(idx, 1)[0];
+      const nextUsers = [...state.users];
+      const removed = nextUsers.splice(idx, 1)[0];
+      clearPendingUsage(removed.id);
+      state.users = nextUsers;
       appendLog(state, 'user:del', `مشترک حذف شد: ${removed.name}`);
       const saved = await saveRuntimeState(env, state);
       return json(buildFullAdminPayload(saved, url.host, cfInfo));
@@ -619,22 +654,36 @@ async function handleApi(request, url, env, runtime) {
       const body = await readJsonBody(request);
       if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
 
-      const cur = state.users[idx];
+      const cur = { ...state.users[idx] };
+      const nextUsers = [...state.users];
       const doReset = body.action === 'reset_traffic' || Boolean(body.resetTraffic);
       const doRotate = body.action === 'rotate_keys' || Boolean(body.rotateKeys);
 
       if (doReset) {
+        clearPendingUsage(cur.id);
         cur.usedUpBytes = 0;
         cur.usedDownBytes = 0;
-        state.users[idx] = normalizeUser(cur, true);
+        cur.connections = 0;
+        nextUsers[idx] = normalizeUser(cur, true);
+        state.users = nextUsers;
         appendLog(state, 'user:reset', `ریست مصرف ترافیک: ${cur.name}`);
       } else if (doRotate) {
         cur.uuid = randomUUID();
         cur.trojanPassword = randomPassword(14);
         cur.subToken = randomToken(16);
-        state.users[idx] = normalizeUser(cur);
+        nextUsers[idx] = normalizeUser(cur);
+        state.users = nextUsers;
         appendLog(state, 'user:rotate', `چرخش کلیدهای امنیتی: ${cur.name}`);
       } else {
+        const nextUuid = String(body.uuid || cur.uuid || '').trim().toLowerCase();
+        const nextTrojan = String(body.trojanPassword || cur.trojanPassword || '').trim();
+        if (nextUuid && state.users.some((u, i) => i !== idx && String(u.uuid || '').toLowerCase() === nextUuid)) {
+          return json({ ok: false, error: 'این شناسه UUID متعلق به مشترک دیگری است.' }, 400);
+        }
+        if (nextTrojan && state.users.some((u, i) => i !== idx && String(u.trojanPassword || '') === nextTrojan)) {
+          return json({ ok: false, error: 'این گذرواژه Trojan متعلق به مشترک دیگری است.' }, 400);
+        }
+
         const expiryDays = body.expiryDays !== undefined ? Math.max(0, Number(body.expiryDays) || 0) : cur.expiryDays;
         const startOnFirstUse = body.startOnFirstUse !== undefined ? Boolean(body.startOnFirstUse) : cur.startOnFirstUse;
         let expiresAt = cur.expiresAt;
@@ -646,7 +695,7 @@ async function handleApi(request, url, env, runtime) {
         }
 
         const pwUnchanged = !body.trojanPassword || body.trojanPassword === cur.trojanPassword;
-        state.users[idx] = normalizeUser(
+        nextUsers[idx] = normalizeUser(
           {
             ...cur,
             name: body.name !== undefined ? body.name : cur.name,
@@ -662,6 +711,7 @@ async function handleApi(request, url, env, runtime) {
           },
           pwUnchanged
         );
+        state.users = nextUsers;
         appendLog(state, 'user:edit', `ویرایش مشترک: ${state.users[idx].name}`);
       }
 
@@ -730,6 +780,228 @@ async function handleApi(request, url, env, runtime) {
     appendLog(state, 'restore', 'نسخه پشتیبان با موفقیت بازیابی شد');
     const saved = await saveRuntimeState(env, state);
     return json(buildFullAdminPayload(saved, url.host, cfInfo));
+  }
+
+  // ---- POST /api/cf/config (Verify / Save / Clear Cloudflare API Token) ----
+  if (path === '/api/cf/config' && method === 'POST') {
+    const body = await readJsonBody(request);
+    if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
+
+    if (body.action === 'clear') {
+      state.cfApi = {
+        token: '',
+        accountId: '',
+        accountName: '',
+        scriptName: '',
+        dailyLimit: 100000,
+        canEditWorkers: false,
+        updatedAt: Date.now(),
+      };
+      cfUsageMemCache = null;
+      appendLog(state, 'cf:clear', 'توکن API کلادفلر از پنل حذف شد');
+      const saved = await saveRuntimeState(env, state);
+      return json({
+        ok: true,
+        cleared: true,
+        cfIntegration: sanitizeCfPublicInfo(saved.cfApi, url.host),
+      });
+    }
+
+    const rawInputToken = String(body.token || '').trim();
+    const effectiveToken =
+      rawInputToken && rawInputToken !== '__SAVED__'
+        ? rawInputToken
+        : String(state.cfApi?.token || '').trim();
+
+    if (!effectiveToken || effectiveToken.length < 20) {
+      return json(
+        {
+          ok: false,
+          error: 'لطفاً یک Cloudflare API Token معتبر وارد کنید.',
+        },
+        400
+      );
+    }
+
+    const preferredAccountId = String(body.accountId || state.cfApi?.accountId || '').trim();
+    const preferredScript =
+      String(body.scriptName || state.cfApi?.scriptName || '').trim() || inferWorkerNameFromHost(url.host);
+    const dailyLimit = Math.max(1000, Math.min(100_000_000, Number(body.dailyLimit) || state.cfApi?.dailyLimit || 100000));
+
+    const check = await verifyAndProbeCloudflareToken({
+      token: effectiveToken,
+      accountId: preferredAccountId,
+      scriptName: preferredScript,
+      dailyLimit,
+      env,
+    });
+
+    if (!check.ok) {
+      return json(check, 400);
+    }
+
+    const shouldSave = body.action !== 'verify';
+    let cfPublic = sanitizeCfPublicInfo(
+      {
+        token: effectiveToken,
+        accountId: check.accountId,
+        accountName: check.accountName,
+        scriptName: check.scriptName,
+        dailyLimit,
+        canEditWorkers: check.canEditWorkers,
+        updatedAt: Date.now(),
+      },
+      url.host
+    );
+
+    if (shouldSave) {
+      state.cfApi = {
+        token: effectiveToken,
+        accountId: check.accountId,
+        accountName: check.accountName,
+        scriptName: check.scriptName,
+        dailyLimit,
+        canEditWorkers: check.canEditWorkers,
+        updatedAt: Date.now(),
+      };
+      cfUsageMemCache = check.usage ? { at: Date.now(), accountId: check.accountId, data: check.usage } : null;
+      appendLog(state, 'cf:token', `توکن کلادفلر متصل شد (${check.accountName || check.accountId})`);
+      const saved = await saveRuntimeState(env, state);
+      cfPublic = sanitizeCfPublicInfo(saved.cfApi, url.host);
+    }
+
+    return json({
+      ok: true,
+      saved: shouldSave,
+      verified: true,
+      tokenStatus: check.tokenStatus,
+      accountId: check.accountId,
+      accountName: check.accountName,
+      scriptName: check.scriptName,
+      availableScripts: check.availableScripts || [],
+      canReadAnalytics: check.canReadAnalytics,
+      canEditWorkers: check.canEditWorkers,
+      cfIntegration: cfPublic,
+      usage: check.usage || null,
+    });
+  }
+
+  // ---- GET /api/cf/usage (Daily Request Limit Telemetry) ----
+  if (path === '/api/cf/usage' && method === 'GET') {
+    const cfApi = state.cfApi || {};
+    if (!cfApi.token || !cfApi.accountId) {
+      return json({
+        ok: false,
+        needsToken: true,
+        cfIntegration: sanitizeCfPublicInfo(cfApi, url.host),
+      });
+    }
+    const forceFresh = url.searchParams.get('fresh') === '1';
+    if (
+      !forceFresh &&
+      cfUsageMemCache &&
+      cfUsageMemCache.accountId === cfApi.accountId &&
+      Date.now() - cfUsageMemCache.at < 45_000
+    ) {
+      return json({
+        ok: true,
+        cached: true,
+        cfIntegration: sanitizeCfPublicInfo(cfApi, url.host),
+        usage: {
+          ...cfUsageMemCache.data,
+          dailyLimit: cfApi.dailyLimit || 100000,
+          pct: Math.min(
+            100,
+            Math.round(((cfUsageMemCache.data.usedToday || 0) / Math.max(1, cfApi.dailyLimit || 100000)) * 1000) / 10
+          ),
+        },
+      });
+    }
+
+    const usageRes = await queryCloudflareDailyRequests({
+      token: cfApi.token,
+      accountId: cfApi.accountId,
+      scriptName: cfApi.scriptName || inferWorkerNameFromHost(url.host),
+      dailyLimit: cfApi.dailyLimit || 100000,
+      env,
+    });
+    if (!usageRes.ok) {
+      return json(
+        {
+          ok: false,
+          error: usageRes.error,
+          cfIntegration: sanitizeCfPublicInfo(cfApi, url.host),
+        },
+        400
+      );
+    }
+    cfUsageMemCache = { at: Date.now(), accountId: cfApi.accountId, data: usageRes.usage };
+    return json({
+      ok: true,
+      cached: false,
+      cfIntegration: sanitizeCfPublicInfo(cfApi, url.host),
+      usage: usageRes.usage,
+    });
+  }
+
+  // ---- GET /api/update/check (Hardcoded GitHub: youdidking/NightLine) ----
+  if (path === '/api/update/check' && method === 'GET') {
+    const info = await checkOfficialGitHubUpdate(state.cfApi, url.host, env);
+    return json(info, info.ok ? 200 : 502);
+  }
+
+  // ---- POST /api/update/apply (In-Panel Self-Update from youdidking/NightLine) ----
+  if (path === '/api/update/apply' && method === 'POST') {
+    const body = await readJsonBody(request);
+    if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
+
+    const token =
+      body.token && String(body.token).trim() && String(body.token).trim() !== '__SAVED__'
+        ? String(body.token).trim()
+        : String(state.cfApi?.token || '').trim();
+    const accountId = String(body.accountId || state.cfApi?.accountId || '').trim();
+    const scriptName =
+      String(body.scriptName || state.cfApi?.scriptName || '').trim() || inferWorkerNameFromHost(url.host);
+
+    if (!token) {
+      return json(
+        {
+          ok: false,
+          needsToken: true,
+          error:
+            'برای بروزرسانی خودکار از داخل پنل، ابتدا توکن API کلادفلر (دارای دسترسی Workers Scripts: Edit) را ثبت کنید.',
+        },
+        400
+      );
+    }
+
+    const result = await applyOfficialGitHubSelfUpdate({
+      token,
+      accountId,
+      scriptName,
+      env,
+    });
+    if (!result.ok) {
+      return json(result, 400);
+    }
+
+    state.cfApi = {
+      ...(state.cfApi || {}),
+      token,
+      accountId: result.accountId,
+      accountName: result.accountName || state.cfApi?.accountName || '',
+      scriptName: result.scriptName,
+      dailyLimit: state.cfApi?.dailyLimit || 100000,
+      canEditWorkers: true,
+      updatedAt: Date.now(),
+    };
+    appendLog(
+      state,
+      'system:update',
+      `بروزرسانی هسته از مخزن رسمی به نسخه ${result.targetVersion} روی ورکر ${result.scriptName} انجام شد`
+    );
+    await saveRuntimeState(env, state);
+    return json(result);
   }
 
   return json({ ok: false, error: 'مسیر API یافت نشد.' }, 404);
@@ -809,6 +1081,12 @@ function buildFullAdminPayload(state, host, cf = null) {
     authenticated: true,
     brand: PANEL_BRAND,
     settings: state.settings,
+    cfIntegration: sanitizeCfPublicInfo(state.cfApi, host),
+    updater: {
+      repo: GITHUB_REPO,
+      repoUrl: GITHUB_REPO_URL,
+      currentVersion: PANEL_VERSION,
+    },
     tgProxy,
     users,
     initialNodes,
@@ -942,4 +1220,556 @@ async function servePanelShell(request, env) {
     });
   }
   return new Response('NIGHTLINE UI bundle missing — run `npm run build`.', { status: 500 });
+}
+
+/* ---------------- Cloudflare Daily Quota & Hardcoded GitHub Self-Updater ---------------- */
+
+let cfUsageMemCache = null;
+
+function inferWorkerNameFromHost(host) {
+  const clean = String(host || '').split(':')[0].trim().toLowerCase();
+  if (clean.endsWith('.workers.dev')) {
+    const parts = clean.split('.');
+    if (parts.length >= 4) return parts[0];
+  }
+  return '';
+}
+
+function sanitizeCfPublicInfo(cfApi, host) {
+  const raw = cfApi && typeof cfApi === 'object' ? cfApi : {};
+  const tok = String(raw.token || '').trim();
+  const inferredScript = String(raw.scriptName || '').trim() || inferWorkerNameFromHost(host);
+  return {
+    hasToken: Boolean(tok),
+    maskedToken: tok ? `••••••••${tok.slice(-4)}` : '',
+    accountId: String(raw.accountId || '').trim(),
+    accountName: String(raw.accountName || '').trim(),
+    scriptName: inferredScript,
+    dailyLimit: Math.max(1000, Number(raw.dailyLimit) || 100000),
+    canEditWorkers: Boolean(raw.canEditWorkers),
+    updatedAt: Number(raw.updatedAt) || 0,
+    tokensDashboardUrl: 'https://dash.cloudflare.com/profile/api-tokens',
+  };
+}
+
+async function fetchJsonWithTimeout(urlStr, options = {}, timeoutMs = 10000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => {
+    try { ctrl.abort(); } catch {}
+  }, timeoutMs);
+  try {
+    const res = await fetch(urlStr, { ...options, signal: ctrl.signal });
+    const text = await res.text();
+    const data = safeJsonParse(text, null);
+    return { ok: res.ok, status: res.status, data, text };
+  } catch (err) {
+    return { ok: false, status: 0, data: null, text: '', error: err?.message || String(err) };
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+async function resolveCloudflareAccount(cfBase, token, preferredAccountId = '') {
+  const headers = {
+    authorization: `Bearer ${token}`,
+    'content-type': 'application/json',
+  };
+  if (preferredAccountId) {
+    const accRes = await fetchJsonWithTimeout(
+      `${cfBase}/accounts/${encodeURIComponent(preferredAccountId)}`,
+      { headers }
+    );
+    if (accRes.ok && accRes.data?.success && accRes.data?.result?.id) {
+      return {
+        ok: true,
+        accountId: accRes.data.result.id,
+        accountName: accRes.data.result.name || '',
+      };
+    }
+  }
+  const listRes = await fetchJsonWithTimeout(`${cfBase}/accounts?per_page=10`, { headers });
+  if (listRes.ok && listRes.data?.success && Array.isArray(listRes.data.result) && listRes.data.result.length > 0) {
+    const chosen = preferredAccountId
+      ? listRes.data.result.find((a) => a.id === preferredAccountId) || listRes.data.result[0]
+      : listRes.data.result[0];
+    return {
+      ok: true,
+      accountId: chosen.id,
+      accountName: chosen.name || '',
+    };
+  }
+  const cfErr = listRes.data?.errors?.[0]?.message || '';
+  return {
+    ok: false,
+    error: cfErr
+      ? `عدم دسترسی به اکانت کلادفلر: ${cfErr}`
+      : 'توکن معتبر نیست یا دسترسی خواندن اکانت (Account Settings / Analytics: Read) را ندارد.',
+  };
+}
+
+async function verifyAndProbeCloudflareToken({ token, accountId, scriptName, dailyLimit = 100000, env }) {
+  const cfBase = String(env?.NL_CF_API_BASE || 'https://api.cloudflare.com/client/v4').replace(/\/+$/, '');
+  const headers = {
+    authorization: `Bearer ${token}`,
+    'content-type': 'application/json',
+  };
+
+  let tokenStatus = 'unknown';
+  const userVerify = await fetchJsonWithTimeout(`${cfBase}/user/tokens/verify`, { headers });
+  if (userVerify.ok && userVerify.data?.success) {
+    tokenStatus = userVerify.data?.result?.status || 'active';
+    if (tokenStatus && tokenStatus !== 'active') {
+      return { ok: false, error: `وضعیت توکن کلادفلر فعال نیست (${tokenStatus}).` };
+    }
+  }
+
+  const accInfo = await resolveCloudflareAccount(cfBase, token, accountId);
+  if (!accInfo.ok) {
+    if (!userVerify.ok) {
+      const msg = userVerify.data?.errors?.[0]?.message || accInfo.error;
+      return { ok: false, error: `خطا در اعتبارسنجی توکن کلادفلر: ${msg}` };
+    }
+    if (!accountId) {
+      return {
+        ok: false,
+        error:
+          'توکن معتبر است اما شناسه اکانت خودکار یافت نشد. لطفاً دسترسی Account Settings: Read بدهید یا Account ID را وارد کنید.',
+      };
+    }
+  }
+
+  const resolvedAccountId = accInfo.ok ? accInfo.accountId : accountId;
+  const resolvedAccountName = accInfo.ok ? accInfo.accountName : '';
+
+  if (tokenStatus === 'unknown' && resolvedAccountId) {
+    const accVerify = await fetchJsonWithTimeout(
+      `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/tokens/verify`,
+      { headers }
+    );
+    if (accVerify.ok && accVerify.data?.success) {
+      tokenStatus = accVerify.data?.result?.status || 'active';
+    } else if (accInfo.ok) {
+      tokenStatus = 'active';
+    }
+  }
+
+  let availableScripts = [];
+  let resolvedScript = scriptName || '';
+  let canEditWorkers = false;
+  if (resolvedAccountId) {
+    const scriptsRes = await fetchJsonWithTimeout(
+      `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/workers/scripts`,
+      { headers }
+    );
+    if (scriptsRes.ok && scriptsRes.data?.success && Array.isArray(scriptsRes.data.result)) {
+      availableScripts = scriptsRes.data.result.map((s) => s.id).filter(Boolean).slice(0, 30);
+      if (!resolvedScript && availableScripts.length === 1) {
+        resolvedScript = availableScripts[0];
+      } else if (resolvedScript && !availableScripts.includes(resolvedScript)) {
+        const ci = availableScripts.find((s) => s.toLowerCase() === resolvedScript.toLowerCase());
+        if (ci) resolvedScript = ci;
+      }
+      const probeTarget = resolvedScript || availableScripts[0] || '';
+      if (probeTarget) {
+        const setRes = await fetchJsonWithTimeout(
+          `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/workers/scripts/${encodeURIComponent(probeTarget)}/settings`,
+          { headers }
+        );
+        if (setRes.ok && setRes.data?.success) {
+          canEditWorkers = true;
+        }
+      } else {
+        canEditWorkers = true;
+      }
+    }
+  }
+
+  const usageRes = await queryCloudflareDailyRequests({
+    token,
+    accountId: resolvedAccountId,
+    scriptName: resolvedScript,
+    dailyLimit,
+    env,
+  });
+
+  if (!usageRes.ok) {
+    return {
+      ok: false,
+      error:
+        usageRes.error ||
+        'توکن شناسایی شد اما دسترسی خواندن آمار (Account Analytics: Read) روی آن فعال نیست.',
+    };
+  }
+
+  return {
+    ok: true,
+    tokenStatus: tokenStatus || 'active',
+    accountId: resolvedAccountId,
+    accountName: resolvedAccountName,
+    scriptName: resolvedScript,
+    availableScripts,
+    canReadAnalytics: true,
+    canEditWorkers,
+    usage: usageRes.usage,
+  };
+}
+
+async function queryCloudflareDailyRequests({ token, accountId, scriptName = '', dailyLimit = 100000, env }) {
+  const cfBase = String(env?.NL_CF_API_BASE || 'https://api.cloudflare.com/client/v4').replace(/\/+$/, '');
+  const now = new Date();
+  const startOfUtcDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  const nextUtcMidnight = new Date(startOfUtcDay.getTime() + 86_400_000);
+
+  const gqlQuery = `
+    query NightlineDailyQuota($accountTag: string!, $since: Time!, $until: Time!) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          workersInvocationsAdaptive(limit: 200, filter: { datetime_geq: $since, datetime_leq: $until }) {
+            dimensions { scriptName }
+            sum { requests subrequests errors }
+          }
+        }
+      }
+    }
+  `;
+
+  const res = await fetchJsonWithTimeout(
+    `${cfBase}/graphql`,
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: gqlQuery,
+        variables: {
+          accountTag: accountId,
+          since: startOfUtcDay.toISOString(),
+          until: now.toISOString(),
+        },
+      }),
+    },
+    10000
+  );
+
+  if (!res.ok || !res.data) {
+    return {
+      ok: false,
+      error: 'عدم دریافت پاسخ از GraphQL کلادفلر. دسترسی Account Analytics: Read توکن را بررسی کنید.',
+    };
+  }
+
+  if (Array.isArray(res.data.errors) && res.data.errors.length > 0 && !res.data.data) {
+    return {
+      ok: false,
+      error: `خطای دسترسی آمار کلادفلر: ${res.data.errors[0]?.message || 'GraphQL Error'}`,
+    };
+  }
+
+  const accounts = res.data?.data?.viewer?.accounts;
+  if (!Array.isArray(accounts) || accounts.length === 0) {
+    return {
+      ok: false,
+      error: 'دسترسی به آمار اکانت کلادفلر مجاز نیست (Account Analytics: Read نیاز است).',
+    };
+  }
+
+  const rows = Array.isArray(accounts[0]?.workersInvocationsAdaptive)
+    ? accounts[0].workersInvocationsAdaptive
+    : [];
+
+  let usedToday = 0;
+  let subrequestsToday = 0;
+  let errorsToday = 0;
+  let scriptRequests = 0;
+
+  for (const row of rows) {
+    const reqs = Math.max(0, Number(row?.sum?.requests) || 0);
+    const subs = Math.max(0, Number(row?.sum?.subrequests) || 0);
+    const errs = Math.max(0, Number(row?.sum?.errors) || 0);
+    usedToday += reqs;
+    subrequestsToday += subs;
+    errorsToday += errs;
+    if (scriptName && row?.dimensions?.scriptName === scriptName) {
+      scriptRequests += reqs;
+    }
+  }
+
+  const safeLimit = Math.max(1000, Number(dailyLimit) || 100000);
+  const pct = Math.min(100, Math.round((usedToday / safeLimit) * 1000) / 10);
+
+  return {
+    ok: true,
+    usage: {
+      usedToday,
+      scriptRequests,
+      subrequestsToday,
+      errorsToday,
+      dailyLimit: safeLimit,
+      remainingToday: Math.max(0, safeLimit - usedToday),
+      pct,
+      sinceUtc: startOfUtcDay.toISOString(),
+      resetAtUtc: nextUtcMidnight.toISOString(),
+      resetInSec: Math.max(0, Math.floor((nextUtcMidnight.getTime() - now.getTime()) / 1000)),
+      fetchedAt: Date.now(),
+    },
+  };
+}
+
+function normalizeVersionString(v) {
+  return String(v || '')
+    .trim()
+    .replace(/^[vV]+/, '')
+    .split('-')[0]
+    .trim();
+}
+
+function compareSemver(a, b) {
+  const pa = normalizeVersionString(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = normalizeVersionString(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const da = pa[i] || 0;
+    const db = pb[i] || 0;
+    if (da > db) return 1;
+    if (da < db) return -1;
+  }
+  return 0;
+}
+
+async function checkOfficialGitHubUpdate(cfApi, host, env) {
+  const ghApiBase = String(env?.NL_GH_API_BASE || 'https://api.github.com').replace(/\/+$/, '');
+  const ghRawBase = String(env?.NL_GH_RAW_BASE || 'https://raw.githubusercontent.com').replace(/\/+$/, '');
+  const ghHeaders = {
+    accept: 'application/vnd.github+json',
+    'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}`,
+  };
+
+  let latestVersion = '';
+  let releaseUrl = GITHUB_REPO_URL;
+  let releaseNotes = '';
+  let publishedAt = '';
+  let assetWorkerUrl = '';
+  let tagRef = 'main';
+
+  const relRes = await fetchJsonWithTimeout(
+    `${ghApiBase}/repos/${GITHUB_REPO}/releases/latest`,
+    { headers: ghHeaders },
+    9000
+  );
+
+  if (relRes.ok && relRes.data && relRes.data.tag_name) {
+    tagRef = String(relRes.data.tag_name).trim();
+    latestVersion = normalizeVersionString(tagRef);
+    releaseUrl = String(relRes.data.html_url || `${GITHUB_REPO_URL}/releases`);
+    releaseNotes = String(relRes.data.body || '').slice(0, 1500);
+    publishedAt = String(relRes.data.published_at || '');
+    if (Array.isArray(relRes.data.assets)) {
+      const workerAsset = relRes.data.assets.find(
+        (a) => a && a.name === 'worker-single-file.js' && a.browser_download_url
+      );
+      if (workerAsset) {
+        assetWorkerUrl = String(workerAsset.browser_download_url);
+      }
+    }
+  }
+
+  // Also check main branch package.json if no release exists yet or main has newer version
+  const pkgRes = await fetchJsonWithTimeout(
+    `${ghRawBase}/${GITHUB_REPO}/main/package.json`,
+    { headers: { 'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}` } },
+    8000
+  );
+  if (pkgRes.ok && pkgRes.data && pkgRes.data.version) {
+    const mainVer = normalizeVersionString(pkgRes.data.version);
+    if (!latestVersion || compareSemver(mainVer, latestVersion) > 0) {
+      latestVersion = mainVer;
+      tagRef = 'main';
+      if (!assetWorkerUrl) {
+        assetWorkerUrl = `${ghRawBase}/${GITHUB_REPO}/main/worker-single-file.js`;
+      }
+    }
+  }
+
+  if (!latestVersion) {
+    if (relRes.status === 404 || pkgRes.status === 404) {
+      return {
+        ok: true,
+        repo: GITHUB_REPO,
+        repoUrl: GITHUB_REPO_URL,
+        currentVersion: PANEL_VERSION,
+        latestVersion: PANEL_VERSION,
+        updateAvailable: false,
+        notPublishedYet: true,
+        releaseUrl: GITHUB_REPO_URL,
+        releaseNotes: '',
+        publishedAt: '',
+        scriptUrl: `${ghRawBase}/${GITHUB_REPO}/main/worker-single-file.js`,
+        cfConfigured: Boolean(cfApi?.token),
+        scriptName: String(cfApi?.scriptName || '').trim() || inferWorkerNameFromHost(host),
+      };
+    }
+    return {
+      ok: false,
+      repo: GITHUB_REPO,
+      repoUrl: GITHUB_REPO_URL,
+      currentVersion: PANEL_VERSION,
+      error: 'عدم برقراری ارتباط با مخزن گیت‌هاب جهت بررسی نسخه جدید.',
+    };
+  }
+
+  if (!assetWorkerUrl) {
+    assetWorkerUrl = `${ghRawBase}/${GITHUB_REPO}/${encodeURIComponent(tagRef)}/worker-single-file.js`;
+  }
+
+  const updateAvailable = compareSemver(latestVersion, PANEL_VERSION) > 0;
+  return {
+    ok: true,
+    repo: GITHUB_REPO,
+    repoUrl: GITHUB_REPO_URL,
+    currentVersion: PANEL_VERSION,
+    latestVersion,
+    updateAvailable,
+    releaseUrl,
+    releaseNotes,
+    publishedAt,
+    scriptUrl: assetWorkerUrl,
+    cfConfigured: Boolean(cfApi?.token),
+    canEditWorkers: Boolean(cfApi?.canEditWorkers),
+    scriptName: String(cfApi?.scriptName || '').trim() || inferWorkerNameFromHost(host),
+  };
+}
+
+async function applyOfficialGitHubSelfUpdate({ token, accountId, scriptName, env }) {
+  const cfBase = String(env?.NL_CF_API_BASE || 'https://api.cloudflare.com/client/v4').replace(/\/+$/, '');
+  const ghRawBase = String(env?.NL_GH_RAW_BASE || 'https://raw.githubusercontent.com').replace(/\/+$/, '');
+
+  // 1. Resolve Cloudflare Account
+  const accInfo = await resolveCloudflareAccount(cfBase, token, accountId);
+  if (!accInfo.ok) {
+    return { ok: false, error: accInfo.error };
+  }
+  const resolvedAccountId = accInfo.accountId;
+
+  // 2. Resolve Worker Script Name
+  const cfHeaders = { authorization: `Bearer ${token}` };
+  let targetScript = String(scriptName || '').trim();
+  if (!targetScript) {
+    const listRes = await fetchJsonWithTimeout(
+      `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/workers/scripts`,
+      { headers: cfHeaders }
+    );
+    if (listRes.ok && Array.isArray(listRes.data?.result) && listRes.data.result.length === 1) {
+      targetScript = listRes.data.result[0].id;
+    }
+  }
+  if (!targetScript) {
+    return {
+      ok: false,
+      error: 'نام ورکر (Worker Name) مشخص نیست. لطفاً نام دقیق ورکر خود در کلادفلر را وارد کنید.',
+    };
+  }
+
+  // 3. Check official GitHub release / main bundle from youdidking/NightLine
+  const updateInfo = await checkOfficialGitHubUpdate({ token, scriptName: targetScript }, '', env);
+  if (!updateInfo.ok) {
+    return { ok: false, error: updateInfo.error || 'خطا در دریافت اطلاعات مخزن گیت‌هاب.' };
+  }
+
+  const candidateUrls = [
+    updateInfo.scriptUrl,
+    `${ghRawBase}/${GITHUB_REPO}/main/worker-single-file.js`,
+  ].filter(Boolean);
+
+  let workerCode = '';
+  for (const dlUrl of candidateUrls) {
+    const dlRes = await fetchJsonWithTimeout(
+      dlUrl,
+      { headers: { 'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}` } },
+      15000
+    );
+    if (dlRes.ok && typeof dlRes.text === 'string' && dlRes.text.length > 15000 && dlRes.text.includes('export')) {
+      workerCode = dlRes.text;
+      break;
+    }
+  }
+
+  if (!workerCode) {
+    return {
+      ok: false,
+      error: `فایل اجرایی worker-single-file.js در مخزن رسمی (${GITHUB_REPO}) یافت نشد یا هنوز منتشر نشده است.`,
+    };
+  }
+
+  // 4. Read existing Worker settings so KV bindings, vars & compatibility flags are 100% preserved
+  const settingsUrl = `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/workers/scripts/${encodeURIComponent(targetScript)}/settings`;
+  const curSettingsRes = await fetchJsonWithTimeout(settingsUrl, { headers: cfHeaders }, 10000);
+  if (!curSettingsRes.ok || !curSettingsRes.data?.success) {
+    const cfMsg = curSettingsRes.data?.errors?.[0]?.message || '';
+    return {
+      ok: false,
+      error: cfMsg
+        ? `عدم دسترسی به تنظیمات ورکر (${targetScript}): ${cfMsg} — مطمئن شوید نام ورکر صحیح است و توکن دسترسی Workers Scripts: Edit دارد.`
+        : `ورکر «${targetScript}» یافت نشد یا توکن کلادفلر دسترسی Workers Scripts: Edit را ندارد.`,
+    };
+  }
+
+  const existing = curSettingsRes.data.result || {};
+  const preservedBindings = Array.isArray(existing.bindings)
+    ? existing.bindings
+        .filter((b) => b && b.name)
+        .map((b) => (b.type === 'secret_text' || b.type === 'secret_key' ? { type: 'inherit', name: b.name } : b))
+    : [];
+
+  const metadata = {
+    main_module: 'worker.js',
+    compatibility_date: existing.compatibility_date || '2025-09-01',
+    compatibility_flags: Array.isArray(existing.compatibility_flags) && existing.compatibility_flags.length > 0
+      ? existing.compatibility_flags
+      : ['nodejs_compat'],
+    bindings: preservedBindings,
+    keep_bindings: ['secret_text', 'secret_key'],
+  };
+  if (existing.usage_model) metadata.usage_model = existing.usage_model;
+  if (existing.placement && typeof existing.placement === 'object') metadata.placement = existing.placement;
+
+  // 5. Upload new ES Module Worker bundle via Cloudflare Workers API
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append(
+    'worker.js',
+    new Blob([workerCode], { type: 'application/javascript+module' }),
+    'worker.js'
+  );
+
+  const uploadUrl = `${cfBase}/accounts/${encodeURIComponent(resolvedAccountId)}/workers/scripts/${encodeURIComponent(targetScript)}`;
+  const uploadRes = await fetchJsonWithTimeout(
+    uploadUrl,
+    {
+      method: 'PUT',
+      headers: { authorization: `Bearer ${token}` },
+      body: form,
+    },
+    20000
+  );
+
+  if (!uploadRes.ok || !uploadRes.data?.success) {
+    const errMsg = uploadRes.data?.errors?.[0]?.message || 'خطا در بارگذاری کد جدید روی کلادفلر.';
+    return {
+      ok: false,
+      error: `بروزرسانی ورکر ناموفق بود: ${errMsg}`,
+    };
+  }
+
+  return {
+    ok: true,
+    updated: true,
+    previousVersion: PANEL_VERSION,
+    targetVersion: updateInfo.latestVersion || PANEL_VERSION,
+    scriptName: targetScript,
+    accountId: resolvedAccountId,
+    accountName: accInfo.accountName || '',
+    repoUrl: GITHUB_REPO_URL,
+    reloadAfterMs: 2200,
+  };
 }

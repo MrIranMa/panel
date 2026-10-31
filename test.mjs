@@ -1,18 +1,22 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.4.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (12/12 Suites)
+ * NIGHTLINE v2.5.0 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
 import { Duplex } from 'node:stream';
 import tls from 'node:tls';
 import { chromium } from 'playwright';
 import WebSocket from 'ws';
 
 const PORT = 18800 + Math.floor(Math.random() * 500);
+const MOCK_PORT = 19400 + Math.floor(Math.random() * 400);
 const BASE = `http://127.0.0.1:${PORT}`;
+const MOCK_BASE = `http://127.0.0.1:${MOCK_PORT}`;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -115,12 +119,140 @@ async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPor
   });
 }
 
+async function startMockCloudflareAndGitHubServer(stateRecorder) {
+  const realBundleSample = fs.readFileSync(new URL('./worker-single-file.js', import.meta.url), 'utf8');
+  const srv = http.createServer(async (req, res) => {
+    const u = new URL(req.url, MOCK_BASE);
+    let bodyBuf = Buffer.alloc(0);
+    for await (const chunk of req) {
+      bodyBuf = Buffer.concat([bodyBuf, Buffer.from(chunk)]);
+    }
+    const auth = req.headers.authorization || '';
+
+    // Cloudflare REST + GraphQL Mock (strictly enforces Bearer token like real api.cloudflare.com)
+    if (u.pathname.startsWith('/cf/')) {
+      if (auth !== 'Bearer cf_valid_test_token_1234567890') {
+        res.writeHead(403, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, errors: [{ code: 1000, message: 'Invalid API Token' }] }));
+      }
+    }
+    if (u.pathname === '/cf/user/tokens/verify') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, result: { id: 'tok_1', status: 'active' } }));
+    }
+    if (u.pathname === '/cf/accounts') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        success: true,
+        result: [{ id: 'acc_nl_998877', name: 'NightLine Edge Account' }],
+      }));
+    }
+    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        success: true,
+        result: [{ id: 'nightline-worker' }],
+      }));
+    }
+    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/nightline-worker/settings') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        success: true,
+        result: {
+          compatibility_date: '2025-09-01',
+          compatibility_flags: ['nodejs_compat'],
+          bindings: [
+            { type: 'kv_namespace', name: 'KV', namespace_id: 'kv_ns_demo_123' },
+            { type: 'secret_text', name: 'CUSTOM_SECRET' },
+          ],
+        },
+      }));
+    }
+    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/nightline-worker' && req.method === 'PUT') {
+      stateRecorder.workerUploads.push({
+        contentType: req.headers['content-type'] || '',
+        bodyText: bodyBuf.toString('utf8'),
+        byteLength: bodyBuf.length,
+      });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, result: { id: 'nightline-worker' } }));
+    }
+    if (u.pathname === '/cf/graphql' && req.method === 'POST') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        data: {
+          viewer: {
+            accounts: [
+              {
+                workersInvocationsAdaptive: [
+                  {
+                    dimensions: { scriptName: 'nightline-worker' },
+                    sum: { requests: 27450, subrequests: 8200, errors: 3 },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }));
+    }
+
+    // Hardcoded GitHub `youdidking/NightLine` Mock
+    if (u.pathname === '/gh/repos/youdidking/NightLine/releases/latest') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({
+        tag_name: 'v2.6.0',
+        html_url: 'https://github.com/youdidking/NightLine/releases/tag/v2.6.0',
+        body: '- Official test release from youdidking/NightLine',
+        published_at: '2026-10-31T12:00:00Z',
+        assets: [
+          {
+            name: 'worker-single-file.js',
+            browser_download_url: `${MOCK_BASE}/ghraw/youdidking/NightLine/v2.6.0/worker-single-file.js`,
+          },
+        ],
+      }));
+    }
+    if (u.pathname === '/ghraw/youdidking/NightLine/main/package.json') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ name: 'nightline', version: '2.6.0' }));
+    }
+    if (u.pathname.endsWith('/worker-single-file.js')) {
+      res.writeHead(200, { 'content-type': 'application/javascript' });
+      return res.end(realBundleSample);
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'mock route not found: ' + u.pathname }));
+  });
+
+  await new Promise((resolve) => srv.listen(MOCK_PORT, '127.0.0.1', resolve));
+  return srv;
+}
+
 async function main() {
-  console.log('═══ NIGHTLINE v2.4.0 Full Live Verification Suite (12/12) ═══');
+  console.log('═══ NIGHTLINE v2.5.0 Full Live Verification Suite (15/15) ═══');
+
+  const mockRecorder = { workerUploads: [] };
+  const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
 
   const proc = spawn(
     'npx',
-    ['wrangler', 'dev', '--local', '--port', String(PORT), '--persist-to', `/tmp/nl-v24-kv-${Date.now()}`],
+    [
+      'wrangler',
+      'dev',
+      '--local',
+      '--port',
+      String(PORT),
+      '--persist-to',
+      `/tmp/nl-v25-kv-${Date.now()}`,
+      '--var',
+      `NL_CF_API_BASE:${MOCK_BASE}/cf`,
+      '--var',
+      `NL_GH_API_BASE:${MOCK_BASE}/gh`,
+      '--var',
+      `NL_GH_RAW_BASE:${MOCK_BASE}/ghraw`,
+    ],
     { stdio: ['ignore', 'pipe', 'pipe'] }
   );
 
@@ -139,9 +271,9 @@ async function main() {
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.4.0) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.0) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.4.0', 'Health version must be 2.4.0');
+    assert.equal(health.version, '2.5.0', 'Health version must be 2.5.0');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -157,7 +289,7 @@ async function main() {
     assert.equal(spRes.status, 200);
     const spBuf = await spRes.arrayBuffer();
     assert.equal(spBuf.byteLength, 65536, 'Speed probe must return exact requested byte count');
-    console.log(`✓ [1/12] /health + /api/client-info + /api/speed-probe -> version=${health.version}, IP/Country OK, 64KB probe OK`);
+    console.log(`✓ [1/15] /health + /api/client-info + /api/speed-probe -> version=${health.version}, IP/Country OK, 64KB probe OK`);
 
     // ── TEST 2: Setup Panel & Verify No remarkPrefix + Default ProxyIPs + TgProxy ──
     const setupRes = await fetch(`${BASE}/api/setup`, {
@@ -169,14 +301,16 @@ async function main() {
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.4.0');
+    assert.equal(boot.version, '2.5.0');
+    assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
+    assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
     assert(boot.settings.proxyIPs.length >= 3, 'Default verified ProxyIPs must be populated');
     assert.equal(boot.settings.enableNAT64, true, 'Default NAT64 must be enabled');
     assert.equal(boot.settings.enableTgProxy, true, 'Telegram Web Proxy must be enabled by default');
     assert.match(boot.settings.tgProxySecret, /^[0-9a-f]{32}$/, '32-hex Telegram secret auto-minted');
     assert(boot.tgProxy.tgUrl.startsWith('tg://webproxy?server='), 'tg://webproxy URL ready');
-    console.log(`✓ [2/12] Setup & Defaults -> 0 remarkPrefix, ${boot.settings.proxyIPs.length} ProxyIPs, tg://webproxy ready`);
+    console.log(`✓ [2/15] Setup & Defaults -> 0 remarkPrefix, ${boot.settings.proxyIPs.length} ProxyIPs, tg://webproxy ready`);
 
     const user = boot.users[0];
 
@@ -208,7 +342,7 @@ async function main() {
     for (const hp of [80, 8080, 8880, 2052, 2082, 2086, 2095]) {
       assert(rawWithHttp.some((l) => l.includes(`:${hp}?`) && l.includes('security=none')), `Expected HTTP port ${hp}`);
     }
-    console.log(`✓ [3/12] Ports & Emoji-Free Subscriptions -> All 6 TLS + 7 HTTP ports (${rawWithHttp.length} lines), 0 emojis`);
+    console.log(`✓ [3/15] Ports & Emoji-Free Subscriptions -> All 6 TLS + 7 HTTP ports (${rawWithHttp.length} lines), 0 emojis`);
 
     // ── TEST 4: Private DoH (`/dns-query/<token>`) Browser HTML + JSON + Binary POST ──
     const dohHtmlRes = await fetch(`${BASE}/dns-query/${user.subToken}`, {
@@ -229,7 +363,7 @@ async function main() {
       body: dnsWireQuery,
     });
     assert.equal(dohPostRes.status, 200);
-    console.log('✓ [4/12] Private DoH -> Emoji-free HTML Guide 200 + JSON 200 + RFC 8484 POST 200');
+    console.log('✓ [4/15] Private DoH -> Emoji-free HTML Guide 200 + JSON 200 + RFC 8484 POST 200');
 
     // ── TEST 5: LIVE `www.speedtest.net` HTTPS over Fragmented VLESS Tunnel ──
     const speedtestHttp = await fetchHttpsViaFragmentedVless({
@@ -243,7 +377,7 @@ async function main() {
       /^HTTP\/1\.[01]\s+200\b/.test(speedtestHttp) && speedtestHttp.includes('h=www.speedtest.net'),
       `Expected HTTP 200 from www.speedtest.net over VLESS tunnel, got: ${speedtestHttp.slice(0, 140)}`
     );
-    console.log('✓ [5/12] Cloudflare-Hosted Tunnel -> LIVE HTTPS to www.speedtest.net over fragmented VLESS returned 200 OK');
+    console.log('✓ [5/15] Cloudflare-Hosted Tunnel -> LIVE HTTPS to www.speedtest.net over fragmented VLESS returned 200 OK');
 
     // ── TEST 6: Official Telegram Web Proxy (`/?bridge=`, `/api/v1/session`, `/api/v1/ws`) ──
     const tgSecret = boot.settings.tgProxySecret;
@@ -268,7 +402,7 @@ async function main() {
       tgWs.on('open', () => { assert.equal(tgWs.protocol, subproto); tgWs.close(); resolve(); });
       tgWs.on('error', reject);
     });
-    console.log('✓ [6/12] Official Telegram Web Proxy -> HMAC Bridge 200 + Session Lease 200 + Lane WS 101 verified');
+    console.log('✓ [6/15] Official Telegram Web Proxy -> HMAC Bridge 200 + Session Lease 200 + Lane WS 101 verified');
 
     // ── TEST 7–12: Headless Chromium UI E2E Verification ──
     const browser = await chromium.launch();
@@ -299,7 +433,7 @@ async function main() {
     assert(computedFilter.includes('blur'), `Expected CSS blur filter, got: ${computedFilter}`);
     await page.click('#btn-ip-blur');
     assert.equal(await page.locator('#visitor-ip').evaluate((el) => el.classList.contains('is-blurred')), false);
-    console.log(`✓ [7/12] Visitor IP/Country/ISP Strip + BLUR Toggle -> IP="${detectedIp}", filter="${computedFilter}" verified`);
+    console.log(`✓ [7/15] Visitor IP/Country/ISP Strip + BLUR Toggle -> IP="${detectedIp}", filter="${computedFilter}" verified`);
 
     // Login to Admin Panel
     await page.fill('#login-pass', 'AdminPassword24!');
@@ -315,7 +449,7 @@ async function main() {
     });
     assert.equal(emojiCheck.emojiCount, 0, `Expected 0 emojis in DOM, found: ${emojiCheck.matches.join(',')}`);
     assert(emojiCheck.svgIcons >= 25, `Expected >=25 custom SVG icons, found: ${emojiCheck.svgIcons}`);
-    console.log(`✓ [8/12] Zero-Emoji & Custom SVG Icon Audit -> 0 emojis in DOM, ${emojiCheck.svgIcons} crisp vector icons rendered`);
+    console.log(`✓ [8/15] Zero-Emoji & Custom SVG Icon Audit -> 0 emojis in DOM, ${emojiCheck.svgIcons} crisp vector icons rendered`);
 
     // ── TEST 9: Stationary-Shadow Button Physics Audit ──
     // Verify that when a button (including `.btn.sm-btn`) is pressed, its body moves by `--sh-d` (3px)
@@ -351,7 +485,7 @@ async function main() {
     assert.equal(shadowAudit.btnMovedX, 3, 'Small button must translate +3px X onto its shadow');
     assert.equal(shadowAudit.btnMovedY, 3, 'Small button must translate +3px Y onto its shadow');
     assert(shadowAudit.shadowDriftX < 0.5 && shadowAudit.shadowDriftY < 0.5, `Shadow must stay stationary! Drift: ${JSON.stringify(shadowAudit)}`);
-    console.log(`✓ [9/12] Stationary-Shadow Button Physics -> Button moved (+${shadowAudit.btnMovedX}px, +${shadowAudit.btnMovedY}px), shadow drift = 0.0px!`);
+    console.log(`✓ [9/15] Stationary-Shadow Button Physics -> Button moved (+${shadowAudit.btnMovedX}px, +${shadowAudit.btnMovedY}px), shadow drift = 0.0px!`);
 
     // ── TEST 10: Dynamic Theme-Native Monochrome Speed/RTT & Subscriber Usage Chart ──
     await page.click('#btn-speed-burst');
@@ -376,7 +510,7 @@ async function main() {
     assert(canvasOk.paletteCount >= 2, 'Telemetry canvas must actively draw monochrome bars/waveforms');
     await page.click('.t-pick[data-th="light"]');
     await page.click('#chart-mode-live');
-    console.log(`✓ [10/12] Monochrome Live Speed & Usage Chart -> Burst=${kpiSpd.trim()}, canvas=${canvasOk.width}x${canvasOk.height} verified`);
+    console.log(`✓ [10/15] Monochrome Live Speed & Usage Chart -> Burst=${kpiSpd.trim()}, canvas=${canvasOk.width}x${canvasOk.height} verified`);
 
     // ── TEST 11: Smart Browser-Based ISP & Connectivity Advisor + 1-Click Auto-Apply ──
     await page.click('.tab-btn[data-tab="advisor"]');
@@ -389,7 +523,7 @@ async function main() {
     assert(recsCount >= 2, 'Advisor must render concrete ISP tuning recommendations');
     await page.click('#btn-adv-apply');
     await sleep(300);
-    console.log(`✓ [11/12] Smart Browser Network Advisor -> 12/12 live browser probes + ${recsCount} recommendations + 1-click Auto-Apply verified`);
+    console.log(`✓ [11/15] Smart Browser Network Advisor -> 12/12 live browser probes + ${recsCount} recommendations + 1-click Auto-Apply verified`);
 
     // ── TEST 12: Clean IP Scanner + Balanced Layout Zero-Emoji Subscriber Press Pass ──
     await page.click('.tab-btn[data-tab="net"]');
@@ -411,19 +545,150 @@ async function main() {
       return ((document.documentElement.innerText || '').match(/\p{Extended_Pictographic}/gu) || []).length;
     });
     assert.equal(subEmojiCount, 0, 'Subscriber Press Pass must contain 0 emojis');
+    console.log('✓ [12/15] Clean IP Scanner + Emoji-Free Subscriber Press Pass verified!');
+
+    // ── TEST 13: New User Zero-Traffic & Progress Bar Isolation + Duplicate UUID Guard ──
+    // Note: `user` (سردبیر اصلی) already accrued real bytes from VLESS + Trojan E2E tunnels in Tests 4–5!
+    // Adding a brand-new unlimited user `SinA` MUST have `usedBytes === 0` and `0%` progress bar width!
+    const dupRes = await fetch(`${BASE}/api/users`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ name: 'DupCheck', uuid: user.uuid }),
+    });
+    assert.equal(dupRes.status, 400, 'Duplicate UUID on new user must be rejected with 400');
+
+    await page.click('.tab-btn[data-tab="users"]');
+    await page.waitForSelector('#pane-users:not([hidden])');
+    await page.fill('#uf-name', 'SinA');
+    await page.fill('#uf-gb', '0');
+    await page.click('#f-user button[type="submit"]');
+    await sleep(400);
+
+    const userBarAudit = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('#users-list .user-card'));
+      return cards.map((c) => {
+        const name = (c.querySelector('.user-name')?.innerText || '').trim();
+        const bw = (c.querySelector('.user-meta b')?.innerText || '').trim();
+        const barWidth = c.querySelector('.meter i')?.style.width || '';
+        return { name, bw, barWidth };
+      });
+    });
+    const sinaCard = userBarAudit.find((c) => c.name.includes('SinA'));
+    assert(sinaCard, 'SinA must appear in Subscriber Ledger');
+    assert(sinaCard.bw.startsWith('0 B /'), `New user SinA must start at 0 B, got: ${sinaCard.bw}`);
+    assert.equal(sinaCard.barWidth, '0%', `New 0-byte user progress bar MUST be 0%, got: ${sinaCard.barWidth}`);
+
+    // Also verify Tab 1 `#u-meter` for SinA is 0%
+    await page.click('.tab-btn[data-tab="sub"]');
+    await page.waitForSelector('#pane-sub:not([hidden])');
+    const tab1SinaWidth = await page.evaluate(() => document.getElementById('u-meter')?.style.width);
+    assert.equal(tab1SinaWidth, '0%', `Tab 1 #u-meter for 0-byte SinA MUST be 0%, got: ${tab1SinaWidth}`);
+    console.log(`✓ [13/15] New User Isolation & Progress Bar Fix -> SinA (${sinaCard.bw}) bar=${sinaCard.barWidth}, duplicate UUID blocked`);
+
+    // ── TEST 14: Compact Cloudflare Daily Request Quota Bar + Token Verifier + Mini Popup Guide ──
+    await page.click('#btn-cf-quota');
+    await page.waitForSelector('#cf-modal:not([hidden])');
+    await page.click('#btn-cf-guide-pop');
+    await page.waitForSelector('#cf-perm-popover:not([hidden])');
+    const guideHasLinks = await page.evaluate(() => {
+      const pop = document.getElementById('cf-perm-popover');
+      const links = Array.from(pop.querySelectorAll('a[href]')).map((a) => a.href);
+      return {
+        hasDashLink: links.some((h) => h.includes('dash.cloudflare.com/profile/api-tokens')),
+        hasDocsLink: links.some((h) => h.includes('developers.cloudflare.com')),
+        permItems: pop.querySelectorAll('.perm-list li').length,
+      };
+    });
+    assert(guideHasLinks.hasDashLink && guideHasLinks.hasDocsLink && guideHasLinks.permItems === 3, 'Mini guide popup must contain hyperlinked token permissions');
+    await page.click('#btn-cf-guide-close');
+
+    // Test invalid token rejection first
+    await page.fill('#cf-inp-token', 'cf_invalid_bad_token_0000000000');
+    await page.click('#btn-cf-verify');
+    await sleep(300);
+    const badMsgCls = await page.locator('#cf-verify-msg').getAttribute('class');
+    assert.equal(badMsgCls, 'err', 'Invalid Cloudflare token must show error state');
+
+    // Now verify & save valid token -> live 27,450 / 100,000 (27.5%) quota bar!
+    await page.fill('#cf-inp-token', 'cf_valid_test_token_1234567890');
+    await page.click('#btn-cf-save');
+    await sleep(400);
+    const cfBarState = await page.evaluate(() => ({
+      miniTxt: document.getElementById('cf-mini-txt')?.textContent || '',
+      miniWidth: document.getElementById('cf-mini-bar')?.style.width || '',
+      modalNums: document.getElementById('cf-modal-nums')?.textContent || '',
+    }));
+    assert.equal(cfBarState.miniTxt, '27.4K/100K', `Expected compact bar 27.4K/100K, got: ${cfBarState.miniTxt}`);
+    assert.equal(cfBarState.miniWidth, '27%', `Expected compact bar width 27%, got: ${cfBarState.miniWidth}`);
+    assert(cfBarState.modalNums.includes('27,450 / 100,000'), `Expected exact count in modal, got: ${cfBarState.modalNums}`);
+    await page.click('#btn-cf-close');
+    console.log(`✓ [14/15] Cloudflare Daily Request Quota Bar & Token Verifier -> ${cfBarState.miniTxt} (${cfBarState.miniWidth}), mini permissions popup verified`);
+
+    // ── TEST 15: Hardcoded GitHub (`youdidking/NightLine`) Updater & Self-Deploy + Tab 05 Spacing & Clean Copy Audit ──
+    const copyAndSpacingAudit = await page.evaluate(() => {
+      const fullHtmlText = document.documentElement.innerHTML;
+      const bannedMetaPhrases = [
+        'کاملاً منطبق با تم تک‌رنگ روزنامه',
+        'کاملاً هماهنگ با تم تک‌رنگ روزنامه',
+        'Strictly monochrome newsprint ink',
+        'dynamically follows Light/Dark ink',
+        'حروف‌چینی با JetBrains Mono و وزیرمتن',
+        'Set in JetBrains Mono',
+      ];
+      const foundMeta = bannedMetaPhrases.filter((p) => fullHtmlText.includes(p));
+
+      const navBottom = document.querySelector('.nav-tabs').getBoundingClientRect().bottom;
+      const tab1Top = document.querySelector('#pane-sub .telemetry-card').getBoundingClientRect().top;
+      const gapTab1 = Math.round(tab1Top - navBottom);
+      return { foundMeta, gapTab1 };
+    });
+    assert.equal(copyAndSpacingAudit.foundMeta.length, 0, `Leftover meta phrases found: ${copyAndSpacingAudit.foundMeta.join(', ')}`);
+
+    await page.click('.tab-btn[data-tab="advisor"]');
+    await page.waitForSelector('#pane-advisor:not([hidden])');
+    const gapTab5 = await page.evaluate(() => {
+      const navBottom = document.querySelector('.nav-tabs').getBoundingClientRect().bottom;
+      const advTop = document.getElementById('advisor-master-card').getBoundingClientRect().top;
+      return Math.round(advTop - navBottom);
+    });
+    assert(gapTab5 >= 12 && Math.abs(gapTab5 - copyAndSpacingAudit.gapTab1) <= 1, `Tab 05 gap (${gapTab5}px) must match Tab 01 gap (${copyAndSpacingAudit.gapTab1}px)`);
+
+    // Open Hardcoded GitHub Updater Modal, check `youdidking/NightLine`, and trigger In-Panel Self-Update!
+    await page.click('#btn-gh-updater');
+    await page.waitForSelector('#gh-modal:not([hidden])');
+    await sleep(450);
+    const ghUi = await page.evaluate(() => ({
+      repoHref: document.querySelector('#gh-modal a.inline-link')?.href || '',
+      remVer: document.getElementById('gh-rem-ver')?.textContent || '',
+      dotVisible: !document.getElementById('gh-upd-dot')?.hidden,
+    }));
+    assert.equal(ghUi.repoHref, 'https://github.com/youdidking/NightLine');
+    assert.equal(ghUi.remVer, 'V2.6.0', `Expected V2.6.0 from mock GitHub release, got: ${ghUi.remVer}`);
+    assert.equal(ghUi.dotVisible, true, 'Update NEW indicator must appear when newer version exists on GitHub');
+
+    await page.click('#btn-gh-apply');
+    await sleep(600);
+    assert.equal(mockRecorder.workerUploads.length, 1, 'Self-updater must PUT multipart Worker bundle to Cloudflare API');
+    const upload = mockRecorder.workerUploads[0];
+    assert(upload.contentType.includes('multipart/form-data'), 'Worker upload must be multipart/form-data');
+    assert(upload.bodyText.includes('"kv_ns_demo_123"'), 'Self-updater MUST preserve existing KV namespace bindings');
+    assert(upload.bodyText.includes('"keep_bindings":["secret_text","secret_key"]'), 'Self-updater MUST preserve existing secrets');
+    assert(upload.byteLength > 200000, 'Uploaded Worker bundle must contain full compiled script');
+    console.log(`✓ [15/15] GitHub Self-Updater (youdidking/NightLine) + Tab 05 Spacing (${gapTab5}px == ${copyAndSpacingAudit.gapTab1}px) + Clean Captions verified!`);
 
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('✓ [12/12] Clean IP Scanner + Emoji-Free Subscriber Press Pass verified!');
-    console.log('\nALL 12/12 NIGHTLINE v2.4.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 NIGHTLINE v2.5.0 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));
     proc.kill('SIGTERM');
+    mockSrv.close();
     process.exit(1);
   } finally {
     proc.kill('SIGTERM');
+    mockSrv.close();
   }
   process.exit(0);
 }

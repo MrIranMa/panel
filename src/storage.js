@@ -14,7 +14,9 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'NIGHTLINE';
-export const PANEL_VERSION = '2.4.0';
+export const PANEL_VERSION = '2.5.0';
+export const GITHUB_REPO = 'youdidking/NightLine';
+export const GITHUB_REPO_URL = 'https://github.com/youdidking/NightLine';
 export const STATE_KEY = 'nl:state:v2';
 const CACHE_TTL_MS = 15_000;
 const USAGE_FLUSH_INTERVAL_MS = 45_000;
@@ -471,6 +473,17 @@ export async function loadRuntimeState(env, forceRefresh = false) {
     }
   }
 
+  const rawCfApi = raw.cfApi && typeof raw.cfApi === 'object' ? raw.cfApi : {};
+  const cfApi = {
+    token: String(rawCfApi.token || '').trim(),
+    accountId: String(rawCfApi.accountId || '').trim(),
+    accountName: String(rawCfApi.accountName || '').trim(),
+    scriptName: String(rawCfApi.scriptName || '').trim(),
+    dailyLimit: Math.max(1000, Number(rawCfApi.dailyLimit) || 100000),
+    canEditWorkers: Boolean(rawCfApi.canEditWorkers),
+    updatedAt: Number(rawCfApi.updatedAt) || 0,
+  };
+
   const state = {
     mode: 'kv',
     kvBound: true,
@@ -478,6 +491,7 @@ export async function loadRuntimeState(env, forceRefresh = false) {
     initialized: true,
     envUuid: null,
     auth: raw.auth,
+    cfApi,
     settings: sanitizeSettings(rawSettings, DEFAULT_SETTINGS),
     users: Array.isArray(raw.users) ? raw.users.map((u) => normalizeUser(u, true)) : [],
     logs: Array.isArray(raw.logs) ? raw.logs.slice(0, 40) : [],
@@ -486,6 +500,15 @@ export async function loadRuntimeState(env, forceRefresh = false) {
   memCache = state;
   memCacheAt = now;
   return state;
+}
+
+export function clearPendingUsage(userId) {
+  if (!userId) return;
+  const pend = pendingUsage.get(userId);
+  if (pend) {
+    pendingBytesTotal = Math.max(0, pendingBytesTotal - (pend.up || 0) - (pend.down || 0));
+    pendingUsage.delete(userId);
+  }
 }
 
 export async function saveRuntimeState(env, nextState) {
@@ -507,10 +530,22 @@ export async function saveRuntimeState(env, nextState) {
   });
   pendingBytesTotal = 0;
 
+  const rawCf = nextState?.cfApi && typeof nextState.cfApi === 'object' ? nextState.cfApi : {};
+  const cfApiDoc = {
+    token: String(rawCf.token || '').trim(),
+    accountId: String(rawCf.accountId || '').trim(),
+    accountName: String(rawCf.accountName || '').trim(),
+    scriptName: String(rawCf.scriptName || '').trim(),
+    dailyLimit: Math.max(1000, Number(rawCf.dailyLimit) || 100000),
+    canEditWorkers: Boolean(rawCf.canEditWorkers),
+    updatedAt: Number(rawCf.updatedAt) || 0,
+  };
+
   const doc = {
     version: 3,
     updatedAt: Date.now(),
     auth: nextState.auth,
+    cfApi: cfApiDoc,
     settings: sanitizeSettings(nextState.settings || {}, DEFAULT_SETTINGS),
     users: mergedUsers,
     logs: Array.isArray(nextState.logs) ? nextState.logs.slice(0, 40) : [],
@@ -530,6 +565,7 @@ export async function saveRuntimeState(env, nextState) {
     initialized: true,
     envUuid: null,
     auth: doc.auth,
+    cfApi: doc.cfApi,
     settings: doc.settings,
     users: doc.users,
     logs: doc.logs,

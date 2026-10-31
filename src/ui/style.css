@@ -207,14 +207,14 @@ html[data-lang="en"] .head{line-height:1.15;letter-spacing:-.02em}
 
 /* ledger status strip & navigation tabs --------------------------------- */
 .ledger-bar{
-  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 14px;
-  padding:10px 14px;margin-top:12px;
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 10px;
+  padding:9px 12px;margin-top:12px;
   border:1.5px solid var(--ink);background:var(--paper-2);
   box-shadow:var(--shadow-sm);
 }
-.ledger-items{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-family:var(--en-font);font-size:11px;letter-spacing:.06em;direction:ltr;unicode-bidi:isolate}
+.ledger-items{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-family:var(--en-font);font-size:10.5px;letter-spacing:.05em;direction:ltr;unicode-bidi:isolate}
 .ledger-items b{font-weight:700}
-.ledger-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ledger-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 
 .nav-tabs{
   display:grid;grid-template-columns:repeat(6,1fr);gap:8px;
@@ -254,6 +254,12 @@ html[data-lang="en"] .tab-btn{font-family:var(--en-font);font-size:10.5px;letter
   background:var(--ink);color:var(--paper);
 }
 .tab-btn.active .tnum{opacity:.9}
+
+.tab-pane{margin-top:14px}
+.tab-pane>.telemetry-card,
+.tab-pane>.cols,
+.tab-pane>.cols-even,
+.tab-pane>.stack{margin-top:0}
 
 /* grids & cards (zero dead-space stretch layout) ------------------------ */
 .cols{
@@ -524,7 +530,7 @@ html[data-lang="en"] .notice-title{font-family:var(--en-font);font-size:11px;let
   width:100%;max-width:540px;
   background:var(--paper);color:var(--ink);
   border:2px solid var(--ink);
-  box-shadow:7px 7px 0 var(--ink);
+  box-shadow:7px 7px 0 var(--sh-c);
   padding:22px 24px;
 }
 .sw .fa{font-family:var(--fa-font);letter-spacing:0;font-size:11.5px}
@@ -632,6 +638,87 @@ html[data-lang="en"] .kpi-box span{font-family:var(--en-font);text-transform:upp
   display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;
   margin-top:8px;font-size:11.5px;color:var(--ink-faint);
 }
+.chart-legend{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;
+}
+.chart-legend[hidden]{display:none !important}
+.leg-item{
+  display:inline-flex;align-items:center;gap:5px;color:var(--ink-soft);
+}
+.leg-item .ic{color:var(--ink)}
+.leg-sep{opacity:.55}
+
+/* compact cloudflare daily quota pill & github self-updater ------------- */
+.quota-pill{
+  --sh-d:3px;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 9px;border:1.5px solid var(--ink);
+  background:var(--paper);color:var(--ink);cursor:pointer;
+  font-family:var(--fa-font);font-size:11px;font-weight:700;
+  transform:translate3d(0,0,0);
+  box-shadow:var(--sh-d) var(--sh-d) 0 0 var(--sh-c);
+  transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .18s cubic-bezier(.22,1,.36,1),background-color .14s ease,color .14s ease;
+}
+html[data-lang="en"] .quota-pill{font-family:var(--en-font);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.quota-pill:hover{
+  background:var(--paper-2);
+  transform:translate3d(-1.5px,-1.5px,0);
+  box-shadow:calc(var(--sh-d) + 1.5px) calc(var(--sh-d) + 1.5px) 0 0 var(--sh-c);
+}
+.quota-pill:active,.quota-pill.is-pressed{
+  transform:translate3d(var(--sh-d),var(--sh-d),0);
+  box-shadow:0 0 0 0 var(--sh-c);
+  transition-duration:.06s;
+}
+.quota-lbl{color:var(--ink-soft);white-space:nowrap}
+.mini-meter{
+  display:inline-block;width:54px;height:7px;
+  border:1px solid var(--ink);background:var(--paper-2);
+  padding:1px;overflow:hidden;flex-shrink:0;
+}
+.mini-meter i{
+  display:block;height:100%;background:var(--ink);
+  transition:width .3s ease;
+}
+.mini-meter.warn i{background:var(--red)}
+.upd-dot{
+  font-family:var(--en-font);font-size:9.5px;font-weight:700;letter-spacing:.06em;
+  padding:1px 5px;background:var(--ink);color:var(--paper);
+}
+.cf-quota-box{
+  margin-top:10px;padding:10px 12px;
+  border:1.5px solid var(--ink);background:var(--paper-2);
+}
+.cf-help-links{
+  display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;
+}
+.inline-link,.inline-link-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--ink);font-size:inherit;font-family:inherit;font-weight:700;
+  text-decoration:underline;text-underline-offset:3px;
+  background:none;border:none;padding:0;cursor:pointer;
+}
+.inline-link:hover,.inline-link-btn:hover{opacity:.72}
+.perm-popover{
+  margin:6px 0 8px;padding:10px 12px;
+  border:1.5px dashed var(--ink);background:var(--paper-2);
+  box-shadow:var(--shadow-sm);
+}
+.perm-popover[hidden]{display:none !important}
+.perm-list{
+  margin:0;padding-inline-start:17px;
+  font-size:11.5px;line-height:1.75;color:var(--ink-soft);
+}
+.perm-list code{
+  font-family:var(--en-font);font-size:10.5px;
+  background:var(--ink);color:var(--paper);padding:1px 5px;direction:ltr;display:inline-block;
+}
+.gh-notes{
+  margin:10px 0 0;padding:8px 10px;max-height:115px;overflow:auto;
+  border:1px solid var(--ink);background:var(--paper-2);
+  font-family:var(--en-font);font-size:11px;line-height:1.6;white-space:pre-wrap;
+  direction:ltr;text-align:left;
+}
 .seg-grp{display:inline-flex;border:1.5px solid var(--ink);background:var(--paper)}
 .seg-btn{
   border:none;border-inline-start:1px solid var(--ink);
@@ -679,11 +766,11 @@ html[data-lang="en"] .seg-btn{font-family:var(--en-font);font-size:10.5px;letter
 /* footer ---------------------------------------------------------------- */
 footer{margin-top:36px}
 .colophon{
-  margin:0 0 5px;font-family:var(--en-font);font-size:10.5px;letter-spacing:.1em;
+  margin:0;font-family:var(--en-font);font-size:11px;letter-spacing:.08em;
   color:var(--ink-faint);text-transform:uppercase;
-  display:flex;flex-wrap:wrap;gap:4px 9px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;
 }
-html[data-lang="fa"] .colophon:first-of-type{font-family:var(--fa-font);letter-spacing:0;font-size:12px}
+html[data-lang="fa"] .colophon .fa{font-family:var(--fa-font);letter-spacing:0;font-size:11.5px}
 
 ::selection{background:var(--ink);color:var(--paper)}
 *{scrollbar-width:thin;scrollbar-color:var(--ink-faint) transparent}
