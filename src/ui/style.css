@@ -868,3 +868,5 @@ html[data-lang="fa"] .colophon .fa{font-family:var(--fa-font);letter-spacing:0;f
 @media(max-width:540px){.card{padding:12px}.scan-options{grid-template-columns:1fr}.scan-detail{line-height:1.6}}
 
 .cols{align-items:start}.net-telegram .field-grid{grid-template-columns:1fr}
+
+.tunnel-guide{border-top:1px dotted var(--ink);margin:12px 0;padding-top:8px}.tunnel-guide .actions{gap:8px}.tunnel-guide .btn{white-space:normal}.adv-path-metrics strong{overflow-wrap:anywhere}

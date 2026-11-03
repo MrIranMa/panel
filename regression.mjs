@@ -48,6 +48,7 @@ const account='0123456789abcdef0123456789abcdef';
 const calls=[];let persisted,metadata,failPublish=false,multiple=false,failDownload=false;
 globalThis.fetch=async(url,opts={})=>{
  const host=new URL(url).hostname;
+ if(new URL(url).hostname==='raw.githubusercontent.com'){assert(!opts.headers.authorization);return new Response(failDownload?Buffer.from(officialWorker).fill(32):officialWorker);}
  if(host==='api.github.com'||host==='github.com'){assert(!opts.headers.authorization,'Never send CF credentials to GitHub');return host==='api.github.com'?Response.json(officialRelease):new Response(failDownload?Buffer.from(officialWorker).fill(32):officialWorker);}
  if(host.endsWith('.workers.dev'))return Response.json({ok:true,version:'2.5.3',initialized:true});
  const path=new URL(url).pathname.replace('/client/v4','');calls.push([opts.method||'GET',path]);
@@ -74,7 +75,7 @@ try{
  const upload=calls.findIndex(c=>c[0]==='PUT'&&c[1].includes('/workers/scripts/'));
  assert(seed<upload,'Seed credentials before deployment');
  assert(!calls.some(c=>c[0]==='PUT'&&c[1].endsWith('/workers/subdomain')),'Do not rename account subdomain');
- console.log('PASS installer deployment, official download checksum, initialized KV, naming and credential isolation (mock API)');
+ console.log('PASS installer deployment, direct official file download, initialized KV, naming and credential isolation (mock API)');
  calls.length=0;failDownload=true;
  const downloadFailure=await(await installer.fetch(installRequest())).json();assert.equal(downloadFailure.ok,false);assert(!calls.some(c=>c[0]==='POST'||c[0]==='PUT'),'Download failure must not create KV or Workers');failDownload=false;
  console.log('PASS failed official download stops installation before resource creation');

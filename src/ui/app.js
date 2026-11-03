@@ -803,6 +803,7 @@
     advisorRunning=true;lastAdvisorPatch=null;advisorController=new AbortController();
     var signal=advisorController.signal,N=globalThis.NLNetwork;
     var deadline=setTimeout(function(){advisorController.abort();},65000);
+    $('btn-adv-cancel').hidden=false;
     $('btn-adv-run').disabled=true;$('btn-adv-apply').hidden=true;$('adv-recs').hidden=true;
     $('adv-progress').hidden=false;$('adv-path-metrics').hidden=true;
     $('adv-run-ic').classList.add('ic-spin');
@@ -812,6 +813,13 @@
       advisorStage(5,'۱ از ۴ · تأخیر، نوسان و WebSocket واقعی','1/4 · Latency, jitter and WebSocket');
       var base=await N.sample('/api/ping',{signal:signal,check:'health',credentials:'same-origin',timeout:2200},5);
       var ws=await N.wsProbe((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/api/network/ws',signal);
+      var currentUser=getSelectedUser(),settings=STATE.settings||{},tunnel={ok:false,reason:'no-identity'};
+      if(currentUser){
+        var protocol=settings.enableVless?'vless':'trojan';
+        tunnel=await N.tunnelProbe((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+((settings.wsPath||'/').split('?')[0]||'/'),{protocol:protocol,uuid:currentUser.uuid,trojanHash:currentUser.trojanHash},{signal:signal,timeout:8000});
+      }
+      var tunnelReasons={'no-identity':'کاربر معتبر انتخاب نشده','websocket-error':'ارتباط WS/TLS برقرار نشد','websocket-timeout':'مهلت برقراری WebSocket تمام شد','tunnel-timeout':'پس از WS پاسخ HTTP نرسید','closed-before-http':'تونل پیش از پاسخ HTTP بسته شد','http-denied':'مقصد پاسخ HTTP ناموفق داد','invalid-response':'پاسخ غیرمنتظره','invalid-http-response':'پاسخ HTTP معتبر نبود','cancelled':'آزمون متوقف شد'};
+      $('adv-tunnel').textContent=tunnel.ok?tunnel.protocol.toUpperCase()+' · HTTP '+tunnel.status+' · '+tunnel.ms+' ms':tr('تأیید نشد: ','Not verified: ')+tr(tunnelReasons[tunnel.reason]||'پاسخ کامل دریافت نشد',tunnel.reason);
       if(signal.aborted)throw Error('cancelled');
       $('adv-path-metrics').hidden=false;
       $('adv-rtt').textContent=base.ms===null?'—':base.ms+' ms · '+base.replies+'/'+base.attempts;
@@ -824,8 +832,8 @@
         r.target=t;byId[t.id]=r;
         var b=$('adv-bdg-'+t.id);b.className=r.ok?'badge ok':'badge';
         b.textContent=r.ok?(t.kind==='opaque'?tr('پاسخ مرورگری','OPAQUE REPLY'):tr('تأیید پاسخ','VERIFIED REPLY')):tr('بی‌پاسخ / خطا','NO REPLY / ERROR');
-        $('adv-ms-'+t.id).textContent=(r.ms!==null?r.ms+' ms · ':'')+r.replies+'/'+r.attempts;
-        $('adv-bar-'+t.id).style.width=(r.ok?Math.max(12,100-r.ms/20):3)+'%';
+        $('adv-ms-'+t.id).textContent=r.ms!==null?r.ms+' ms · '+r.replies+'/'+r.attempts:'—';
+        $('adv-bar-'+t.id).style.width=(r.ok?Math.max(12,100-r.ms/20):0)+'%';
         completed++;advisorStage(20+Math.round(completed*40/ADV_TARGETS.length),'۲ از ۴ · '+completed+' از '+ADV_TARGETS.length+' مقصد','2/4 · '+completed+'/'+ADV_TARGETS.length+' targets');
         return r;
       },signal);
@@ -855,15 +863,16 @@
       advisorStage(95,'۴ از ۴ · آماده‌سازی پیشنهادها؛ بدون اعمال خودکار','4/4 · Preparing changes for review');
       var patch={},s=STATE.settings||{},recs=[];
       function rec(fa,en){recs.push([fa,en]);}
-      if(base.ok&&down.ok){
+      if(base.ok&&down.ok&&tunnel.ok){
         patch.alpn='http/1.1';patch.showSubInfoNodes=true;patch.enableHttpPorts=false;patch.enableECH=false;
-        if(s.enableFragment){patch.fragmentMode='tlshello';patch.fragmentPackets='tlshello';patch.fragmentLength='100-200';patch.fragmentInterval='1-3';patch.enableNoise=false;}
-        rec('پایهٔ سازگاری: HTTP/1.1 برای WS، پورت‌های فقط TLS و حذف ECH آزمایشی؛ در صورت روشن‌بودن Fragment، TLSHello ملایم. تست مرورگر نمی‌تواند بهترین اندازهٔ Fragment را تعیین کند.','Compatibility baseline: HTTP/1.1 WebSocket, TLS-only ports and no experimental ECH; mild TLSHello when Fragment is enabled. Browser tests cannot optimize actual Fragment packet sizes.');
+        rec('پایهٔ سازگاری: HTTP/1.1 برای WS، پورت‌های فقط TLS و حذف ECH آزمایشی؛ تنظیم Fragment شما دست‌نخورده می‌ماند و نیاز به آزمون در هستهٔ کلاینت دارد.','Compatibility baseline: HTTP/1.1 WebSocket, TLS-only ports and no experimental ECH; Fragment settings are preserved and must be tested in the client core.');
       }
       if(base.ok&&down.ok&&(!up.ok||!ws.ok||(up.ms>=120&&up.mbps<Math.min(1.5,down.mbps*0.3)))){
         patch.earlyData=0;
         rec('آپلود یا WebSocket پایدار نبود؛ Early Data صفر به‌عنوان آزمایش سازگاری پیشنهاد می‌شود، نه تشخیص محدودیت قطعی اپراتور.','Upload/WebSocket was unstable; Early Data 0 is a compatibility experiment, not proof of ISP throttling.');
       }else rec('Early Data بدون شواهد خطا تغییر نمی‌کند؛ پورت‌های TLS، IPها و قواعد شخصی شما حفظ می‌شوند.','Preserve Early Data without evidence; retain configured TLS ports, IPs and custom routing.');
+      rec(tunnel.ok?'ترافیک HTTP واقعاً از تونل کاربر منتخب عبور کرد؛ این نتیجه مربوط به دامنه و همین مسیر مرورگر است، نه تضمین همهٔ IPها.':'بازشدن صفحه یا echo وب‌سوکت کافی نیست: آزمون عبور HTTP از تونل تأیید نشد. ابتدا خروجی پایهٔ دامنه روی 443 را در کلاینت امتحان کنید.','The authenticated tunnel HTTP test is separate from page reachability and WebSocket echo. It does not validate every IP or TLS fragmentation.');
+      rec('سه ردیف اول اشتراک Normal اعلان رایگان/مصرف/اعتبار هستند، نود اتصال نیستند؛ برای اتصال نود VLESS یا Trojan با دامنهٔ پنل را انتخاب کنید.','The first three Normal entries are mandatory notices, not connection nodes. Select an actual domain VLESS/Trojan node.');
       var ports=results.filter(function(r){return r.target.kind==='port'&&r.ok;}).map(function(r){return r.target.port;});
       rec('پورت‌های دارای پاسخ سلامت همین Worker: '+(ports.join('، ')||'هیچ‌کدام در این نمونه')+'؛ فهرست پورت‌ها خودکار بازنویسی نمی‌شود.','This Worker’s health replied on: '+(ports.join(', ')||'none in this sample')+'. Existing TLS port choices are not overwritten.');
       var dns=results.filter(function(r){return r.target.kind==='dns'&&r.ok;}).sort(function(a,b){return a.ms-b.ms;});
@@ -878,7 +887,7 @@
       changes.textContent=tr('تغییرات پس از تأیید: ','Changes after confirmation: ')+(changed.length?changed.map(function(k){return k+': '+String(s[k])+' → '+String(patch[k]);}).join(' · '):tr('پروفایل سازگاری فعلی حفظ می‌شود.','Keep current compatibility profile.'));ul.appendChild(changes);
       lastAdvisorPatch=Object.keys(patch).length?patch:null;advisorCompletedAt=Date.now();
       var isp=STATE.cf.ispFa||STATE.cf.ispEn||tr('شبکهٔ فعلی','current network');
-      $('adv-verdict').textContent=tr('آزمون کامل شد — ','Completed — ')+isp+' · '+(base.ok?tr('پاسخ پنل تأیید شد؛ پیشنهادها را مرور کنید.','Worker replied; review recommendations.'):tr('مسیر پنل پاسخ کافی نداشت؛ پیشنهاد شبکه‌ای اعمال نمی‌شود.','Insufficient Worker responses; no network changes proposed.'));
+      $('adv-verdict').textContent=tr('آزمون کامل شد — ','Completed — ')+isp+' · '+(tunnel.ok?tr('عبور ترافیک از تونل تأیید شد؛ پیشنهادها را مرور کنید.','Tunnel HTTP verified; review recommendations.'):tr('عبور تونل تأیید نشد؛ نتیجهٔ صفحه را با اتصال کانفیگ اشتباه نگیرید.','Tunnel not verified; page reachability is not config connectivity.'));
       $('btn-adv-apply').hidden=STATE.mode!=='admin'||!lastAdvisorPatch;
       advisorStage(100,'آمادهٔ بررسی و تأیید شما','Ready for your review');
     }catch(err){
@@ -886,7 +895,7 @@
       $('adv-verdict').textContent=signal.aborted?tr('آزمون متوقف یا زمان آن تمام شد؛ هیچ تنظیمی تغییر نکرد.','Stopped or timed out; no settings changed.'):tr('آزمون ناقص بود؛ هیچ تنظیمی تغییر نکرد.','Incomplete diagnostic; no settings changed.');
       advisorStage(0,'بدون تغییر تنظیمات','No settings changed');
     }finally{
-      clearTimeout(deadline);advisorRunning=false;$('btn-adv-run').disabled=false;$('adv-run-ic').classList.remove('ic-spin');
+      clearTimeout(deadline);$('btn-adv-cancel').hidden=true;advisorRunning=false;$('btn-adv-run').disabled=false;$('adv-run-ic').classList.remove('ic-spin');
     }
   }
   if($('btn-adv-cancel'))$('btn-adv-cancel').onclick=function(){if(advisorController)advisorController.abort();};
@@ -2008,6 +2017,7 @@
     };
   }
 
+  ['adv-baseline','adv-fragment-small','adv-fragment-lab'].forEach(function(id){if($(id))$(id).onclick=function(){var u=getSelectedUser();if(!u){showToast('ابتدا وارد پنل شوید و کاربر را انتخاب کنید','Select a user first');return;}var a=document.createElement('a');a.href=subBaseUrl(u)+'?format=xray&profile='+(id==='adv-baseline'?'baseline':id==='adv-fragment-lab'?'fragment-lab':'tlshello-small');a.target='_blank';a.rel='noopener noreferrer';a.click();};});
   document.querySelectorAll('.frag-preset').forEach(function (btn) {
     btn.onclick = function () {
       $('s-frag-on').checked = true;

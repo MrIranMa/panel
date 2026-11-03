@@ -308,8 +308,8 @@
 
     <div class="ticker" aria-hidden="true">
       <div class="ticker-track">
-        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>SMART ISP ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
-        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>SMART ISP ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
       </div>
     </div>
   </header>
@@ -1030,7 +1030,7 @@
 </p>
 </div>
 </div></div><div class="stack"><div class="card">
-<p class="kicker"><svg class="ic"><use href="#i-radar"></use></svg><span class="fa">IPها و دامنه‌های تمیز کلادفلر + اسکنرِ مرورگر</span><span class="en">CLEAN IPs, DOMAINS &amp; BROWSER SCANNER</span></p>
+<p class="kicker"><svg class="ic"><use href="#i-radar"></use></svg><span class="fa">IP و دامنه · بررسی پاسخ مرورگر</span><span class="en">IP &amp; DOMAIN RESPONSE CHECK</span></p>
 <label class="fld-label" for="s-cleanips">
 <span class="fa">فهرست IP / دامنهٔ شما (هر خط یک مورد؛ کد تقریبی کشور برای نام نود: <code>172.67.73.163#US|MCI</code>)</span>
 <span class="en">YOUR IPs / DOMAINS (ONE PER LINE; APPROX. COUNTRY TAG: <code>172.67.73.163#US|MCI</code>)</span>
@@ -1055,8 +1055,8 @@
 </button>
 </div>
 <div class="actions" style="margin-top:7px"><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
-<div class="scan-options"><label class="fld-label"><span class="fa">روش بررسی</span><span class="en">METHOD</span><select id="scan-transport"><option value="auto">HTTP(S) + نامزد‌یابی تخمینی</option><option value="strict">HTTPS — فقط پاسخ واقعی</option><option value="http">HTTP — فقط صفحهٔ غیرامن</option></select></label><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">TIMEOUT</span><select id="scan-timeout"><option value="4000">4 s</option><option value="7000">7 s</option><option value="10000">10 s</option></select></label></div>
-<p class="hint"><span class="fa">پاسخ HTTP از اینترنت شما اندازه‌گیری می‌شود. خطای سریع فقط «نامزد تخمینی» است، نه پینگ یا IP سالم. مرورگر در صفحهٔ HTTPS اجازهٔ HTTP خام را نمی‌دهد.</span><span class="en">HTTP responses use your connection. Fast errors only suggest unverified candidates, not healthy IPs. Secure pages cannot request plain HTTP.</span></p>
+<div class="scan-options"><label class="fld-label"><span class="fa">روش بررسی</span><span class="en">METHOD</span><select id="scan-transport"><option value="auto">HTTP(S) + نامزد‌یابی تخمینی</option><option value="strict" selected>HTTPS — فقط پاسخ واقعی</option><option value="http">HTTP — فقط صفحهٔ غیرامن</option></select></label><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">TIMEOUT</span><select id="scan-timeout"><option value="4000">4 s</option><option value="7000">7 s</option><option value="10000">10 s</option></select></label></div>
+<p class="hint"><span class="fa">این بخش ICMP یا TLS با SNI دلخواه نمی‌زند. عدد پاسخ فقط در تکمیل واقعی HTTP(S) نشان داده می‌شود؛ تخمین اختیاری، پینگ نیست. برای تست دقیق IP با SNI باید از هستهٔ محلی مانند Alan/CFScanner استفاده کنید. مرورگر در صفحهٔ HTTPS اجازهٔ HTTP خام را نمی‌دهد.</span><span class="en">HTTP responses use your connection. Fast errors only suggest unverified candidates, not healthy IPs. Secure pages cannot request plain HTTP.</span></p>
 <p class="hint" hidden="" id="scan-control"></p>
 <div class="range-panel" hidden="" id="cf-ranges-panel">
 <div class="stat-strip">
@@ -1257,7 +1257,8 @@
           <div class="adv-path-metrics" id="adv-path-metrics" hidden>
             <div><span><span class="fa">تأخیر میانهٔ پنل</span><span class="en">MEDIAN RTT</span></span><strong id="adv-rtt" class="mono">—</strong></div>
             <div><span><span class="fa">نوسان / بی‌پاسخ</span><span class="en">JITTER / NO REPLY</span></span><strong id="adv-jitter" class="mono">—</strong></div>
-            <div><span>WebSocket</span><strong id="adv-ws" class="mono">—</strong></div>
+            <div><span><span class="fa">عبور HTTP از تونل کاربر</span><span class="en">AUTHENTICATED TUNNEL HTTP</span></span><strong id="adv-tunnel" class="mono">—</strong></div>
+            <div><span>WebSocket echo</span><strong id="adv-ws" class="mono">—</strong></div>
             <div><span><span class="fa">تاخیر هنگام انتقال</span><span class="en">LOADED RTT</span></span><strong id="adv-loaded" class="mono">—</strong></div>
             <div><span><span class="fa">دریافت از Worker</span><span class="en">WORKER DOWNLOAD</span></span><strong class="mono" id="adv-down">—</strong></div>
             <div><span><span class="fa">ارسال به Worker</span><span class="en">WORKER UPLOAD</span></span><strong class="mono" id="adv-up">—</strong></div>
@@ -1265,6 +1266,7 @@
           <ul class="adv-recs" id="adv-recs" hidden></ul>
         </div>
 
+        <section class="tunnel-guide"><p class="hint"><span class="fa">برای عیب‌یابی Pages ابتدا خروجی پایهٔ 443 را در کلاینت تست کنید؛ اگر موفق بود، مشکل از ترکیب IP/پورت/تنظیمات دیگر است. خروجی خرد TLSHello فقط برای Xray سازگار است؛ بازنویسی TCP/TLS محلی Alan روی Worker اجرا نمی‌شود.</span><span class="en">Test the domain-only 443 baseline in your client first. The small TLSHello profile requires compatible Xray. Alan's local TCP/TLS bridge does not run on Workers.</span></p><div class="actions"><button id="adv-baseline" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-download"/></svg><span class="fa">خروجی پایهٔ دامنه · Xray</span><span class="en">DOMAIN BASELINE · XRAY</span></button><button id="adv-fragment-small" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-bolt"/></svg><span class="fa">TLSHello خرد · آزمایشی</span><span class="en">SMALL TLSHELLO · EXPERIMENTAL</span></button><button id="adv-fragment-lab" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">بستهٔ مقایسهٔ Fragment در کلاینت</span><span class="en">CLIENT FRAGMENT COMPARISON</span></button><a class="btn ghost sm-btn" href="https://github.com/DrAlanK/Alan-RIP-Dpi-Windows" target="_blank" rel="noopener noreferrer"><svg class="ic"><use href="#i-external"/></svg><span>Alan-RIP-Dpi · Windows</span></a></div></section>
         <div class="adv-grid" id="adv-grid"></div>
       </div>
     </div>

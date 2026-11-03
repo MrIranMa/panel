@@ -225,6 +225,8 @@ export async function handleTunnelWS(request, env, ctx, runtime) {
     replayBytes: 0,
   };
   let headerProcessed = false;
+  let pendingHeader = new Uint8Array(0);
+  const headerDeadline=setTimeout(()=>{if(!headerProcessed){remote.dead=true;pendingHeader=new Uint8Array(0);safeCloseWS(server);}},10000);
   let udpWrite = null;
   let matchedUser = null;
   let upBytes = 0;
@@ -241,7 +243,7 @@ export async function handleTunnelWS(request, env, ctx, runtime) {
     .pipeTo(
       new WritableStream({
         async write(chunk) {
-          const bytes = await toBytes(chunk);
+          let bytes = await toBytes(chunk);
           if (!bytes || bytes.byteLength === 0) {
             if (!headerProcessed) throw new Error('empty initial frame');
             return;
@@ -281,11 +283,16 @@ export async function handleTunnelWS(request, env, ctx, runtime) {
             return;
           }
 
-          headerProcessed = true;
+          if(pendingHeader.length){const joined=new Uint8Array(pendingHeader.length+bytes.length);joined.set(pendingHeader);joined.set(bytes,pendingHeader.length);bytes=joined;}
           const parsed = parseTunnelHeader(bytes, vlessMap, trojanMap);
           if (parsed.hasError) {
+            if(bytes.length<1024&&(parsed.message==='frame too short'||parsed.message.startsWith('truncated ')||
+              (parsed.message==='invalid vless user'&&bytes.length<64&&bytes.every((b,i)=>i>=56||((b>=48&&b<=57)||(b>=65&&b<=70)||(b>=97&&b<=102)))))){
+              pendingHeader=bytes.slice();return;
+            }
             throw new Error(parsed.message);
           }
+          clearTimeout(headerDeadline);pendingHeader=new Uint8Array(0);headerProcessed=true;
 
           matchedUser = parsed.user;
           const {
@@ -339,12 +346,14 @@ export async function handleTunnelWS(request, env, ctx, runtime) {
           });
         },
         close() {
+          clearTimeout(headerDeadline);
           remote.dead = true;
           remote.activeSocket = null;
           finalizeAccounting();
           safeCloseSocket(remote.socket);
         },
         abort() {
+          clearTimeout(headerDeadline);
           remote.dead = true;
           remote.activeSocket = null;
           finalizeAccounting();
@@ -353,6 +362,7 @@ export async function handleTunnelWS(request, env, ctx, runtime) {
       })
     )
     .catch(() => {
+      clearTimeout(headerDeadline);
       remote.dead = true;
       remote.activeSocket = null;
       finalizeAccounting();

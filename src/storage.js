@@ -581,7 +581,7 @@ export async function saveRuntimeState(env, nextState) {
   return hydrated;
 }
 
-export async function initializePanelState(env, { password, firstUserName, preferredUuid } = {}) {
+export async function initializePanelState(env, { password, firstUserName, preferredUuid, settings: initialOverrides } = {}) {
   const pwRecord = await hashPassword(password);
   const secretBytes = crypto.getRandomValues(new Uint8Array(32));
   const envUuid = String(env?.uuid || env?.UUID || '').trim();
@@ -600,6 +600,7 @@ export async function initializePanelState(env, { password, firstUserName, prefe
   const proxyRaw = String(env?.PROXYIP || env?.PROXY_IP || '').trim();
   const initialSettings = sanitizeSettings({
     proxyIPs: proxyRaw ? proxyRaw.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULT_SETTINGS.proxyIPs,
+    ...(initialOverrides && typeof initialOverrides==='object' ? initialOverrides : {}),
   });
 
   return saveRuntimeState(env, {

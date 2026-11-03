@@ -300,7 +300,7 @@ export function buildUriLines(userView, settings, requestHost) {
 
   // Always declare non-commercial free open-source status inside subscription lists
   lines.push(
-    `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(FREE_NOTICE_FA)}`
+    `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent('[اطلاعیه؛ نود اتصال نیست] '+FREE_NOTICE_FA)}`
   );
 
   { // Mandatory subscription usage/expiry notices; never user-configurable.
@@ -313,8 +313,8 @@ export function buildUriLines(userView, settings, requestHost) {
           : 'بدون انقضا');
     const info1 = `${userView.name} · مصرف: ${used} / ${total}`;
     const info2 = `اعتبار: ${expLabel}`;
-    lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(info1)}`);
-    lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(info2)}`);
+    lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent('[اطلاعیه؛ نود اتصال نیست] '+info1)}`);
+    lines.push(`vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent('[اطلاعیه؛ نود اتصال نیست] '+info2)}`);
   }
 
   const nodes = buildNodeDescriptors(userView, settings, requestHost);
@@ -427,9 +427,9 @@ export function buildXrayConfigs(userView, settings, requestHost) {
     // IMPORTANT: Keep bootstrapDomains strictly in `dns.servers[1].domains` so Xray resolves
     // clean addresses (e.g. www.speedtest.net) without routing browser traffic over DIRECT!
     const directDomains = [];
-    if (settings.bypassIran) directDomains.push('geosite:ir', 'regexp:.*\\.ir$');
+    if (settings.bypassIran) directDomains.push('geosite:category-ir', 'regexp:.*\\.ir$');
     if (settings.bypassChina) directDomains.push('geosite:cn');
-    if (settings.bypassRussia) directDomains.push('geosite:ru');
+    if (settings.bypassRussia) directDomains.push('geosite:category-ru');
     for (const d of settings.customDirectDomains || []) directDomains.push(d);
 
     const rules = [];
@@ -453,7 +453,7 @@ export function buildXrayConfigs(userView, settings, requestHost) {
     }
 
     if (settings.bypassLAN) {
-      rules.push({ type: 'field', ip: ['geoip:private'], outboundTag: 'direct' });
+      rules.push({ type: 'field', ip: ['10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','127.0.0.0/8','169.254.0.0/16','::1/128','fc00::/7','fe80::/10'], outboundTag: 'direct' });
     }
     const directIps = [];
     if (settings.bypassIran) directIps.push('geoip:ir');
@@ -802,11 +802,20 @@ export function detectSubscriptionFormat(request) {
   return 'b64';
 }
 
+// Explicit, per-download profiles. Stored settings and existing subscriptions are unchanged.
+export function connectionProfile(settings,profile){
+  if(!['baseline','tlshello-small','fragment-lab'].includes(profile))return settings;
+  return {...settings,tlsPorts:[443],enableHttpPorts:false,earlyData:0,alpn:'http/1.1',enableECH:false,
+    customDomains:[],cleanIPs:profile==='tlshello-small'?settings.cleanIPs:[],bypassIran:false,bypassChina:false,bypassRussia:false,blockAds:false,blockAdult:false,
+    remoteDnsMode:'cloudflare',directDns:'localhost',enableFragment:profile!=='baseline',enableNoise:false,
+    fragmentMode:'tlshello',fragmentPackets:'tlshello',fragmentLength:'5-16',fragmentInterval:'2-3'};
+}
+
 export function serveSubscription(request, user, settings = {}, assets = {}) {
   try {
     const url = new URL(request.url);
     const requestHost = url.host || 'localhost';
-    const safeSettings = settings && typeof settings === 'object' ? settings : {};
+    const safeSettings = connectionProfile(settings && typeof settings === 'object' ? settings : {},url.searchParams.get('profile'));
     const userView = enrichUserView(user);
     const headers = buildSubscriptionHeaders(userView, safeSettings, requestHost);
     const fmt = detectSubscriptionFormat(request);
@@ -839,7 +848,9 @@ export function serveSubscription(request, user, settings = {}, assets = {}) {
     }
 
     if (fmt === 'xray') {
-      const body = JSON.stringify(buildXrayConfigs(userView, safeSettings, requestHost), null, 2);
+      const variants=url.searchParams.get('profile')==='fragment-lab'?[['5-16','2-3'],['10-20','1-3'],['100-200','1-3']]:null;
+      const configs=variants?variants.flatMap(([length,interval])=>buildXrayConfigs(userView,{...safeSettings,fragmentLength:length,fragmentInterval:interval},requestHost).map(c=>({...c,remarks:c.remarks+' [TLSHello '+length+' / '+interval+']'}))):buildXrayConfigs(userView,safeSettings,requestHost);
+      const body = JSON.stringify(configs, null, 2);
       return new Response(body, {
         headers: { ...headers, 'content-type': 'application/json; charset=utf-8' },
       });

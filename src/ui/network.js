@@ -92,5 +92,33 @@
       ws.onerror=finish;ws.onclose=finish;
     });
   }
-  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe,cleanProbe:cleanProbe};
+  function tunnelProbe(url,identity,options){
+    options=options||{};identity=identity||{};
+    return new Promise(function(resolve){
+      var ws,done=false,start=performance.now(),buffer=new Uint8Array(0),signal=options.signal,opened=false;
+      var trojan=identity.protocol==='trojan';
+      var target='www.gstatic.com',request=new TextEncoder().encode('GET /generate_204?_nl='+Date.now()+' HTTP/1.1\r\nHost: '+target+'\r\nConnection: close\r\n\r\n');
+      function finish(ok,reason,status){if(done)return;done=true;clearTimeout(timer);if(signal)signal.removeEventListener('abort',cancel);try{ws.close();}catch(e){}resolve({ok:ok,reason:reason,status:status||null,protocol:trojan?'trojan':'vless',ms:ok?Math.max(1,Math.round(performance.now()-start)):null,upgraded:opened});}
+      function cancel(){finish(false,'cancelled');}
+      var timer=setTimeout(function(){finish(false,opened?'tunnel-timeout':'websocket-timeout');},options.timeout||8000);
+      if(signal){if(signal.aborted){cancel();return;}signal.addEventListener('abort',cancel,{once:true});}
+      if(trojan?!/^[a-f0-9]{56}$/i.test(identity.trojanHash||''):!/^[a-f0-9]{32}$/i.test(String(identity.uuid||'').replace(/-/g,''))){finish(false,'no-identity');return;}
+      var host=new TextEncoder().encode(target),header;
+      if(trojan){header=new Uint8Array(56+2+2+1+host.length+2+2);header.set(new TextEncoder().encode(identity.trojanHash.toLowerCase()+'\r\n'));header[58]=1;header[59]=3;header[60]=host.length;header.set(host,61);header[61+host.length]=0;header[62+host.length]=80;header[63+host.length]=13;header[64+host.length]=10;}
+      else{header=new Uint8Array(23+host.length);header.set(String(identity.uuid).replace(/-/g,'').match(/../g).map(function(h){return parseInt(h,16);}),1);header[18]=1;header[20]=80;header[21]=2;header[22]=host.length;header.set(host,23);}
+      try{ws=new WebSocket(url);ws.binaryType='arraybuffer';}catch(e){finish(false,'websocket-error');return;}
+      ws.onopen=function(){opened=true;var payload=new Uint8Array(header.length+request.length);payload.set(header);payload.set(request,header.length);ws.send(payload);};
+      ws.onmessage=function(event){
+        if(done)return;if(!(event.data instanceof ArrayBuffer)){finish(false,'invalid-response');return;}
+        var part=new Uint8Array(event.data);if(buffer.length+part.length>16384){finish(false,'oversize-response');return;}
+        var joined=new Uint8Array(buffer.length+part.length);joined.set(buffer);joined.set(part,buffer.length);buffer=joined;
+        var offset=0;if(!trojan){if(buffer.length<2)return;if(buffer[0]!==0){finish(false,'invalid-vless-response');return;}offset=2+buffer[1];if(buffer.length<offset)return;}
+        var text=new TextDecoder().decode(buffer.subarray(offset)),match=text.match(/^HTTP\/1\.[01] (\d{3})[^\r\n]*\r\n/);
+        if(match){var status=Number(match[1]);finish(status>=200&&status<400,status>=200&&status<400?'http-response':'http-denied',status);}
+        else if(text.length>512)finish(false,'invalid-http-response');
+      };
+      ws.onerror=function(){finish(false,'websocket-error');};ws.onclose=function(){finish(false,'closed-before-http');};
+    });
+  }
+  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe,cleanProbe:cleanProbe,tunnelProbe:tunnelProbe};
 })(globalThis);

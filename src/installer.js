@@ -1,4 +1,4 @@
-/* Dedicated NIGHTLINE 2.5.3 installer. All progress is reported by the server on the same origin. */
+/* Version-independent NIGHTLINE installer. All progress is reported by the server on the same origin. */
 import { initializePanelState } from './storage.js';
 import { fetchLatestBundle } from './releases.js';
 import { INSTALLER_HTML } from './generated/installer-ui.js';
@@ -69,7 +69,7 @@ export async function runInstallation(initialToken,emit,apiBase=API,releaseOptio
     stage('security','running','تولید گذرواژه و ثبت وضعیت مدیریت پیش از انتشار…',40);
     const password=[...crypto.getRandomValues(new Uint8Array(24))].map(b=>b.toString(16).padStart(2,'0')).join('');
     const kv={get:async()=>null,put:async(key,value)=>{await cf(`/accounts/${account}/storage/kv/namespaces/${namespace.id}/values/${encodeURIComponent(key)}`,'PUT',value);}};
-    await initializePanelState({KV:kv},{password,firstUserName:'مدیر NIGHTLINE رایگان'});
+    await initializePanelState({KV:kv},{password,firstUserName:'مدیر NIGHTLINE رایگان',settings:pages?{tlsPorts:[443],earlyData:0,alpn:'http/1.1'}:undefined});
     stage('security','done','مدیریت ایجاد شد؛ راه‌اندازی عمومی در پنل نصب‌شده قفل می‌شود.',50);
     if(pages){
       stage('worker','running','ساخت پروژهٔ Pages و اتصال KV و قفل مدیریت…',53);

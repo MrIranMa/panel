@@ -11,6 +11,7 @@
     "test:installer": "node test-installer.mjs",
     "test:pages": "node test-pages.mjs && node test-pages-runtime.mjs",
     "test:releases": "node test-releases.mjs",
+    "test:core": "node test-core.mjs",
     "test:network": "node test-network.mjs",
     "build:pages": "node build.mjs --pages && node build-installer.mjs",
     "deploy:installer": "wrangler deploy --config wrangler.installer.toml"
