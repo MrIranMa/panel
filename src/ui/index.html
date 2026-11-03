@@ -1055,7 +1055,9 @@
 </button>
 </div>
 <div class="actions" style="margin-top:7px"><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
-<p class="hint"><span class="fa">زمان HTTPS از اینترنت همین مرورگر اندازه‌گیری می‌شود؛ زمان خطا پینگ موفق نیست. پاسخ IP نیز سلامت کامل تونل را تضمین نمی‌کند.</span><span class="en">HTTPS timings use this browser’s network; error durations are not successful pings or full-tunnel verification.</span></p>
+<div class="scan-options"><label class="fld-label"><span class="fa">روش بررسی</span><span class="en">METHOD</span><select id="scan-transport"><option value="auto">HTTP(S) + نامزد‌یابی تخمینی</option><option value="strict">HTTPS — فقط پاسخ واقعی</option><option value="http">HTTP — فقط صفحهٔ غیرامن</option></select></label><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">TIMEOUT</span><select id="scan-timeout"><option value="4000">4 s</option><option value="7000">7 s</option><option value="10000">10 s</option></select></label></div>
+<p class="hint"><span class="fa">پاسخ HTTP از اینترنت شما اندازه‌گیری می‌شود. خطای سریع فقط «نامزد تخمینی» است، نه پینگ یا IP سالم. مرورگر در صفحهٔ HTTPS اجازهٔ HTTP خام را نمی‌دهد.</span><span class="en">HTTP responses use your connection. Fast errors only suggest unverified candidates, not healthy IPs. Secure pages cannot request plain HTTP.</span></p>
+<p class="hint" hidden="" id="scan-control"></p>
 <div class="range-panel" hidden="" id="cf-ranges-panel">
 <div class="stat-strip">
 <strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" rel="noopener noreferrer" target="_blank">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"></use></svg></a></strong>
@@ -1063,7 +1065,7 @@
 </div>
 <p class="hint"><span class="fa">تعداد نمونهٔ هر رنج: ۰ تا ۱۲، مجموع حداکثر ۴۸. زمان‌ها از اینترنت همین مرورگرند. کشورِ GeoIP تقریبی است، نه مکان قطعی لبه.</span><span class="en">Choose 0–12 samples per range, 48 total max. Timings use this browser’s network. GeoIP is approximate, not a proven edge location.</span></p>
 <div class="range-list" id="cf-range-list"></div>
-<p class="hint"><span class="fa">آزمون HTTPS مستقیماً از اینترنت همین مرورگر انجام می‌شود؛ زمان پاسخ موفق، مدت تلاش ناموفق و تعداد پاسخ‌ها جدا نمایش داده می‌شوند. نتیجهٔ خطا به‌عنوان IP سالم ذخیره نمی‌شود.</span><span class="en">HTTPS probes run on this browser’s network. Successful response time and failed-attempt duration are reported separately; errors are never ranked as healthy IPs.</span></p>
+<p class="hint"><span class="fa">پاسخ واقعی و نامزدهای تخمینی جدا هستند؛ خطا پینگ نیست و نامزد تخمینی خودکار به‌عنوان سالم اولویت نمی‌گیرد.</span><span class="en">Real responses and estimated candidates are separate; errors are not pings and candidates are never prioritized as healthy IPs.</span></p>
 <div class="actions"><button class="btn primary sm-btn" id="btn-scan-ranges" type="button"><svg class="ic ic-sm"><use href="#i-radar"></use></svg><span class="fa">نمونه‌گیری و بررسی نامزدها</span><span class="en">SAMPLE &amp; PROBE CANDIDATES</span></button></div>
 </div>
 <p class="hint" hidden="" id="scan-summary"></p>
@@ -1099,7 +1101,7 @@
 <button class="btn ghost sm-btn" id="btn-test-chain" type="button">TEST</button>
 </div>
 </div>
-</div></div><div class="card field-full">
+</div><div class="card net-telegram">
 <p class="kicker">
 <svg class="ic"><use href="#i-send"></use></svg>
 <span class="fa">پروکسیِ رسمیِ تلگرام (Telegram Web Proxy — بدون نیاز به برنامه‌جانبی)</span>
@@ -1135,7 +1137,7 @@
 <span class="fa">کپی لینک اشتراک تلگرام (t.me)</span><span class="en">COPY SHAREABLE t.me LINK</span>
 </button>
 </div>
-</div></div>
+</div></div></div>
 
       <div class="actions">
         <button class="btn primary" id="save-net" type="button">

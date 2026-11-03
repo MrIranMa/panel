@@ -511,6 +511,15 @@ async function main() {
     await openedSponsor.close();
     console.log('✓ [login/admin] Sponsor absent on login, floating only in panel; exact link, animation, themes, mobile & popup');
 
+    fs.mkdirSync('docs/screenshots',{recursive:true});
+    await page.click('#btn-ip-blur');
+    await page.waitForFunction(()=>document.getElementById('toast').hidden);
+    await page.screenshot({path:'docs/screenshots/panel-desktop.jpg',quality:90,fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:'docs/screenshots/panel-mobile.jpg',quality:90,fullPage:false});
+    await page.setViewportSize({width:1400,height:920});
+    await page.click('#btn-ip-blur');
+
     // ── TEST 8: Zero-Emoji Live DOM Audit + Custom Monochrome SVG Icons ──
     const emojiCheck = await page.evaluate(() => {
       const txt = document.documentElement.innerText || '';
@@ -630,6 +639,10 @@ async function main() {
     // ── TEST 12: Official CIDR selector + approximate country flags ONLY in node names ──
     await page.click('.tab-btn[data-tab="net"]');
     await page.waitForSelector('#pane-net:not([hidden])');
+    await page.waitForFunction(()=>document.getElementById('toast').hidden);
+    await page.click('#btn-ip-blur');
+    await page.screenshot({path:'docs/screenshots/network-desktop.jpg',quality:90,fullPage:true});
+    await page.click('#btn-ip-blur');
     await page.check('#scan-geo');
     await context.route('https://ipwho.is/**', (route) => route.fulfill({
       status: 200, contentType: 'application/json',
@@ -641,7 +654,9 @@ async function main() {
     await page.waitForFunction(() => document.querySelectorAll('#scan-results .scan-item').length === 3, null, { timeout: 16000 });
     assert((await page.locator('#scan-summary').textContent()).includes('HTTPS'), 'Scanner must report browser HTTPS observations');
     const failedIP = page.locator('#scan-results .scan-item').filter({hasText:'203.0.113.1'});
-    assert((await failedIP.innerText()).includes('مدت میانهٔ تلاش'), 'Failed IP must show attempt duration, never pretend it is successful ping');
+    assert(!(await failedIP.innerText()).includes('0/3'), 'No repeated meaningless failure counter');
+    assert(!(await failedIP.innerText()).includes('مدت میانهٔ تلاش'), 'Do not display error duration as ping');
+    assert((await page.locator('#scan-control').innerText()).includes('HTTP'), 'Measure real panel HTTP RTT separately');
     if (await page.locator('#btn-prune-clean').isVisible()) await page.click('#btn-prune-clean');
     assert((await page.locator('#s-cleanips').inputValue()).includes('203.0.113.1'), 'TLS errors must not silently prune unverified IPs');
     // The user-list probe must NOT turn a reserved TEST-NET address into a fake country flag.

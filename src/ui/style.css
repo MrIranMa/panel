@@ -860,3 +860,11 @@ html[data-lang="fa"] .colophon .fa{font-family:var(--fa-font);letter-spacing:0;f
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .compact-net-grid>.stack{margin-top:0}.advisor-changes{overflow-wrap:anywhere;direction:ltr;text-align:start;font-family:var(--en-font);font-size:10px;line-height:1.9}
+
+/* Content-height cards, including the dashboard: avoid stretched empty columns. */
+.cols-even{align-items:start}.stack{align-content:start}.card-fill{flex:initial;justify-content:flex-start}.mt-auto{margin-top:10px;padding-top:0}
+.card{padding:14px 16px}footer{margin-top:22px}.dotted{margin:12px 0}.labor{margin-bottom:10px;line-height:1.7}
+.scan-options{display:grid;grid-template-columns:minmax(0,2fr) minmax(80px,1fr);gap:8px;margin-top:9px}.scan-options .fld-label{margin:0}.scan-options select{margin-top:4px;width:100%}
+@media(max-width:540px){.card{padding:12px}.scan-options{grid-template-columns:1fr}.scan-detail{line-height:1.6}}
+
+.cols{align-items:start}.net-telegram .field-grid{grid-template-columns:1fr}

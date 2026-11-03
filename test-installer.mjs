@@ -3,6 +3,9 @@ import http from 'node:http';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
+const officialWorker=fs.readFileSync('worker-single-file.js');
+const officialRelease={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.3/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
 const PORT=20100+Math.floor(Math.random()*300),MOCK=20500+Math.floor(Math.random()*300);
 const BASE='http://127.0.0.1:'+PORT,TOKEN='cloudflare_valid_token_01234567890123456789';
 let uploads=0,stateDoc=null,metadata='',requests=[];
@@ -10,6 +13,7 @@ const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');requests.push([req.method,url.pathname]);
  const chunks=[];for await(const chunk of req)chunks.push(chunk);const body=Buffer.concat(chunks).toString();
  res.setHeader('content-type','application/json');
+ if(url.pathname.startsWith('/gh/')){assert(!req.headers.authorization,'CF token must not reach GitHub');res.end(url.pathname.endsWith('/releases/latest')?JSON.stringify(officialRelease):officialWorker);return;}
  if(url.pathname==='/cf/health'){res.end(JSON.stringify({ok:true,version:'2.5.3',initialized:true}));return;}
  if(req.headers.authorization!=='Bearer '+TOKEN){res.statusCode=403;res.end(JSON.stringify({success:false,errors:[{code:10000,message:'Authentication error: missing permissions'}]}));return;}
  // Intentional pause verifies that a real intermediate stage appears before completion.
@@ -23,7 +27,7 @@ const server=http.createServer(async(req,res)=>{
  res.end(JSON.stringify({success:true,result}));
 });
 await new Promise(r=>server.listen(MOCK,'127.0.0.1',r));
-const proc=spawn('node_modules/.bin/wrangler',['dev','--config','wrangler.installer.toml','--local','--port',String(PORT),'--var','NL_INSTALLER_TEST_CF_BASE:http://127.0.0.1:'+MOCK+'/cf'],{stdio:['ignore','pipe','pipe'],detached:process.platform!=='win32'});
+const proc=spawn('node_modules/.bin/wrangler',['dev','--config','wrangler.installer.toml','--local','--port',String(PORT),'--var','NL_INSTALLER_TEST_CF_BASE:http://127.0.0.1:'+MOCK+'/cf','--var','NL_INSTALLER_TEST_GH_BASE:http://127.0.0.1:'+MOCK+'/gh'],{stdio:['ignore','pipe','pipe'],detached:process.platform!=='win32'});
 let logs='';proc.stdout.on('data',d=>logs+=d);proc.stderr.on('data',d=>logs+=d);
 let browser;
 try{
@@ -31,7 +35,7 @@ try{
  assert(ready,'Installer workerd did not start: '+logs);
  browser=await chromium.launch();const context=await browser.newContext({viewport:{width:1280,height:980}});const page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(BASE);
- assert.equal(await page.locator('h1').innerText(),'NIGHTLINE');assert.equal(await page.locator('#go').isEnabled(),true);
+ assert.equal(await page.locator('h1').innerText(),'NIGHTLINE');assert.equal(await page.locator('.side-column').count(),0);assert.equal(await page.locator('#go').isEnabled(),true);
  await page.fill('#token','ghp_012345678901234567890123456789012345');await page.click('#go');assert((await page.locator('#form-status').innerText()).includes('GitHub'));
  assert.equal(uploads,0);
  await page.fill('#token',TOKEN);await page.click('#go');
@@ -44,6 +48,7 @@ try{
  assert.equal(await page.locator('#progress').getAttribute('aria-valuenow'),'100');
  assert.match(await page.locator('#panel-url').innerText(),/^https:\/\/nightline-free-[a-f0-9]{12}\.community-account\.workers.dev\/panel$/);
  assert.equal((await page.locator('#password').inputValue()).length,48);
+ assert.equal(await page.locator('#result-version').innerText(),'2.5.3');
  assert.equal(uploads,1);assert(metadata.includes('SETUP_LOCKED'));assert(!JSON.stringify(stateDoc).includes(TOKEN));
  assert.equal(await page.locator('#token').inputValue(),'');assert(!(await page.locator('#event-log').innerText()).includes(TOKEN));
  assert.equal(await page.evaluate(()=>Object.keys(localStorage).some(k=>/token|password/i.test(k))),false);

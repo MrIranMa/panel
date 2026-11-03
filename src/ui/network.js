@@ -1,4 +1,4 @@
-/* Bounded browser-native diagnostics. No server-side IP scan or rejection-as-ping heuristic. */
+/* Bounded browser-native diagnostics. No server-side IP scan. Heuristic candidates never count as successful pings. */
 (function (root) {
   'use strict';
   function median(values) {
@@ -45,7 +45,7 @@
       } else if(options.check === 'upload') {
         if(!res.ok)throw Error('http');extra.bytes=Number((await res.json()).receivedBytes);
         if(extra.bytes!==options.bytes)throw Error('size');
-      } else if(res.type!=='opaque' && !res.ok)throw Error('http');
+      } else if(res.type!=='opaque' && res.type!=='opaqueredirect' && !res.ok)throw Error('http');
       return Object.assign({ok:true,ms:Math.max(1,Math.round(performance.now()-start))},extra);
     } catch(e) {
       return {ok:false,ms:Math.max(1,Math.round(performance.now()-start)),reason: parent&&parent.aborted?'cancelled':expired?'timeout':'browser-or-network'};
@@ -55,6 +55,22 @@
     var out=[];
     for(var i=0;i<(rounds||3);i++) {if(options.signal&&options.signal.aborted)break;out.push(await timed(url,options));}
     return summary(out);
+  }
+  async function cleanProbe(entry, options) {
+    options=options||{};
+    var plainPorts=[80,8080,8880,2052,2082,2086,2095];
+    var scheme=options.transport==='http'||(options.transport!=='strict'&&plainPorts.indexOf(entry.port)>=0)?'http':'https';
+    if(scheme==='http'&&options.pageProtocol==='https:')return {ok:false,kind:'mixed-content',ms:null,replies:0,attempts:0,scheme:scheme};
+    var timeout=options.timeout||4000;
+    var r=await sample(scheme+'://'+entry.host+':'+entry.port+'/cdn-cgi/trace',{
+      mode:'no-cors',redirect:'manual',timeout:timeout,signal:options.signal
+    },3);
+    r.scheme=scheme;r.kind=r.ok?'response':'unconfirmed';
+    var quick=r.samples.filter(function(s){return !s.ok&&s.reason==='browser-or-network'&&s.ms>=20&&s.ms<timeout*0.65;});
+    if(!r.ok&&r.replies===0&&entry.isRawIp&&options.transport!=='strict'&&quick.length>=2){r.kind='candidate';r.candidateMs=median(quick.map(function(s){return s.ms;}));}
+    else if(!r.ok&&r.samples.length&&r.samples.every(function(s){return s.reason==='timeout';}))r.kind='timeout';
+    else if(!r.ok&&r.replies)r.kind='unstable';
+    return r;
   }
   async function bounded(items, count, fn, signal) {
     var output=new Array(items.length), next=0;
@@ -76,5 +92,5 @@
       ws.onerror=finish;ws.onclose=finish;
     });
   }
-  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe};
+  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe,cleanProbe:cleanProbe};
 })(globalThis);

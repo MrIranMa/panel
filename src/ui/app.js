@@ -2090,13 +2090,16 @@
   if($('btn-scan-stop'))$('btn-scan-stop').onclick=function(){if(scannerController)scannerController.abort();};
   async function probeSingleCleanEntry(entry) {
     if(isSandboxPreview)return {entry:entry,ok:false,ms:9999,attemptMs:null,replies:0,attempts:0,reason:'offline-preview'};
-    var r=await globalThis.NLNetwork.sample('https://'+entry.host+(entry.port!==443?':'+entry.port:'')+'/cdn-cgi/trace',{
-      mode:'no-cors',timeout:2300,signal:scannerController?scannerController.signal:undefined
-    },3);
+    var r=await globalThis.NLNetwork.cleanProbe(entry,{
+      transport:$('scan-transport').value,pageProtocol:location.protocol,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined
+    });
     r.entry=entry;r.responseMs=r.ms;r.ms=r.ok?r.ms:9999;return r;
   }
   async function probeBatch(entries, concurrency){
     var done=0;
+    $('scan-control').hidden=false;$('scan-control').textContent=tr('سنجش HTTP پنل…','Measuring panel HTTP…');
+    var control=await globalThis.NLNetwork.sample('/api/ping',{check:'health',credentials:'same-origin',timeout:4000,signal:scannerController?scannerController.signal:undefined},3);
+    $('scan-control').textContent=control.ok?tr('پینگ HTTP پنل: ','Panel HTTP RTT: ')+control.ms+' ms · '+tr('نوسان: ','jitter: ')+(control.jitter===null?'—':control.jitter+' ms')+tr(' · مستقل از IPهای فهرست',' · not the listed IPs'):tr('پاسخ HTTP پنل پایدار نبود.','Panel HTTP response was unstable.');
     return globalThis.NLNetwork.bounded(entries,concurrency||4,async function(entry){
       var result=await probeSingleCleanEntry(entry);done++;
       $('scan-summary').textContent=tr('سنجش از اینترنت من: ','Testing from my network: ')+done+'/'+entries.length;
@@ -2104,12 +2107,19 @@
     },scannerController?scannerController.signal:undefined);
   }
   function scanBadge(r){
-    return r.ok?tr('پاسخ HTTPS · ','HTTPS REPLY · ')+r.responseMs+' ms · '+r.replies+'/'+r.attempts:
-      tr('پاسخ کافی دریافت نشد · ','INSUFFICIENT REPLIES · ')+r.replies+'/'+r.attempts;
+    if(r.ok)return r.scheme.toUpperCase()+' · '+r.responseMs+' ms';
+    if(r.kind==='candidate')return tr('نامزد تخمینی · تأییدنشده','ESTIMATED CANDIDATE · UNVERIFIED');
+    if(r.kind==='mixed-content')return tr('HTTP در صفحهٔ امن مسدود است','HTTP BLOCKED BY SECURE PAGE');
+    if(r.kind==='timeout')return tr('بدون پاسخ در مهلت انتخابی','TIMED OUT');
+    if(r.kind==='unstable')return tr('پاسخ ناپایدار','UNSTABLE RESPONSE');
+    return tr('مرورگر اتصال را تأیید نکرد','BROWSER COULD NOT VERIFY');
   }
   function scanDetail(r){
-    if(r.ok)return tr('نوسان نمونه‌ها: ','Sample jitter: ')+(r.jitter===null?'—':r.jitter+' ms');
-    return tr('مدت میانهٔ تلاش: ','Median attempt duration: ')+(r.attemptMs===null?'—':r.attemptMs+' ms')+tr(' · خطای مرورگر/شبکه/TLS؛ این عدد پینگ موفق نیست.',' · Browser/network/TLS failure; not a successful ping.');
+    if(r.ok)return tr('نوسان: ','Jitter: ')+(r.jitter===null?'—':r.jitter+' ms')+tr(' · پاسخ HTTP، نه تأیید تونل',' · HTTP response, not tunnel verification');
+    if(r.kind==='candidate')return tr('واکنش سریع به خطا؛ پینگ نیست. فقط برای آزمون در کلاینت.','Fast error reaction; not a ping. Client testing only.');
+    if(r.kind==='mixed-content')return tr('پورت TLS مانند 443 را انتخاب کنید.','Choose a TLS port such as 443.');
+    if(r.kind==='timeout')return tr('مهلت را بیشتر کنید یا IP بعدی را امتحان کنید.','Increase timeout or try another IP.');
+    return tr('خطای TLS، مرورگر یا شبکه؛ IP خودکار حذف نمی‌شود.','TLS, browser or network error; IP is kept.');
   }
 
   var geoCountryCache = Object.create(null);
@@ -2167,7 +2177,7 @@
         if(scannerController.signal.aborted){sum.textContent=tr('اسکن متوقف شد؛ فهرست شما تغییر نکرد.','Stopped; your list is unchanged.');return;}
         $('s-cleanips').value=parsedList.map(function(p){return p.rawLine;}).join('\n');
         results.sort(function(a,b){return a.ms-b.ms;});lastUserScanHealthy=results.filter(function(r){return r.ok;});
-        sum.textContent=tr('سنجش کامل: ','Completed: ')+results.length+tr(' مورد · پاسخ HTTPS: ',' entries · HTTPS replies: ')+lastUserScanHealthy.length+tr(' · خطا/ناقص: ',' · error/incomplete: ')+(results.length-lastUserScanHealthy.length)+tr('؛ هیچ IPی با خطا حذف نشد.','; no failed IP was removed.');
+        sum.textContent=tr('سنجش کامل: ','Completed: ')+results.length+tr(' مورد · پاسخ HTTP/HTTPS: ',' entries · HTTP/HTTPS replies: ')+lastUserScanHealthy.length+tr(' · نامزد تخمینی: ',' · estimated candidates: ')+results.filter(function(r){return r.kind==='candidate';}).length+tr('؛ هیچ IPی با خطا حذف نشد.','; no failed IP was removed.');
         $('btn-prune-clean').hidden=!lastUserScanHealthy.length;
         results.forEach(function(r){
           var item=document.createElement('div');item.className='scan-item';
@@ -2316,8 +2326,8 @@
       var tlsCount = results.filter(function (r) { return r.ok; }).length;
       var ccCount = results.filter(function (r) { return r.entry.countryCode; }).length;
       summary.textContent = tr(
-        results.length + ' نمونه از رنج‌های رسمی · ' + tlsCount + ' پاسخ مرورگری (فقط TLS) · ' + ccCount + ' کد کشورِ تقریبی. این نتیجه اتصال Worker را تأیید نمی‌کند؛ پس از افزودن، در کلاینت واقعی آزمایش و برای انتشار در Normal ذخیره کنید.',
-        results.length + ' official-range samples · ' + tlsCount + ' browser TLS responses · ' + ccCount + ' approximate country codes. This does NOT verify the Worker connection; add and test in your actual client, then save for the Normal subscription.'
+        results.length + ' نمونه از رنج‌های رسمی · ' + tlsCount + ' پاسخ HTTP/HTTPS · ' + ccCount + ' کد کشورِ تقریبی. این نتیجه اتصال Worker را تأیید نمی‌کند؛ پس از افزودن، در کلاینت واقعی آزمایش و برای انتشار در Normal ذخیره کنید.',
+        results.length + ' official-range samples · ' + tlsCount + ' HTTP/HTTPS responses · ' + ccCount + ' approximate country codes. This does NOT verify the Worker connection; add and test in your actual client, then save for the Normal subscription.'
       );
       results.forEach(function (r) {
         var item = document.createElement('div');

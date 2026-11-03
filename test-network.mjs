@@ -23,3 +23,13 @@ await N.bounded(Array.from({length:10},(_,i)=>i),3,async()=>{running++;maximum=M
 const cancelled=new AbortController();cancelled.abort();assert.equal((await N.sample('https://example.com',{signal:cancelled.signal},3)).attempts,0);
 const app=fs.readFileSync('src/ui/app.js','utf8');assert(!app.includes('NEEDS CLIENT SNI TEST'));assert(!app.includes("if (entry.isRawIp) return"));assert(!app.includes('sni-scanner.py'));
 console.log('PASS browser diagnostics: median/jitter, real repeated raw-IP attempts, no quick-error false positives, health/DoH validation, bounded concurrency and cancellation.');
+
+const entry={host:'104.16.1.1',port:443,isRawIp:true};
+context.fetch=async()=>{clock+=100;throw TypeError('TLS');};
+const candidate=await N.cleanProbe(entry,{pageProtocol:'https:',transport:'auto'});
+assert.equal(candidate.ok,false);assert.equal(candidate.ms,null);assert.equal(candidate.kind,'candidate');
+assert.equal((await N.cleanProbe(entry,{pageProtocol:'https:',transport:'strict'})).kind,'unconfirmed');
+let mixedCalls=0;context.fetch=async()=>{mixedCalls++;return {type:'opaqueredirect'};};
+assert.equal((await N.cleanProbe({...entry,port:80},{pageProtocol:'https:',transport:'auto'})).kind,'mixed-content');assert.equal(mixedCalls,0);
+const http=await N.cleanProbe({...entry,port:80},{pageProtocol:'http:',transport:'http'});assert.equal(http.ok,true);assert.equal(http.scheme,'http');
+console.log('PASS HTTP redirect response, secure-page mixed-content guard, separate unverified candidates and strict response-only mode.');

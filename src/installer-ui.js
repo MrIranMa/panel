@@ -12,7 +12,7 @@ function stage(event){
  if(Number.isFinite(event.percent)){$('progress-fill').style.width=event.percent+'%';$('progress').setAttribute('aria-valuenow',String(event.percent));}
  if(event.message){status(event.message);log(event.message);}
 }
-function showResult(data){credentials={url:data.url,password:data.password};$('result').hidden=false;$('panel-url').textContent=data.url;$('panel-url').href=data.url;$('open-panel').href=data.url;$('password').value=data.password;$('result-notice').textContent=data.notice;status('نصب انجام شد؛ اطلاعات ورود را پیش از بستن صفحه ذخیره کنید.');$('go-label').textContent='نصب با موفقیت تمام شد';$('result').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
+function showResult(data){credentials={url:data.url,password:data.password,version:data.version||''};$('result').hidden=false;$('result-version').textContent=data.version||'';$('panel-url').textContent=data.url;$('panel-url').href=data.url;$('open-panel').href=data.url;$('password').value=data.password;$('result-notice').textContent=data.notice;status('نصب انجام شد؛ اطلاعات ورود را پیش از بستن صفحه ذخیره کنید.');$('go-label').textContent='نصب با موفقیت تمام شد';$('result').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
 function receive(event){
  if(event.type==='stage')stage(event);
  if(event.type==='error'){var current=document.querySelector('.steps [data-state="running"]');if(current){current.dataset.state='error';current.querySelector('.step-state').textContent='خطا';}status(event.error||'نصب کامل نشد.',true);log(event.error||'خطای نصب');$('log-panel').open=true;}
@@ -43,6 +43,6 @@ $('install').addEventListener('submit',async function(event){
 });
 async function copy(value){try{await navigator.clipboard.writeText(value);status('کپی شد.');}catch(e){status('دسترسی کلیپ‌بورد بسته است؛ مقدار را انتخاب و دستی کپی کنید.',true);}}
 $('copy-url').onclick=function(){if(credentials)copy(credentials.url);};$('copy-password').onclick=function(){if(credentials)copy(credentials.password);};$('show-password').onclick=function(){$('password').type=$('password').type==='password'?'text':'password';};
-$('download').onclick=function(){if(!credentials)return;var blob=new Blob(['NIGHTLINE 2.5.3\nPanel: '+credentials.url+'\nAdmin password: '+credentials.password+'\nKeep this file private.\n'],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='nightline-private-login.txt';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);};
+$('download').onclick=function(){if(!credentials)return;var blob=new Blob(['NIGHTLINE '+credentials.version+'\nPanel: '+credentials.url+'\nAdmin password: '+credentials.password+'\nKeep this file private.\n'],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='nightline-private-login.txt';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);};
 window.addEventListener('beforeunload',function(e){if(active){e.preventDefault();e.returnValue='';}});
 })();

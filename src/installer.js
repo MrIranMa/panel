@@ -1,6 +1,6 @@
 /* Dedicated NIGHTLINE 2.5.3 installer. All progress is reported by the server on the same origin. */
 import { initializePanelState } from './storage.js';
-import { PAYLOAD, SHA256 } from './generated/installer-payload.js';
+import { fetchLatestBundle } from './releases.js';
 import { INSTALLER_HTML } from './generated/installer-ui.js';
 
 const API='https://api.cloudflare.com/client/v4';
@@ -22,14 +22,7 @@ async function readInput(request){
   if(!/^[A-Za-z0-9_-]{20,512}$/.test(token))throw Error('توکن Cloudflare نامعتبر یا ناقص است.');
   return token;
 }
-async function unpack(){
-  const bytes=Uint8Array.from(atob(PAYLOAD),c=>c.charCodeAt(0));
-  const source=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-  const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',source))].map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(hash!==SHA256)throw Error('یکپارچگی بستهٔ نصب تأیید نشد؛ فایل نصب‌کننده را دوباره دریافت کنید.');
-  return source;
-}
-export async function runInstallation(initialToken,emit,apiBase=API){
+export async function runInstallation(initialToken,emit,apiBase=API,releaseOptions={}){
   let token=initialToken,account,namespace,script,uploaded=false,uploadAttempted=false,ownsLock=false,current='account';
   const stage=(step,state,message,percent)=>{current=step;emit({type:'stage',step,state,message,percent});};
   async function cf(path,method='GET',body,allowMissing=false){
@@ -57,8 +50,10 @@ export async function runInstallation(initialToken,emit,apiBase=API){
     if(!subdomain?.subdomain)subdomain=await cf(`/accounts/${account}/workers/subdomain`,'PUT',{subdomain:'nightline-free-'+crypto.randomUUID().slice(0,8)});
     if(!/^[a-z0-9-]+$/.test(subdomain?.subdomain||''))throw Error('workers.dev در این اکانت فعال نیست؛ وضعیت اکانت را در داشبورد بررسی کنید.');
     stage('account','done','اکانت مقصد و زیردامنه شناسایی شدند؛ نام موجود تغییر نمی‌کند.',14);
-    stage('package','running','آماده‌سازی بسته و بررسی SHA-256…',16);
-    const source=await unpack();stage('package','done','بستهٔ تعبیه‌شدهٔ نسخهٔ ۲.۵.۳ سالم است.',25);
+    stage('package','running','دریافت آخرین نسخه از مخزن رسمی…',16);
+    const bundle=await fetchLatestBundle(message=>stage('package','running',message,20),releaseOptions);
+    const source=bundle.source,installedVersion=bundle.version;
+    stage('package','done','نسخهٔ '+installedVersion+' از مخزن رسمی دریافت شد.',25);
     script='nightline-free-'+crypto.randomUUID().replaceAll('-','').slice(0,12);
     stage('storage','running','در حال ساخت KV اختصاصی پنل…',28);
     namespace=await cf(`/accounts/${account}/storage/kv/namespaces`,'POST',{title:script+'-kv'});
@@ -81,12 +76,12 @@ export async function runInstallation(initialToken,emit,apiBase=API){
     stage('verify','running','بررسی پاسخ پنل؛ انتشار KV یا DNS ممکن است زمان ببرد…',90);
     let verified=false;
     for(let attempt=0;attempt<3;attempt++){
-      try{const res=await fetch((apiBase===API?origin+'/health':apiBase+'/health')+'?_install='+crypto.randomUUID(),{cache:'no-store',signal:AbortSignal.timeout(3500)});const health=await res.json();if(res.ok&&health.ok===true&&health.version==='2.5.3'&&health.initialized===true){verified=true;break;}}catch{}
+      try{const res=await fetch((apiBase===API?origin+'/health':apiBase+'/health')+'?_install='+crypto.randomUUID(),{cache:'no-store',signal:AbortSignal.timeout(3500)});const health=await res.json();if(res.ok&&health.ok===true&&health.version===installedVersion&&health.initialized===true){verified=true;break;}}catch{}
       if(attempt<2)await new Promise(r=>setTimeout(r,700));
     }
     const notice=verified?'پاسخ پنل و راه‌اندازی مدیریت تأیید شد. اطلاعات ورود را ذخیره و پس از ورود گذرواژه را تغییر دهید.':'نصب و فعال‌سازی در Cloudflare انجام شد؛ پاسخ نهایی هنوز تأیید نشده است. برای انتشار KV و DNS کمی صبر کنید و سپس آدرس پنل را باز کنید. نصب را دوباره اجرا نکنید.';
-    stage('verify','done',verified?'پاسخ نسخهٔ ۲.۵.۳ و مدیریت تأیید شد.':'نصب ثبت شد؛ انتشار نهایی هنوز در انتظار تأیید است.',100);
-    return {ok:true,url:origin+'/panel',password,verified,notice};
+    stage('verify','done',verified?'پاسخ نسخهٔ '+installedVersion+' و مدیریت تأیید شد.':'نصب ثبت شد؛ انتشار نهایی هنوز در انتظار تأیید است.',100);
+    return {ok:true,url:origin+'/panel',password,verified,notice,version:installedVersion,sourceRef:bundle.ref,sourceURL:bundle.sourceURL,sha256:bundle.sha256};
   }catch(e){
     emit({type:'stage',step:current,state:'error',message:'این مرحله کامل نشد؛ بررسی و پاک‌سازی منابع جدید…'});
     let cleanup='';
@@ -109,13 +104,14 @@ export default {
     if(request.headers.get('origin')!==url.origin||!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))return reply({ok:false,error:'درخواست باید از صفحهٔ همین نصب‌کننده ارسال شود.'},403);
     let token;try{token=await readInput(request);}catch(e){return reply({ok:false,error:e.message},400);}
     const apiBase=/^http:\/\/127\.0\.0\.1:\d+\/cf$/.test(env.NL_INSTALLER_TEST_CF_BASE||'')?env.NL_INSTALLER_TEST_CF_BASE:API;
-    if(!request.headers.get('accept')?.includes('application/x-ndjson'))return reply(await runInstallation(token,()=>{},apiBase));
+    const releaseOptions={api:env.NL_INSTALLER_TEST_GH_BASE,raw:env.NL_INSTALLER_TEST_RAW_BASE};
+    if(!request.headers.get('accept')?.includes('application/x-ndjson'))return reply(await runInstallation(token,()=>{},apiBase,releaseOptions));
     const encoder=new TextEncoder();let connected=true;
     const stream=new ReadableStream({start(controller){
       const emit=event=>{if(connected){try{controller.enqueue(encoder.encode(JSON.stringify(event)+'\n'));}catch{connected=false;}}};
       const task=(async()=>{
         const heartbeat=setInterval(()=>emit({type:'heartbeat'}),5000);
-        try{const result=await runInstallation(token,emit,apiBase);emit(result.ok?{type:'done',...result}:{type:'error',...result});}
+        try{const result=await runInstallation(token,emit,apiBase,releaseOptions);emit(result.ok?{type:'done',...result}:{type:'error',...result});}
         catch{emit({type:'error',ok:false,error:'خطای پیش‌بینی‌نشده؛ وضعیت منابع جدید را در داشبورد بررسی کنید.'});}
         finally{token='';clearInterval(heartbeat);if(connected){try{controller.close();}catch{}}}
       })();
