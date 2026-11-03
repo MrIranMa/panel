@@ -2,6 +2,7 @@
 <html lang="fa" dir="rtl" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>NIGHTLINE | نصب رسمی</title><style nonce="{{NONCE}}">{{STYLE}}</style></head>
 <body>
 <svg class="symbols" aria-hidden="true"><defs>
+<symbol id="worker-mark" viewBox="0 0 32 32"><path d="M8 8h16v16H8ZM12 12h8v8h-8M12 2v6m8-6v6M12 24v6m8-6v6M2 12h6m-6 8h6m16-8h6m-6 8h6"/></symbol><symbol id="pages-mark" viewBox="0 0 32 32"><path d="M4 5h16l8 8v14H4ZM20 5v8h8M9 18h14M9 22h10"/></symbol>
 <symbol id="back" viewBox="0 0 24 24"><path d="M21 12H3m7-7-7 7 7 7"/></symbol>
 <symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4"/><path d="m11 11 10 10m-5-5 3-3m-6 0 3-3"/></symbol>
 <symbol id="account" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></symbol>
@@ -16,23 +17,23 @@
 </defs></svg>
 <main class="paper">
   <div class="topline"><span dir="ltr">OFFICIAL / INSTALLER</span><span>رایگان · متن‌باز · غیرقابل فروش</span><button class="icon-btn" id="theme" type="button" title="تغییر تم" aria-label="تغییر تم"><svg><use href="#sun"/></svg></button></div>
-  <header class="masthead"><div class="seal" aria-hidden="true"><span>N</span></div><div><p class="eyebrow">نصب آسان NIGHTLINE</p><h1 dir="ltr">NIGHTLINE</h1><p class="subhead">آخرین نسخهٔ رسمی · کاملاً رایگان</p></div></header>
+  <header class="masthead"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M6 6h40l12 12v40H6ZM46 6v12h12"/><path d="M18 46V22l28 24V22M12 52h40M18 13h20"/><circle cx="50" cy="13" r="2"/></svg></div><div><p class="eyebrow">نصب رایگان روی حساب کلادفلر شما</p><h1 dir="ltr">NIGHTLINE</h1><p class="subhead">آخرین نسخهٔ رسمی · کاملاً رایگان</p></div></header>
   <div class="rule"></div>
   <div class="layout">
     <section class="main-column">
-      <div class="section-heading"><span class="issue" dir="ltr">01 / ACCESS</span><h2>کلید ورود به نصب</h2></div>
+      <div class="section-heading"><span class="issue" dir="ltr">01 / ACCESS</span><h2>شروع نصب</h2></div>
       <form id="install" novalidate>
-        <label for="install-target">روش نصب</label>
+        <div class="deployment-heading"><svg class="deployment-mark"><use id="target-icon" href="#worker-mark"/></svg><label for="install-target">۱ · محل نصب پنل</label></div>
         <select id="install-target" name="target"><option value="workers">Workers — workers.dev</option><option value="pages">Pages — pages.dev</option></select>
         <p class="target-note" id="target-note">ساخت Worker جدید و فضای KV اختصاصی</p>
-        <label for="token">توکن API کلادفلر</label>
+        <label for="token">۲ · توکن API کلادفلر</label>
         <div class="token-field"><svg><use href="#key"/></svg><input id="token" type="password" dir="ltr" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Cloudflare API Token" aria-describedby="token-help"><button type="button" id="reveal" aria-label="نمایش یا پنهان‌کردن توکن">نمایش</button></div>
-        <div class="form-meta"><small id="token-help">توکن فقط برای همین نصب ارسال می‌شود؛ ذخیره نمی‌شود.</small><a href="{{TOKEN_TEMPLATE}}" data-workers="{{TOKEN_TEMPLATE}}" data-pages="{{PAGES_TOKEN_TEMPLATE}}" id="token-template" target="_blank" rel="noopener noreferrer">ساخت توکن آماده <svg><use href="#arrow"/></svg></a></div>
+        <div class="form-meta"><small id="token-help">توکن را فقط از لینک زیر بسازید؛ پس از نصب لغوش کنید.</small><a href="{{TOKEN_TEMPLATE}}" data-workers="{{TOKEN_TEMPLATE}}" data-pages="{{PAGES_TOKEN_TEMPLATE}}" id="token-template" target="_blank" rel="noopener noreferrer">ساخت توکن برای روش انتخاب‌شده <svg><use href="#arrow"/></svg></a></div>
         <details class="permissions"><summary>مجوزهای موردنیاز روش انتخاب‌شده</summary><p>منابع توکن را به یک اکانت محدود کنید؛ توکن فقط باید مجوزهای روش انتخاب‌شده را داشته باشد.</p><ul dir="ltr"><li>Account Analytics · Read</li><li>Account Settings · Read</li><li id="deploy-permission">Workers Scripts · Edit</li><li>Workers KV Storage · Edit</li></ul></details>
-        <button class="primary" type="submit" id="go"><svg><use href="#cloud"/></svg><span id="go-label">نصب پنل رایگان من</span><svg class="button-arrow"><use href="#back"/></svg></button>
+        <button class="primary" type="submit" id="go"><svg><use href="#cloud"/></svg><span id="go-label">۳ · نصب پنل رایگان</span><svg class="button-arrow"><use href="#back"/></svg></button>
       </form>
       <noscript><p class="error-note">برای نمایش مراحل نصب، JavaScript مرورگر باید فعال باشد.</p></noscript>
-      <p class="form-status" id="form-status" role="status" aria-live="polite">آمادهٔ شروع — نصب فقط بعد از تأیید شما انجام می‌شود.</p>
+      <p class="form-status" id="form-status" role="status" aria-live="polite">روش نصب را انتخاب کنید، توکن بسازید و «نصب پنل» را بزنید. مراحل و نتیجه همین‌جا نمایش داده می‌شوند.</p>
       <section id="progress-section" hidden aria-label="مراحل نصب">
         <div class="section-heading"><span class="issue" dir="ltr">02 / DEPLOY</span><h2>خبر زندهٔ نصب</h2><span id="elapsed" class="mono" dir="ltr">00:00</span></div>
         <div class="progress-line" role="progressbar" aria-label="پیشرفت نصب" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><i id="progress-fill"></i></div>
@@ -52,7 +53,7 @@
         <p id="result-notice"></p><label>آدرس پنل</label><div class="value-row"><a id="panel-url" target="_blank" rel="noopener noreferrer" dir="ltr"></a><button class="icon-btn" id="copy-url" type="button" aria-label="کپی آدرس"><svg><use href="#copy"/></svg></button></div>
         <label>گذرواژهٔ مدیریت — همین حالا ذخیره کنید</label><div class="value-row"><input id="password" type="password" readonly dir="ltr"><button class="icon-btn" id="show-password" type="button" aria-label="نمایش گذرواژه"><svg><use href="#key"/></svg></button><button class="icon-btn" id="copy-password" type="button" aria-label="کپی گذرواژه"><svg><use href="#copy"/></svg></button></div>
         <div class="result-actions"><a class="primary" id="open-panel" target="_blank" rel="noopener noreferrer">ورود به پنل <svg><use href="#arrow"/></svg></a><button class="secondary" type="button" id="download">ذخیرهٔ اطلاعات ورود</button></div>
-        <small>پس از ذخیرهٔ اطلاعات، این نصب‌کننده را حذف و توکن نصب را لغو کنید.</small>
+        <small>اطلاعات ورود را نگه دارید و توکن نصب را لغو کنید. اگر سایت نصب‌کننده متعلق به خودتان است، می‌توانید آن را حذف کنید.</small>
       </section>
     </section>
   </div>

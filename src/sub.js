@@ -804,11 +804,46 @@ export function detectSubscriptionFormat(request) {
 
 // Explicit, per-download profiles. Stored settings and existing subscriptions are unchanged.
 export function connectionProfile(settings,profile){
-  if(!['baseline','tlshello-small','fragment-lab'].includes(profile))return settings;
+  if(!['baseline','tlshello-small','fragment-lab','auto'].includes(profile))return settings;
   return {...settings,tlsPorts:[443],enableHttpPorts:false,earlyData:0,alpn:'http/1.1',enableECH:false,
-    customDomains:[],cleanIPs:profile==='tlshello-small'?settings.cleanIPs:[],bypassIran:false,bypassChina:false,bypassRussia:false,blockAds:false,blockAdult:false,
+    customDomains:[],cleanIPs:['tlshello-small','auto'].includes(profile)?settings.cleanIPs:[],bypassIran:false,bypassChina:false,bypassRussia:false,blockAds:false,blockAdult:false,
     remoteDnsMode:'cloudflare',directDns:'localhost',enableFragment:profile!=='baseline',enableNoise:false,
     fragmentMode:'tlshello',fragmentPackets:'tlshello',fragmentLength:'5-16',fragmentInterval:'2-3'};
+}
+
+// Client-side measured selection, inspired by Xray observatory/leastPing architecture.
+export function buildAutomaticXray(user,settings,requestHost){
+  const safe=connectionProfile(settings,'auto'),protocol=safe.enableVless?'vless':'trojan';
+  const selected=[],seen=new Set([String(requestHost).split(':')[0].toLowerCase()+':443']);
+  for(const raw of safe.cleanIPs||[]){const entry=parseCleanEntry(raw);if(!entry)continue;const port=entry.portOverride||443;if(![443,2053,2083,2087,2096,8443].includes(port))continue;const key=entry.address.toLowerCase()+':'+port;if(seen.has(key))continue;seen.add(key);selected.push(raw);if(selected.length>=3)break;}
+  safe.cleanIPs=selected; // Bound generation before building config objects, not after.
+  const variants=[['5-16','2-3'],['10-20','1-3'],['100-200','1-3']];
+  const proxies=[],fragments=[];let base=null,addresses=[];
+  variants.forEach(([length,interval],index)=>{
+    const configs=buildXrayConfigs(user,{...safe,fragmentLength:length,fragmentInterval:interval},requestHost).filter(c=>c.outbounds[0].protocol===protocol);
+    if(!base)base=configs[0];
+    configs.forEach(c=>{
+      const proxy=JSON.parse(JSON.stringify(c.outbounds[0]));
+      const endpoint=protocol==='vless'?proxy.settings.vnext[0]:proxy.settings.servers[0];
+      const key=endpoint.address+':'+endpoint.port;
+      if(!addresses.includes(key)){if(addresses.length>=4)return;addresses.push(key);}
+      const fragmentTag='nl-fragment-'+index;
+      proxy.tag='nl-probe-'+(proxies.length+1);proxy.streamSettings.sockopt.dialerProxy=fragmentTag;
+      proxies.push(proxy);
+      if(!fragments.some(f=>f.tag===fragmentTag)){const f=JSON.parse(JSON.stringify(c.outbounds.find(o=>o.tag==='fragment')));f.tag=fragmentTag;fragments.push(f);}
+    });
+  });
+  if(!base)return [];
+  const config=JSON.parse(JSON.stringify(base));
+  config.remarks='NIGHTLINE · Auto IP / Fragment · measured in Xray client';
+  config.outbounds=proxies.concat(fragments,base.outbounds.filter(o=>['direct','block'].includes(o.tag)));
+  config.dns={servers:['localhost'],queryStrategy:'UseIP'};
+  config.routing.domainStrategy='AsIs';
+  config.routing.rules=config.routing.rules.map(r=>{if(r.outboundTag!=='proxy')return r;const copy={...r,balancerTag:'auto-edge'};delete copy.outboundTag;return copy;});
+  config.routing.rules.push({type:'field',network:'tcp,udp',balancerTag:'auto-edge'});
+  config.routing.balancers=[{tag:'auto-edge',selector:['nl-probe-'],strategy:{type:'leastPing'},fallbackTag:proxies[0].tag}];
+  config.observatory={subjectSelector:['nl-probe-'],probeURL:'https://www.gstatic.com/generate_204',probeInterval:'5m',enableConcurrency:true};
+  return [config];
 }
 
 export function serveSubscription(request, user, settings = {}, assets = {}) {
@@ -819,6 +854,8 @@ export function serveSubscription(request, user, settings = {}, assets = {}) {
     const userView = enrichUserView(user);
     const headers = buildSubscriptionHeaders(userView, safeSettings, requestHost);
     const fmt = detectSubscriptionFormat(request);
+
+    if(url.searchParams.get('profile')==='auto'&&fmt!=='xray')return new Response('انتخاب خودکار فقط با format=xray و کانفیگ کامل JSON پشتیبانی می‌شود.',{status:400,headers:{...headers,'content-type':'text/plain; charset=utf-8'}});
 
     if (fmt === 'html') {
       const html = renderSubscriberPressPass(userView, safeSettings, requestHost, assets);
@@ -849,7 +886,7 @@ export function serveSubscription(request, user, settings = {}, assets = {}) {
 
     if (fmt === 'xray') {
       const variants=url.searchParams.get('profile')==='fragment-lab'?[['5-16','2-3'],['10-20','1-3'],['100-200','1-3']]:null;
-      const configs=variants?variants.flatMap(([length,interval])=>buildXrayConfigs(userView,{...safeSettings,fragmentLength:length,fragmentInterval:interval},requestHost).map(c=>({...c,remarks:c.remarks+' [TLSHello '+length+' / '+interval+']'}))):buildXrayConfigs(userView,safeSettings,requestHost);
+      const configs=url.searchParams.get('profile')==='auto'?buildAutomaticXray(userView,safeSettings,requestHost):variants?variants.flatMap(([length,interval])=>buildXrayConfigs(userView,{...safeSettings,fragmentLength:length,fragmentInterval:interval},requestHost).map(c=>({...c,remarks:c.remarks+' [TLSHello '+length+' / '+interval+']'}))):buildXrayConfigs(userView,safeSettings,requestHost);
       const body = JSON.stringify(configs, null, 2);
       return new Response(body, {
         headers: { ...headers, 'content-type': 'application/json; charset=utf-8' },

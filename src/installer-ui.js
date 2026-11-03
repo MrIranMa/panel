@@ -12,13 +12,13 @@ function stage(event){
  if(Number.isFinite(event.percent)){$('progress-fill').style.width=event.percent+'%';$('progress').setAttribute('aria-valuenow',String(event.percent));}
  if(event.message){status(event.message);log(event.message);}
 }
-function showResult(data){credentials={url:data.url,password:data.password,version:data.version||''};$('result').hidden=false;$('result-version').textContent=data.version||'';$('panel-url').textContent=data.url;$('panel-url').href=data.url;$('open-panel').href=data.url;$('password').value=data.password;$('result-notice').textContent=data.notice;status('نصب انجام شد؛ اطلاعات ورود را پیش از بستن صفحه ذخیره کنید.');$('go-label').textContent='نصب با موفقیت تمام شد';$('result').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
+function showResult(data){credentials={url:data.url,password:data.password,version:data.version||''};$('result').hidden=false;$('result-version').textContent=data.version?'نسخهٔ نصب‌شده: '+data.version:'';$('panel-url').textContent=data.url;$('panel-url').href=data.url;$('open-panel').href=data.url;$('password').value=data.password;$('result-notice').textContent=data.notice;status('نصب انجام شد؛ اطلاعات ورود را پیش از بستن صفحه ذخیره کنید.');$('go-label').textContent='نصب با موفقیت تمام شد';$('result').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
 function receive(event){
  if(event.type==='stage')stage(event);
  if(event.type==='error'){var current=document.querySelector('.steps [data-state="running"]');if(current){current.dataset.state='error';current.querySelector('.step-state').textContent='خطا';}status(event.error||'نصب کامل نشد.',true);log(event.error||'خطای نصب');$('log-panel').open=true;}
  if(event.type==='done'&&event.ok)showResult(event);
 }
-$('install-target').onchange=function(){var pages=this.value==='pages';$('token-template').href=$('token-template').dataset[pages?'pages':'workers'];$('deploy-permission').textContent=pages?'Cloudflare Pages · Edit':'Workers Scripts · Edit';$('target-note').textContent=pages?'ساخت Pages با آدرس pages.dev و KV اختصاصی؛ ارتقای بعدی Pages دستی است.':'ساخت Worker جدید و فضای KV اختصاصی';};
+$('install-target').onchange=function(){var pages=this.value==='pages';$('target-icon').setAttribute('href',pages?'#pages-mark':'#worker-mark');$('token-template').href=$('token-template').dataset[pages?'pages':'workers'];$('deploy-permission').textContent=pages?'Cloudflare Pages · Edit':'Workers Scripts · Edit';$('target-note').textContent=pages?'Pages: پروژه و فضای ذخیره‌سازی جدا ساخته می‌شود؛ آدرس پنل با pages.dev پایان می‌یابد.':'Workers: پنل و فضای ذخیره‌سازی جدا ساخته می‌شود؛ آدرس پنل با workers.dev پایان می‌یابد.';};
 $('install').addEventListener('submit',async function(event){
  event.preventDefault();if(active||credentials)return;
  var token=$('token').value.trim(),target=$('install-target').value;

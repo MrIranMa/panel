@@ -1043,7 +1043,7 @@
 </button>
 <button class="btn ghost sm-btn" hidden="" id="btn-prune-clean" type="button">
 <svg class="ic ic-sm"><use href="#i-check"></use></svg>
-<span class="fa">اولویت‌بندی پاسخگوها (بدون حذف IP)</span><span class="en">PRIORITIZE RESPONSES (KEEP IPs)</span>
+<span class="fa">اولویت‌بندی نامزدها (بدون حذف IP)</span><span class="en">PRIORITIZE CANDIDATES (KEEP IPs)</span>
 </button>
 <button class="btn ghost sm-btn" id="btn-scan-clean" type="button">
 <svg class="ic ic-sm"><use href="#i-radar"></use></svg>
@@ -1055,9 +1055,9 @@
 </button>
 </div>
 <div class="actions" style="margin-top:7px"><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
-<div class="scan-options"><label class="fld-label"><span class="fa">روش بررسی</span><span class="en">METHOD</span><select id="scan-transport"><option value="auto">HTTP(S) + نامزد‌یابی تخمینی</option><option value="strict" selected>HTTPS — فقط پاسخ واقعی</option><option value="http">HTTP — فقط صفحهٔ غیرامن</option></select></label><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">TIMEOUT</span><select id="scan-timeout"><option value="4000">4 s</option><option value="7000">7 s</option><option value="10000">10 s</option></select></label></div>
-<p class="hint"><span class="fa">این بخش ICMP یا TLS با SNI دلخواه نمی‌زند. عدد پاسخ فقط در تکمیل واقعی HTTP(S) نشان داده می‌شود؛ تخمین اختیاری، پینگ نیست. برای تست دقیق IP با SNI باید از هستهٔ محلی مانند Alan/CFScanner استفاده کنید. مرورگر در صفحهٔ HTTPS اجازهٔ HTTP خام را نمی‌دهد.</span><span class="en">HTTP responses use your connection. Fast errors only suggest unverified candidates, not healthy IPs. Secure pages cannot request plain HTTP.</span></p>
-<p class="hint" hidden="" id="scan-control"></p>
+<div class="scan-options"><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">PER-ATTEMPT TIMEOUT</span><select id="scan-timeout"><option value="2500">2.5 s</option><option value="4000" selected>4 s</option><option value="7000">7 s</option></select></label><div class="hint"><span class="fa">رادار دوکاناله: تصویر + درخواست شبکه، سه نوبت و خودآزمایی. فقط پورت‌های TLS بررسی می‌شوند؛ ورودی پورت‌های دیگر در اسکن کنار گذاشته می‌شود.</span><span class="en">Dual-channel image/fetch radar, three rounds and control checks. Only TLS ports are scanned; other port entries are skipped.</span></div></div>
+<p class="hint"><span class="fa">گام ۱: نامزدهای شبکه را پیدا و اضافه کنید. گام ۲: با خروجی خودکار Xray، اتصال کانفیگ را در خود برنامه بررسی کنید. «واکنش» برآورد مرورگر است، نه تأیید اتصال.</span><span class="en">Find candidates, then use the automatic Xray profile to test config connectivity. Browser reaction time is an estimate, not connection proof.</span></p>
+<p class="hint" hidden id="scan-control"></p><p class="hint" hidden id="scan-calibration"></p>
 <div class="range-panel" hidden="" id="cf-ranges-panel">
 <div class="stat-strip">
 <strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" rel="noopener noreferrer" target="_blank">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"></use></svg></a></strong>
@@ -1227,13 +1227,13 @@
         <div class="stat-strip">
           <p class="kicker" style="margin:0">
             <svg class="ic"><use href="#i-radar"/></svg>
-            <span class="fa">مشاورِ هوشمند اینترنت مرورگر و تنظیم خودکار اپراتور</span>
+            <span class="fa">مشاور شبکه و انتخاب مسیر در کلاینت</span>
             <span class="en">SMART BROWSER ISP &amp; CONNECTIVITY ADVISOR</span>
           </p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn primary sm-btn" id="btn-adv-run" type="button">
               <svg class="ic ic-sm" id="adv-run-ic"><use href="#i-radar"/></svg>
-              <span class="fa">شروع تست هوشمند اینترنت من</span><span class="en">RUN FULL ISP DIAGNOSTIC</span>
+              <span class="fa">آزمون شبکه و تونل من</span><span class="en">RUN FULL ISP DIAGNOSTIC</span>
             </button>
             <button class="btn sm-btn" id="btn-adv-apply" type="button" hidden>
               <svg class="ic ic-sm"><use href="#i-check"/></svg>
@@ -1266,8 +1266,8 @@
           <ul class="adv-recs" id="adv-recs" hidden></ul>
         </div>
 
-        <section class="tunnel-guide"><p class="hint"><span class="fa">برای عیب‌یابی Pages ابتدا خروجی پایهٔ 443 را در کلاینت تست کنید؛ اگر موفق بود، مشکل از ترکیب IP/پورت/تنظیمات دیگر است. خروجی خرد TLSHello فقط برای Xray سازگار است؛ بازنویسی TCP/TLS محلی Alan روی Worker اجرا نمی‌شود.</span><span class="en">Test the domain-only 443 baseline in your client first. The small TLSHello profile requires compatible Xray. Alan's local TCP/TLS bridge does not run on Workers.</span></p><div class="actions"><button id="adv-baseline" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-download"/></svg><span class="fa">خروجی پایهٔ دامنه · Xray</span><span class="en">DOMAIN BASELINE · XRAY</span></button><button id="adv-fragment-small" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-bolt"/></svg><span class="fa">TLSHello خرد · آزمایشی</span><span class="en">SMALL TLSHELLO · EXPERIMENTAL</span></button><button id="adv-fragment-lab" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">بستهٔ مقایسهٔ Fragment در کلاینت</span><span class="en">CLIENT FRAGMENT COMPARISON</span></button><a class="btn ghost sm-btn" href="https://github.com/DrAlanK/Alan-RIP-Dpi-Windows" target="_blank" rel="noopener noreferrer"><svg class="ic"><use href="#i-external"/></svg><span>Alan-RIP-Dpi · Windows</span></a></div></section>
-        <div class="adv-grid" id="adv-grid"></div>
+        <section class="tunnel-guide"><div class="actions"><button id="adv-auto-xray" class="btn primary sm-btn" type="button"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">انتخاب خودکار IP و Fragment در Xray</span><span class="en">AUTO IP / FRAGMENT SELECTION IN XRAY</span></button></div><p class="hint"><span class="fa">نامزدهای تازه را ابتدا در تب شبکه ذخیره کنید. سپس این خروجی را در برنامهٔ سازگار Xray وارد کنید؛ برنامه تا چهار آدرس و سه الگوی Fragment را با درخواست واقعی HTTPS بررسی می‌کند و مسیر پاسخگوی کم‌تأخیر را انتخاب می‌کند. هنگام فعال‌بودن، هر پنج دقیقه آزمون پس‌زمینه دارد و از سهمیهٔ پنل مصرف می‌کند. هیچ IPی از داخل مرورگر «قطعی متصل» اعلام نمی‌شود.</span><span class="en">A compatible Xray client tests up to four addresses and three Fragment patterns over actual HTTPS, selecting a responding low-latency route. It probes every five minutes while active and consumes panel quota.</span></p><p class="hint"><span class="fa">برای عیب‌یابی Pages ابتدا خروجی پایهٔ 443 را در کلاینت تست کنید؛ اگر موفق بود، مشکل از ترکیب IP/پورت/تنظیمات دیگر است. خروجی خرد TLSHello فقط برای Xray سازگار است؛ بازنویسی TCP/TLS محلی Alan روی Worker اجرا نمی‌شود.</span><span class="en">Test the domain-only 443 baseline in your client first. The small TLSHello profile requires compatible Xray. Alan's local TCP/TLS bridge does not run on Workers.</span></p><div class="actions"><button id="adv-baseline" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-download"/></svg><span class="fa">خروجی پایهٔ دامنه · Xray</span><span class="en">DOMAIN BASELINE · XRAY</span></button><button id="adv-fragment-small" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-bolt"/></svg><span class="fa">TLSHello خرد · آزمایشی</span><span class="en">SMALL TLSHELLO · EXPERIMENTAL</span></button><button id="adv-fragment-lab" class="btn sm-btn" type="button"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">بستهٔ مقایسهٔ Fragment در کلاینت</span><span class="en">CLIENT FRAGMENT COMPARISON</span></button><a class="btn ghost sm-btn" href="https://github.com/DrAlanK/Alan-RIP-Dpi-Windows" target="_blank" rel="noopener noreferrer"><svg class="ic"><use href="#i-external"/></svg><span>Alan-RIP-Dpi · Windows</span></a></div></section>
+        <details class="advisor-advanced"><summary><span class="fa">مشاهدات تکمیلی: پورت‌ها و سرویس‌های بیرونی</span><span class="en">Additional observations: ports and external services</span></summary><div class="adv-grid" id="adv-grid"></div></details>
       </div>
     </div>
 

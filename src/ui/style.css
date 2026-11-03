@@ -832,7 +832,7 @@ html[data-lang="fa"] .colophon .fa{font-family:var(--fa-font);letter-spacing:0;f
 
 @media(prefers-reduced-motion:reduce){.btn,.tab-btn,.mini,.quota-pill,.blur-btn{transition:none}}
 
-/* 2.5.3: compact rhythm, content-sized columns, compositor-only motion */
+/* 2.5.4: compact rhythm, content-sized columns, compositor-only motion */
 #pane-net .cols-even,#pane-route .cols-even,#pane-sec .cols-even{align-items:start}
 #pane-net .stack,#pane-route .stack,#pane-sec .stack{align-content:start;grid-auto-rows:max-content}
 #pane-net .card-fill,#pane-route .card-fill,#pane-sec .card-fill{flex:initial;justify-content:flex-start}

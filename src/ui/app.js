@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.3 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.4 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -863,16 +863,13 @@
       advisorStage(95,'۴ از ۴ · آماده‌سازی پیشنهادها؛ بدون اعمال خودکار','4/4 · Preparing changes for review');
       var patch={},s=STATE.settings||{},recs=[];
       function rec(fa,en){recs.push([fa,en]);}
-      if(base.ok&&down.ok&&tunnel.ok){
-        patch.alpn='http/1.1';patch.showSubInfoNodes=true;patch.enableHttpPorts=false;patch.enableECH=false;
-        rec('پایهٔ سازگاری: HTTP/1.1 برای WS، پورت‌های فقط TLS و حذف ECH آزمایشی؛ تنظیم Fragment شما دست‌نخورده می‌ماند و نیاز به آزمون در هستهٔ کلاینت دارد.','Compatibility baseline: HTTP/1.1 WebSocket, TLS-only ports and no experimental ECH; Fragment settings are preserved and must be tested in the client core.');
+      if(tunnel.ok&&s.alpn!=='http/1.1'){
+        patch.alpn='http/1.1';
+        rec('مسیر دامنه با WebSocket پاسخ داد؛ HTTP/1.1 فقط به‌عنوان پیشنهاد سازگاری WS عرضه می‌شود.','The domain WebSocket replied; HTTP/1.1 is offered only as a WS compatibility setting.');
       }
-      if(base.ok&&down.ok&&(!up.ok||!ws.ok||(up.ms>=120&&up.mbps<Math.min(1.5,down.mbps*0.3)))){
-        patch.earlyData=0;
-        rec('آپلود یا WebSocket پایدار نبود؛ Early Data صفر به‌عنوان آزمایش سازگاری پیشنهاد می‌شود، نه تشخیص محدودیت قطعی اپراتور.','Upload/WebSocket was unstable; Early Data 0 is a compatibility experiment, not proof of ISP throttling.');
-      }else rec('Early Data بدون شواهد خطا تغییر نمی‌کند؛ پورت‌های TLS، IPها و قواعد شخصی شما حفظ می‌شوند.','Preserve Early Data without evidence; retain configured TLS ports, IPs and custom routing.');
-      rec(tunnel.ok?'ترافیک HTTP واقعاً از تونل کاربر منتخب عبور کرد؛ این نتیجه مربوط به دامنه و همین مسیر مرورگر است، نه تضمین همهٔ IPها.':'بازشدن صفحه یا echo وب‌سوکت کافی نیست: آزمون عبور HTTP از تونل تأیید نشد. ابتدا خروجی پایهٔ دامنه روی 443 را در کلاینت امتحان کنید.','The authenticated tunnel HTTP test is separate from page reachability and WebSocket echo. It does not validate every IP or TLS fragmentation.');
-      rec('سه ردیف اول اشتراک Normal اعلان رایگان/مصرف/اعتبار هستند، نود اتصال نیستند؛ برای اتصال نود VLESS یا Trojan با دامنهٔ پنل را انتخاب کنید.','The first three Normal entries are mandatory notices, not connection nodes. Select an actual domain VLESS/Trojan node.');
+      rec('برای انتخاب واقعی IP و Fragment، خروجی «انتخاب خودکار در Xray» را وارد برنامه کنید؛ هستهٔ برنامه مسیرها را آزمایش و کم‌تأخیرترین مسیر پاسخگو را انتخاب می‌کند.','For actual IP/Fragment selection, import the automatic Xray profile. The client core tests paths and selects the lowest-latency responding route.');
+      rec('RTT صفحه یا خطای یک سایت باعث تغییر DNS، Early Data، طول Fragment یا فهرست IP شما نمی‌شود.','Page RTT or a failed website does not change DNS, Early Data, Fragment sizes or your IP list.');
+      rec(tunnel.ok?'عبور HTTP از تونل دامنه تأیید شد؛ این نتیجه به معنی تست تک‌تک IPها نیست.':'عبور HTTP از تونل دامنه تأیید نشد؛ ابتدا خروجی پایهٔ 443 را در برنامه امتحان کنید.','The domain tunnel test is distinct from candidate scanning and client-core path selection.');
       var ports=results.filter(function(r){return r.target.kind==='port'&&r.ok;}).map(function(r){return r.target.port;});
       rec('پورت‌های دارای پاسخ سلامت همین Worker: '+(ports.join('، ')||'هیچ‌کدام در این نمونه')+'؛ فهرست پورت‌ها خودکار بازنویسی نمی‌شود.','This Worker’s health replied on: '+(ports.join(', ')||'none in this sample')+'. Existing TLS port choices are not overwritten.');
       var dns=results.filter(function(r){return r.target.kind==='dns'&&r.ok;}).sort(function(a,b){return a.ms-b.ms;});
@@ -1039,7 +1036,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.3',
+      version: '2.5.4',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1077,7 +1074,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.3)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.4)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1184,11 +1181,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.3',
-          latestVersion: '2.5.3',
+          currentVersion: '2.5.4',
+          latestVersion: '2.5.4',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.3 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.4 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1198,8 +1195,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.3',
-          targetVersion: '2.5.3',
+          previousVersion: '2.5.4',
+          targetVersion: '2.5.4',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -2017,7 +2014,7 @@
     };
   }
 
-  ['adv-baseline','adv-fragment-small','adv-fragment-lab'].forEach(function(id){if($(id))$(id).onclick=function(){var u=getSelectedUser();if(!u){showToast('ابتدا وارد پنل شوید و کاربر را انتخاب کنید','Select a user first');return;}var a=document.createElement('a');a.href=subBaseUrl(u)+'?format=xray&profile='+(id==='adv-baseline'?'baseline':id==='adv-fragment-lab'?'fragment-lab':'tlshello-small');a.target='_blank';a.rel='noopener noreferrer';a.click();};});
+  ['adv-baseline','adv-fragment-small','adv-fragment-lab','adv-auto-xray'].forEach(function(id){if($(id))$(id).onclick=function(){var u=getSelectedUser();if(!u){showToast('ابتدا وارد پنل شوید و کاربر را انتخاب کنید','Select a user first');return;}if(id==='adv-auto-xray'&&JSON.stringify(textToLines($('s-cleanips').value))!==JSON.stringify((STATE.settings||{}).cleanIPs||[])){showToast('ابتدا نامزدها را با دکمهٔ ذخیرهٔ تنظیمات شبکه ثبت کنید','Save the candidate list in Network settings first');return;}var a=document.createElement('a');a.href=subBaseUrl(u)+'?format=xray&profile='+(id==='adv-auto-xray'?'auto':id==='adv-baseline'?'baseline':id==='adv-fragment-lab'?'fragment-lab':'tlshello-small');a.target='_blank';a.rel='noopener noreferrer';a.click();};});
   document.querySelectorAll('.frag-preset').forEach(function (btn) {
     btn.onclick = function () {
       $('s-frag-on').checked = true;
@@ -2047,7 +2044,7 @@
 
   /* -------------------- Browser Clean IP / Domain Scanner ---------------- */
 
-  var lastUserScanHealthy = [];
+  var lastUserScanCandidates = [];
 
   function parseUserCleanLine(rawLine) {
     var line = String(rawLine || '').trim();
@@ -2091,7 +2088,7 @@
     };
   }
 
-  var scannerController=null, scannerRunning=false;
+  var scannerController=null, scannerRunning=false,scanCalibration=null;
   function scanBusy(on){
     scannerRunning=on;
     ['btn-scan-user-list','btn-scan-ranges','btn-scan-clean'].forEach(function(id){if($(id))$(id).disabled=on;});
@@ -2101,15 +2098,19 @@
   async function probeSingleCleanEntry(entry) {
     if(isSandboxPreview)return {entry:entry,ok:false,ms:9999,attemptMs:null,replies:0,attempts:0,reason:'offline-preview'};
     var r=await globalThis.NLNetwork.cleanProbe(entry,{
-      transport:$('scan-transport').value,pageProtocol:location.protocol,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined
+      calibration:scanCalibration,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined
     });
-    r.entry=entry;r.responseMs=r.ms;r.ms=r.ok?r.ms:9999;return r;
+    r.entry=entry;r.responseMs=r.ms;r.sortMs=r.ok?r.ms:r.candidate?10000+r.candidateMs:999999;r.ms=r.ok?r.ms:9999;return r;
   }
   async function probeBatch(entries, concurrency){
     var done=0;
     $('scan-control').hidden=false;$('scan-control').textContent=tr('سنجش HTTP پنل…','Measuring panel HTTP…');
     var control=await globalThis.NLNetwork.sample('/api/ping',{check:'health',credentials:'same-origin',timeout:4000,signal:scannerController?scannerController.signal:undefined},3);
     $('scan-control').textContent=control.ok?tr('پینگ HTTP پنل: ','Panel HTTP RTT: ')+control.ms+' ms · '+tr('نوسان: ','jitter: ')+(control.jitter===null?'—':control.jitter+' ms')+tr(' · مستقل از IPهای فهرست',' · not the listed IPs'):tr('پاسخ HTTP پنل پایدار نبود.','Panel HTTP response was unstable.');
+    $('scan-summary').textContent=tr('خودآزمایی اسکنر و بررسی مسیر…','Calibrating scanner…');
+    scanCalibration=await globalThis.NLNetwork.scannerCalibration({baseMs:control.ms||100,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined});
+    $('scan-calibration').hidden=false;$('scan-calibration').textContent=scanCalibration.heuristicAllowed?tr('آزمون کنترل انجام شد؛ نامزدها برای تست در برنامه مرتب می‌شوند.','Control check completed; candidates are ranked for client testing.'):tr('این مسیر به آدرس‌های کنترل هم واکنش نشان می‌دهد؛ فقط پاسخ‌های HTTP قابل تأییدند. انتخاب واقعی را با خروجی خودکار Xray انجام دهید.','Control addresses also reacted; only HTTP replies are confirmed. Use the automatic Xray profile for actual selection.');
+    entries=entries.filter(function(e){return [443,2053,2083,2087,2096,8443].indexOf(e.port)>=0;});
     return globalThis.NLNetwork.bounded(entries,concurrency||4,async function(entry){
       var result=await probeSingleCleanEntry(entry);done++;
       $('scan-summary').textContent=tr('سنجش از اینترنت من: ','Testing from my network: ')+done+'/'+entries.length;
@@ -2117,19 +2118,14 @@
     },scannerController?scannerController.signal:undefined);
   }
   function scanBadge(r){
-    if(r.ok)return r.scheme.toUpperCase()+' · '+r.responseMs+' ms';
-    if(r.kind==='candidate')return tr('نامزد تخمینی · تأییدنشده','ESTIMATED CANDIDATE · UNVERIFIED');
-    if(r.kind==='mixed-content')return tr('HTTP در صفحهٔ امن مسدود است','HTTP BLOCKED BY SECURE PAGE');
-    if(r.kind==='timeout')return tr('بدون پاسخ در مهلت انتخابی','TIMED OUT');
-    if(r.kind==='unstable')return tr('پاسخ ناپایدار','UNSTABLE RESPONSE');
-    return tr('مرورگر اتصال را تأیید نکرد','BROWSER COULD NOT VERIFY');
+    if(r.ok)return 'HTTP · '+r.responseMs+' ms';
+    if(r.candidate)return tr('نامزد · واکنش ','CANDIDATE · REACTION ')+r.candidateMs+' ms';
+    return tr('بدون سیگنال قابل‌اتکا','NO RELIABLE SIGNAL');
   }
   function scanDetail(r){
-    if(r.ok)return tr('نوسان: ','Jitter: ')+(r.jitter===null?'—':r.jitter+' ms')+tr(' · پاسخ HTTP، نه تأیید تونل',' · HTTP response, not tunnel verification');
-    if(r.kind==='candidate')return tr('واکنش سریع به خطا؛ پینگ نیست. فقط برای آزمون در کلاینت.','Fast error reaction; not a ping. Client testing only.');
-    if(r.kind==='mixed-content')return tr('پورت TLS مانند 443 را انتخاب کنید.','Choose a TLS port such as 443.');
-    if(r.kind==='timeout')return tr('مهلت را بیشتر کنید یا IP بعدی را امتحان کنید.','Increase timeout or try another IP.');
-    return tr('خطای TLS، مرورگر یا شبکه؛ IP خودکار حذف نمی‌شود.','TLS, browser or network error; IP is kept.');
+    if(r.ok)return tr('پاسخ واقعی HTTP؛ اتصال کانفیگ جدا بررسی می‌شود.','Actual HTTP reply; config connectivity is a separate test.');
+    if(r.candidate)return tr('برآورد مرورگر؛ برای تأیید از خروجی خودکار Xray استفاده کنید.','Browser estimate; verify through automatic Xray testing.');
+    return tr('این مورد انتخاب خودکار نمی‌شود.','Not automatically selected.');
   }
 
   var geoCountryCache = Object.create(null);
@@ -2186,9 +2182,9 @@
         if($('scan-geo')&&$('scan-geo').checked&&!scannerController.signal.aborted)await enrichScanCountries(results);
         if(scannerController.signal.aborted){sum.textContent=tr('اسکن متوقف شد؛ فهرست شما تغییر نکرد.','Stopped; your list is unchanged.');return;}
         $('s-cleanips').value=parsedList.map(function(p){return p.rawLine;}).join('\n');
-        results.sort(function(a,b){return a.ms-b.ms;});lastUserScanHealthy=results.filter(function(r){return r.ok;});
-        sum.textContent=tr('سنجش کامل: ','Completed: ')+results.length+tr(' مورد · پاسخ HTTP/HTTPS: ',' entries · HTTP/HTTPS replies: ')+lastUserScanHealthy.length+tr(' · نامزد تخمینی: ',' · estimated candidates: ')+results.filter(function(r){return r.kind==='candidate';}).length+tr('؛ هیچ IPی با خطا حذف نشد.','; no failed IP was removed.');
-        $('btn-prune-clean').hidden=!lastUserScanHealthy.length;
+        results.sort(function(a,b){return a.sortMs-b.sortMs;});lastUserScanCandidates=results.filter(function(r){return r.ok||r.candidate;});
+        sum.textContent=tr('سنجش کامل: ','Completed: ')+results.length+tr(' مورد · پاسخ HTTP/HTTPS: ',' entries · HTTP/HTTPS replies: ')+results.filter(function(r){return r.ok;}).length+tr(' · نامزد تخمینی: ',' · estimated candidates: ')+results.filter(function(r){return r.kind==='candidate';}).length+tr('؛ هیچ IPی با خطا حذف نشد.','; no failed IP was removed.');
+        $('btn-prune-clean').hidden=!lastUserScanCandidates.length;
         results.forEach(function(r){
           var item=document.createElement('div');item.className='scan-item';
           item.innerHTML='<span class="scan-entry mono" dir="ltr">'+esc(r.entry.bareHost+(r.entry.port!==443?':'+r.entry.port:''))+'</span><span class="badge'+(r.ok?' ok':'')+'">'+esc(scanBadge(r))+'</span><small class="scan-detail">'+esc(scanDetail(r))+'</small>';
@@ -2201,9 +2197,9 @@
 
   if ($('btn-prune-clean')) {
     $('btn-prune-clean').onclick = function () {
-      if (!lastUserScanHealthy.length) return;
+      if (!lastUserScanCandidates.length) return;
       var current = textToLines($('s-cleanips').value);
-      var priority = new Set(lastUserScanHealthy.map(function (r) { return r.entry.addrPart; }));
+      var priority = new Set(lastUserScanCandidates.map(function (r) { return r.entry.addrPart; }));
       var first = [], rest = [];
       current.forEach(function (line) {
         var address = line.split('#')[0].trim();
@@ -2211,7 +2207,7 @@
       });
       $('s-cleanips').value = first.concat(rest).join('\n');
       $('btn-prune-clean').hidden = true;
-      showToast('پاسخگوها اولویت گرفتند؛ هیچ IPی حذف نشد. برای اعمال در Normal ذخیره کنید', 'Prioritized responses; kept all IPs. Save to update Normal');
+      showToast('نامزدها اولویت گرفتند؛ هیچ IPی حذف نشد. برای اعمال در Normal ذخیره کنید', 'Prioritized candidates; kept all IPs. Save to update Normal');
     };
   }
 
@@ -2332,7 +2328,7 @@
       var results = await probeBatch(raw, 4);
       if($('scan-geo')&&$('scan-geo').checked&&!scannerController.signal.aborted)await enrichScanCountries(results);
       if(scannerController.signal.aborted){summary.textContent=tr('اسکن متوقف شد.','Scan stopped.');return;}
-      results.sort(function (a, b) { return a.ms - b.ms; });
+      results.sort(function (a, b) { return a.sortMs - b.sortMs; });
       var tlsCount = results.filter(function (r) { return r.ok; }).length;
       var ccCount = results.filter(function (r) { return r.entry.countryCode; }).length;
       summary.textContent = tr(
@@ -2708,7 +2704,7 @@
   /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
 
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.3';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.4';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if ($('gh-upd-dot')) {

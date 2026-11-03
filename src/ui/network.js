@@ -31,7 +31,7 @@
       var extra={};
       if(options.check === 'health') {
         if(!res.ok) throw Error('http');
-        var h=await res.json(); if(h.ok!==true || h.version!=='2.5.3')throw Error('health');
+        var h=await res.json(); if(h.ok!==true || h.version!=='2.5.4')throw Error('health');
       } else if(options.check === 'dns') {
         if(!res.ok)throw Error('http');
         var d=await res.json();if(d.Status!==0 || !Array.isArray(d.Answer) || !d.Answer.some(function(a){return a.type===1;}))throw Error('dns');
@@ -56,21 +56,41 @@
     for(var i=0;i<(rounds||3);i++) {if(options.signal&&options.signal.aborted)break;out.push(await timed(url,options));}
     return summary(out);
   }
+  function imageSignal(url,options){
+    options=options||{};
+    return new Promise(function(resolve){
+      var img,start=performance.now(),done=false,signal=options.signal;
+      function finish(reason){if(done)return;done=true;clearTimeout(timer);if(signal)signal.removeEventListener('abort',cancel);if(img){img.onload=img.onerror=null;img.removeAttribute('src');}resolve({ok:false,reason:reason,ms:Math.max(1,Math.round(performance.now()-start))});}
+      function cancel(){finish('cancelled');}
+      var timer=setTimeout(function(){finish('timeout');},options.timeout||3000);
+      if(signal){if(signal.aborted){cancel();return;}signal.addEventListener('abort',cancel,{once:true});}
+      if(typeof Image!=='function'){finish('unavailable');return;}
+      img=new Image();img.referrerPolicy='no-referrer';img.onload=function(){finish('image-load');};img.onerror=function(){finish('image-error');};img.src=url+(url.indexOf('?')<0?'?':'&')+'_img='+Date.now()+'-'+Math.random();
+    });
+  }
+  async function edgeSignal(url,options){
+    var pair=await Promise.all([timed(url,{mode:'no-cors',redirect:'manual',timeout:options.timeout,signal:options.signal}),imageSignal(url,options)]);
+    return {fetch:pair[0],image:pair[1]};
+  }
+  async function scannerCalibration(options){
+    options=options||{};
+    var base=options.baseMs||100,floor=Math.min(200,Math.max(20,Math.round(base*0.4)));
+    var controls=await Promise.all(['192.0.2.1','198.51.100.1','203.0.113.1'].map(function(ip){return edgeSignal('https://'+ip+':443/cdn-cgi/trace',{timeout:Math.min(options.timeout||3000,1200),signal:options.signal});}));
+    var reacted=controls.some(function(p){return [p.fetch,p.image].some(function(s){return !['timeout','cancelled','unavailable'].includes(s.reason||'')&&s.ms>=floor;});});
+    return {heuristicAllowed:!reacted,floor:floor,controls:controls};
+  }
   async function cleanProbe(entry, options) {
     options=options||{};
-    var plainPorts=[80,8080,8880,2052,2082,2086,2095];
-    var scheme=options.transport==='http'||(options.transport!=='strict'&&plainPorts.indexOf(entry.port)>=0)?'http':'https';
-    if(scheme==='http'&&options.pageProtocol==='https:')return {ok:false,kind:'mixed-content',ms:null,replies:0,attempts:0,scheme:scheme};
-    var timeout=options.timeout||4000;
-    var r=await sample(scheme+'://'+entry.host+':'+entry.port+'/cdn-cgi/trace',{
-      mode:'no-cors',redirect:'manual',timeout:timeout,signal:options.signal
-    },3);
-    r.scheme=scheme;r.kind=r.ok?'response':'unconfirmed';
-    var quick=r.samples.filter(function(s){return !s.ok&&s.reason==='browser-or-network'&&s.ms>=20&&s.ms<timeout*0.65;});
-    if(!r.ok&&r.replies===0&&entry.isRawIp&&options.transport!=='strict'&&quick.length>=2){r.kind='candidate';r.candidateMs=median(quick.map(function(s){return s.ms;}));}
-    else if(!r.ok&&r.samples.length&&r.samples.every(function(s){return s.reason==='timeout';}))r.kind='timeout';
-    else if(!r.ok&&r.replies)r.kind='unstable';
-    return r;
+    // Browser probes only TLS ports. Plain HTTP is never attempted from a secure page.
+    if([443,2053,2083,2087,2096,8443].indexOf(entry.port)<0)return {ok:false,kind:'unsupported-port',ms:null,replies:0,attempts:0,scheme:'https'};
+    var timeout=options.timeout||3000,cal=options.calibration||{heuristicAllowed:false,floor:20},pairs=[];
+    for(var i=0;i<3;i++){if(options.signal&&options.signal.aborted)break;pairs.push(await edgeSignal('https://'+entry.host+':'+entry.port+'/cdn-cgi/trace',{timeout:timeout,signal:options.signal}));}
+    var r=summary(pairs.map(function(p){return p.fetch;}));r.scheme='https';r.kind=r.ok?'response':'no-signal';
+    var signals=[];
+    pairs.forEach(function(p){var times=[p.fetch,p.image].filter(function(s){return !['timeout','cancelled','unavailable'].includes(s.reason||'')&&s.ms>=cal.floor&&s.ms<timeout*0.85;}).map(function(s){return s.ms;});if(times.length)signals.push(Math.max.apply(null,times));});
+    if(!r.ok&&cal.heuristicAllowed&&signals.length>=2){r.kind='candidate';r.candidate=true;r.candidateMs=median(signals);r.signalJitter=median(signals.slice(1).map(function(v,i){return Math.abs(v-signals[i]);}));}
+    if(!r.ok&&!cal.heuristicAllowed)r.kind='inconclusive';
+    r.channels=pairs;r.evidence=r.ok?'http':'browser-signal';return r;
   }
   async function bounded(items, count, fn, signal) {
     var output=new Array(items.length), next=0;
@@ -120,5 +140,5 @@
       ws.onerror=function(){finish(false,'websocket-error');};ws.onclose=function(){finish(false,'closed-before-http');};
     });
   }
-  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe,cleanProbe:cleanProbe,tunnelProbe:tunnelProbe};
+  root.NLNetwork={median:median,summary:summary,timed:timed,sample:sample,bounded:bounded,wsProbe:wsProbe,cleanProbe:cleanProbe,imageSignal:imageSignal,edgeSignal:edgeSignal,scannerCalibration:scannerCalibration,tunnelProbe:tunnelProbe};
 })(globalThis);
