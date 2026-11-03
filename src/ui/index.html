@@ -117,8 +117,8 @@
           <span class="en">CLOUDFLARE API TOKEN</span>
         </label>
         <div class="cf-help-links">
-          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics" target="_blank" rel="noopener noreferrer" id="cf-template-quick">
-            <span class="fa">تمپلیت آمادهٔ توکن آماری</span><span class="en">PRE-FILLED READ-ONLY TOKEN</span>
+          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer" id="cf-template-quick">
+            <span class="fa">تمپلیت آمادهٔ توکن آماری</span><span class="en">PRE-FILLED COMPLETE TOKEN</span>
             <svg class="ic ic-sm"><use href="#i-external"/></svg>
           </a>
           <span>·</span>
@@ -133,7 +133,7 @@
       <div class="perm-popover" id="cf-perm-popover" hidden>
         <div class="stat-strip" style="margin-bottom:6px">
           <strong style="font-size:12px">
-            <span class="fa">تمپلیت‌های کمینهٔ توکن کلادفلر</span>
+            <span class="fa">تمپلیت کامل توکن کلادفلر</span>
             <span class="en">Pre-filled Cloudflare Token Templates</span>
           </strong>
           <button class="inline-link-btn" id="btn-cf-guide-close" type="button">
@@ -142,8 +142,8 @@
         </div>
         <p class="hint" style="margin:0 0 8px"><span class="fa">روی یکی از تمپلیت‌های رسمی Cloudflare بزنید. دسترسی‌ها از قبل پر شده‌اند؛ حساب مورد نظر را در داشبورد انتخاب کنید، مجوزها را مرور و تأیید کنید و توکنِ نمایش‌داده‌شده را فقط خودتان در کادر زیر وارد کنید. هیچ توکنی از داشبورد به‌صورت خودکار به پنل منتقل نمی‌شود.</span><span class="en">Open an official pre-filled Cloudflare template. Select your account, review permissions and confirm in your own dashboard; copy the displayed token here yourself. No token is silently sent back to this panel.</span></p>
         <div class="token-templates">
-          <a class="btn ghost sm-btn" id="cf-template-read" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-key"/></svg><span class="fa">فقط آمار و تنظیمات (پیشنهادی)</span><span class="en">ANALYTICS ONLY (RECOMMENDED)</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
-          <a class="btn ghost sm-btn" id="cf-template-update" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-cloud-up"/></svg><span class="fa">به‌علاوهٔ مجوز آپدیت Worker (اختیاری)</span><span class="en">+ WORKER SELF-UPDATE (OPTIONAL)</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+          <a class="btn ghost sm-btn" id="cf-template-read" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-key"/></svg><span class="fa">تمپلیت کامل: آمار، تنظیمات و ویرایش Worker</span><span class="en">COMPLETE TOKEN TEMPLATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+          <a class="btn ghost sm-btn" id="cf-template-update" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-cloud-up"/></svg><span class="fa">تمپلیت کامل با مجوز آپدیت Worker</span><span class="en">COMPLETE TEMPLATE + WORKER UPDATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
         </div>
         <p class="hint" style="margin:9px 0 6px"><span class="fa">مجوزهای داخل تمپلیت:</span><span class="en">Permissions preselected by the template:</span></p>
         <ul class="perm-list">
@@ -804,29 +804,38 @@
 
       <section class="card client-directory" aria-label="Official client sources">
         <p class="kicker"><svg class="ic"><use href="#i-external"/></svg><span class="fa">منابع رسمی برنامه‌ها، دسته‌بندی‌شده بر اساس سیستم‌عامل</span><span class="en">OFFICIAL CLIENT SOURCES BY OPERATING SYSTEM</span></p>
-        <p class="hint"><span class="fa">لینک‌ها به مخزن خودِ توسعه‌دهنده می‌روند؛ برنامه‌های بستهٔ iOS به صفحهٔ رسمی App Store پیوند دارند و بعضی ممکن است پولی باشند. نصب از منابع متفرقه توصیه نمی‌شود. سازگاری فرمت اشتراک را در همان برنامه بررسی کنید.</span><span class="en">Links open the developer's repository; closed-source iOS apps link to their official App Store listing and may be paid. Avoid unofficial downloads; verify subscription format compatibility in each app.</span></p>
+        <p class="hint"><span class="fa">لینک‌ها منابع رسمی گیتهاب، App Store یا راهنمای دریافت برنامه هستند. CoreForge از راهنمای TestFlight دریافت می‌شود و نام فعلی مقصد ForgeCore است. بعضی برنامه‌ها پولی یا آزمایشی‌اند؛ سازگاری فرمت ساب را در برنامه بررسی کنید.</span><span class="en">Links open official repositories, App Store listings or the developer’s download guide. CoreForge’s TestFlight destination is currently named ForgeCore. Some apps are paid or beta; verify format compatibility.</span></p>
         <div class="client-os-grid">
           <div class="client-os"><h3>Windows</h3><div class="client-links">
+<a class="client-link" href="https://github.com/WhiteDNS/WhiteVPN-Desktop" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_WHITEVPN}}" width="23" height="23" alt="" loading="lazy"><span>WhiteVPN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+<a class="client-link" href="https://github.com/KaringX/karing" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_KARING}}" width="23" height="23" alt="" loading="lazy"><span>Karing</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a><a class="client-link" href="https://github.com/patterniha/PattN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_PATTN}}" width="23" height="23" alt="" loading="lazy"><span>PattN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
           </div></div>
           <div class="client-os"><h3>Linux</h3><div class="client-links">
+<a class="client-link" href="https://github.com/WhiteDNS/WhiteVPN-Desktop" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_WHITEVPN}}" width="23" height="23" alt="" loading="lazy"><span>WhiteVPN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a><a class="client-link" href="https://github.com/KaringX/karing" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_KARING}}" width="23" height="23" alt=""><span>Karing</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+<a class="client-link" href="https://github.com/patterniha/PattN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_PATTN}}" width="23" height="23" alt="" loading="lazy"><span>PattN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/SagerNet/sing-box" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_SINGBOX}}" width="23" height="23" alt="" loading="lazy"><span>sing-box CLI</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
           </div></div>
           <div class="client-os"><h3>Android</h3><div class="client-links">
+<a class="client-link" href="https://github.com/WhiteDNS/WhiteVPN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_WHITEVPN}}" width="23" height="23" alt="" loading="lazy"><span>WhiteVPN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a><a class="client-link" href="https://github.com/KaringX/karing" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_KARING}}" width="23" height="23" alt="" loading="lazy"><span>Karing</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a><a class="client-link" href="https://github.com/patterniha/PattNG" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_PATTNG}}" width="23" height="23" alt="" loading="lazy"><span>PattNG</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/2dust/v2rayNG" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYNG}}" width="23" height="23" alt="" loading="lazy"><span>v2rayNG</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
           </div></div>
           <div class="client-os"><h3>macOS</h3><div class="client-links">
+<a class="client-link" href="https://github.com/WhiteDNS/WhiteVPN-Desktop" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_WHITEVPN}}" width="23" height="23" alt="" loading="lazy"><span>WhiteVPN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+<a class="client-link" href="https://github.com/KaringX/karing" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_KARING}}" width="23" height="23" alt="" loading="lazy"><span>Karing</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a><a class="client-link" href="https://github.com/patterniha/PattN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_PATTN}}" width="23" height="23" alt="" loading="lazy"><span>PattN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/2dust/v2rayN" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_V2RAYN}}" width="23" height="23" alt="" loading="lazy"><span>v2rayN</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/clash-verge-rev/clash-verge-rev" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_CLASH}}" width="23" height="23" alt="" loading="lazy"><span>Clash Verge Rev</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
           </div></div>
           <div class="client-os"><h3>iOS / iPadOS</h3><div class="client-links">
+<a class="client-link" href="https://whitedns.online/tools/coreforge/" target="_blank" rel="noopener noreferrer" title="CoreForge / ForgeCore — TestFlight"><img class="client-logo" src="{{ICON_COREFORGE}}" width="23" height="23" alt="" loading="lazy"><span>CoreForge · TestFlight</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
+<a class="client-link" href="https://github.com/KaringX/karing" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_KARING}}" width="23" height="23" alt="" loading="lazy"><span>Karing</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://github.com/hiddify/hiddify-app" target="_blank" rel="noopener noreferrer"><img class="client-logo" src="{{ICON_HIDDIFY}}" width="23" height="23" alt="" loading="lazy"><span>Hiddify</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://apps.apple.com/us/app/shadowrocket/id932747118" target="_blank" rel="noopener noreferrer"><span class="client-store mono" aria-hidden="true">STORE</span><span>Shadowrocket</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
             <a class="client-link" href="https://apps.apple.com/us/app/streisand/id6450534064" target="_blank" rel="noopener noreferrer"><span class="client-store mono" aria-hidden="true">STORE</span><span>Streisand</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-external"/></svg></a>
@@ -908,247 +917,225 @@
 
     <!-- ─────────────── TAB 3: NETWORK, CLEAN IP & FRAGMENT ─────────────── -->
     <div class="tab-pane" id="pane-net" hidden>
-      <div class="cols-even">
-        <!-- Protocols & TLS -->
-        <div class="card">
-          <p class="kicker"><svg class="ic"><use href="#i-sliders"/></svg><span class="fa">پروتکل‌ها، پورت‌ها و TLS</span><span class="en">PROTOCOLS, PORTS &amp; TLS</span></p>
-          <div class="check-list">
-            <label class="chk"><input type="checkbox" id="s-vless"><span><strong>VLESS</strong> over WS</span></label>
-            <label class="chk"><input type="checkbox" id="s-trojan"><span><strong>Trojan</strong> over WS</span></label>
-            <label class="chk field-full"><input type="checkbox" id="s-http-on"><span><span class="fa">تولید نودهای بدون TLS (پورت‌های HTTP ۸۰/۸۰۸۰ برای دامنهٔ workers.dev)</span><span class="en">Include non-TLS HTTP ports (80/8080)</span></span></label>
-          </div>
-
-          <p class="fld-label" style="margin-top:12px"><span class="fa">پورت‌های TLS کلادفلر (همهٔ پورت‌های تیک‌خورده در اشتراک تولید می‌شوند)</span><span class="en">CLOUDFLARE TLS PORTS (ALL CHECKED PORTS EMIT NODES)</span></p>
-          <div class="check-list ports-grid" id="tls-ports-box">
-            <label class="chk"><input type="checkbox" value="443"><span>443</span></label>
-            <label class="chk"><input type="checkbox" value="8443"><span>8443</span></label>
-            <label class="chk"><input type="checkbox" value="2053"><span>2053</span></label>
-            <label class="chk"><input type="checkbox" value="2083"><span>2083</span></label>
-            <label class="chk"><input type="checkbox" value="2087"><span>2087</span></label>
-            <label class="chk"><input type="checkbox" value="2096"><span>2096</span></label>
-          </div>
-
-          <p class="fld-label" style="margin-top:10px"><span class="fa">پورت‌های بدون TLS (HTTP — هنگام فعال بودن تیک بالا)</span><span class="en">CLOUDFLARE HTTP PORTS (WHEN NON-TLS IS ENABLED)</span></p>
-          <div class="check-list ports-grid" id="http-ports-box">
-            <label class="chk"><input type="checkbox" value="80"><span>80</span></label>
-            <label class="chk"><input type="checkbox" value="8080"><span>8080</span></label>
-            <label class="chk"><input type="checkbox" value="8880"><span>8880</span></label>
-            <label class="chk"><input type="checkbox" value="2052"><span>2052</span></label>
-            <label class="chk"><input type="checkbox" value="2082"><span>2082</span></label>
-            <label class="chk"><input type="checkbox" value="2086"><span>2086</span></label>
-            <label class="chk"><input type="checkbox" value="2095"><span>2095</span></label>
-          </div>
-
-          <div class="field-grid mt-auto">
-            <div>
-              <label class="fld-label" for="s-fp"><span class="fa">اثرانگشت TLS (uTLS)</span><span class="en">uTLS FINGERPRINT</span></label>
-              <select id="s-fp">
-                <option value="chrome">chrome</option>
-                <option value="firefox">firefox</option>
-                <option value="safari">safari</option>
-                <option value="ios">ios</option>
-                <option value="android">android</option>
-                <option value="edge">edge</option>
-                <option value="randomized">randomized</option>
-              </select>
-            </div>
-            <div>
-              <label class="fld-label" for="s-alpn">ALPN</label>
-              <select id="s-alpn">
-                <option value="http/1.1">http/1.1 (Recommended WS)</option>
-                <option value="h2,http/1.1">h2,http/1.1</option>
-                <option value="h3">h3</option>
-              </select>
-            </div>
-            <div>
-              <label class="fld-label" for="s-ed"><span class="fa">دادهٔ زودهنگام (Early Data)</span><span class="en">EARLY DATA</span></label>
-              <select id="s-ed">
-                <option value="2048">2048 (Standard)</option>
-                <option value="2560">2560 (Max)</option>
-                <option value="0">0 (Off)</option>
-              </select>
-            </div>
-            <div>
-              <label class="fld-label" for="s-wspath"><span class="fa">مسیر WebSocket</span><span class="en">WS PATH</span></label>
-              <input id="s-wspath" dir="ltr" type="text" value="/">
-            </div>
-          </div>
-        </div>
-
-        <!-- Fragment & Anti-DPI + Clean IPs stacked cleanly to match height -->
-        <div class="card">
-          <p class="kicker"><svg class="ic"><use href="#i-bolt"/></svg><span class="fa">تنظیمات ضد فیلتر (Fragment &amp; Noise)</span><span class="en">ANTI-DPI FRAGMENTATION</span></p>
-          <label class="chk">
-            <input type="checkbox" id="s-frag-on">
-            <span>
-              <span class="fa">فعال‌سازی <strong>Fragment</strong> در اشتراک‌های Xray و Sing-box (عبور از فیلترینگ SNI در ایران)</span>
-              <span class="en">Enable TLS Fragmentation in Xray &amp; Sing-box subscriptions</span>
-            </span>
-          </label>
-
-          <div class="actions" style="margin-top:10px">
-            <button class="btn ghost sm-btn frag-preset" data-p="1-1" data-l="10-20" data-i="10-20" type="button">
-              <span class="fa">پیشنهادی ایران (شدید 1-1)</span><span class="en">SEVERE (1-1)</span>
-            </button>
-            <button class="btn ghost sm-btn frag-preset" data-p="tlshello" data-l="10-20" data-i="10-20" type="button">
-              <span class="fa">کلاسیک (tlshello)</span><span class="en">TLSHELLO</span>
-            </button>
-            <button class="btn ghost sm-btn frag-preset" data-p="1-3" data-l="20-50" data-i="10-20" type="button">
-              <span class="fa">ملایم (1-3)</span><span class="en">MILD (1-3)</span>
-            </button>
-          </div>
-
-          <div class="field-grid" style="margin-top:10px">
-            <div>
-              <label class="fld-label" for="s-frag-pkt">Packets</label>
-              <input id="s-frag-pkt" dir="ltr" type="text" value="1-1">
-            </div>
-            <div>
-              <label class="fld-label" for="s-frag-len">Length (bytes)</label>
-              <input id="s-frag-len" dir="ltr" type="text" value="10-20">
-            </div>
-            <div>
-              <label class="fld-label" for="s-frag-int">Interval (ms)</label>
-              <input id="s-frag-int" dir="ltr" type="text" value="10-20">
-            </div>
-            <div style="display:flex;align-items:flex-end">
-              <label class="chk" style="width:100%">
-                <input type="checkbox" id="s-noise">
-                <span><span class="fa">تزریق UDP Noise (Xray)</span><span class="en">UDP Noise (Xray)</span></span>
-              </label>
-            </div>
-          </div>
-
-          <div class="dotted" style="margin:14px 0"></div>
-
-          <div class="mt-auto" style="padding-top:0">
-            <label class="fld-label" for="s-custom-domains">
-              <span class="fa">دامنه‌های سفارشی متصل به ورکر (پورت‌های انتخابی بالا؛ هر پورت باید جداگانه آزمایش شود)</span>
-              <span class="en">CUSTOM DOMAINS (SELECTED PORTS; VERIFY EACH PORT IN A REAL CLIENT)</span>
-            </label>
-            <textarea id="s-custom-domains" style="min-height:76px" placeholder="sub.yourdomain.com"></textarea>
-            <p class="hint" style="margin-top:8px">
-              <span class="fa">مقادیر Fragment فقط در کانفیگ JSON کلاینت سازگار معنا دارند؛ بسته به شبکه و برنامه امتحان کنید، نه به‌عنوان راه‌حل قطعی. اشتراک Normal همچنان URI استاندارد است و Fragment واقعی را حمل نمی‌کند.</span>
-              <span class="en">Fragment settings apply to compatible JSON client configs. Test them per network and app; no bypass is guaranteed. Standard Normal URIs do not carry actual Fragment settings.</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- Clean IPs + Browser Scanner -->
-        <div class="card">
-          <p class="kicker"><svg class="ic"><use href="#i-radar"/></svg><span class="fa">IPها و دامنه‌های تمیز کلادفلر + اسکنرِ مرورگر</span><span class="en">CLEAN IPs, DOMAINS &amp; BROWSER SCANNER</span></p>
-          <label class="fld-label" for="s-cleanips">
-            <span class="fa">فهرست IP / دامنهٔ شما (هر خط یک مورد؛ کد تقریبی کشور برای نام نود: <code>172.67.73.163#US|MCI</code>)</span>
-            <span class="en">YOUR IPs / DOMAINS (ONE PER LINE; APPROX. COUNTRY TAG: <code>172.67.73.163#US|MCI</code>)</span>
-          </label>
-          <textarea id="s-cleanips" style="flex:1;min-height:120px"></textarea>
-
-          <div class="actions" style="margin-top:10px">
-            <button class="btn primary sm-btn" id="btn-scan-user-list" type="button">
-              <svg class="ic ic-sm"><use href="#i-bolt"/></svg>
-              <span class="fa">اسکن لیستِ فعلیِ شما</span><span class="en">SCAN YOUR LISTED IPs</span>
-            </button>
-            <button class="btn ghost sm-btn" id="btn-prune-clean" type="button" hidden>
-              <svg class="ic ic-sm"><use href="#i-check"/></svg>
-              <span class="fa">اولویت‌بندی پاسخگوها (بدون حذف IP)</span><span class="en">PRIORITIZE RESPONSES (KEEP IPs)</span>
-            </button>
-            <button class="btn ghost sm-btn" id="btn-scan-clean" type="button">
-              <svg class="ic ic-sm"><use href="#i-radar"/></svg>
-              <span class="fa">رنج‌های رسمی کلادفلر</span><span class="en">OFFICIAL CF RANGES</span>
-            </button>
-            <button class="btn ghost sm-btn" id="btn-add-presets" type="button">
-              <svg class="ic ic-sm"><use href="#i-plus"/></svg>
-              <span class="fa">افزودن منتخب‌ها</span><span class="en">ADD PRESETS</span>
-            </button>
-          </div>
-          <div class="range-panel" id="cf-ranges-panel" hidden>
-            <div class="stat-strip">
-              <strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" target="_blank" rel="noopener noreferrer">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"/></svg></a></strong>
-              <span class="mono sm" id="cf-ranges-total">—</span>
-            </div>
-            <p class="hint"><span class="fa">آدرس‌های قابل‌اختصاص هر CIDR نمایش داده نمی‌شوند؛ عدد، کل آدرس‌هاست. تعداد نمونهٔ هر رنج: ۰ تا ۱۲، مجموع حداکثر ۴۸. کشورِ GeoIP تقریبی است، نه مکان قطعی Edge. اسکن IP خام در مرورگر با TLS/SNI قادر به تأیید سالم‌بودن اتصال به ورکر نیست؛ موارد فقط نامزد آزمایش در کلاینت‌اند.</span><span class="en">Counts include all addresses per CIDR, not only usable ones. Choose 0–12 samples per range, 48 total max. GeoIP country is approximate, not a proven edge location. Raw-IP browser requests cannot verify Worker connectivity because of TLS/SNI; these are client-test candidates only.</span></p>
-            <div class="range-list" id="cf-range-list"></div>
-            <div class="actions"><button class="btn primary sm-btn" type="button" id="btn-scan-ranges"><svg class="ic ic-sm"><use href="#i-radar"/></svg><span class="fa">نمونه‌گیری و بررسی نامزدها</span><span class="en">SAMPLE &amp; PROBE CANDIDATES</span></button></div>
-          </div>
-          <p class="hint" id="scan-summary" hidden></p>
-          <div id="scan-results" class="scan-grid" hidden></div>
-        </div>
-
-        <!-- Outbound ProxyIP, NAT64, Chain -->
-        <div class="card">
-          <p class="kicker"><svg class="ic"><use href="#i-globe"/></svg><span class="fa">خروجیِ ورکر: ProxyIP، NAT64 و پروکسی زنجیره‌ای</span><span class="en">OUTBOUND: PROXYIP, NAT64 &amp; CHAIN</span></p>
-          <label class="fld-label" for="s-proxyips">
-            <span class="fa">فهرست ProxyIP (برای باز شدن سایت‌های پشت کلادفلر مثل speedtest.net — هر خط <code>host</code> یا <code>host:port</code>)</span>
-            <span class="en">PROXY IPs (FALLBACK FOR CLOUDFLARE-HOSTED SITES LIKE SPEEDTEST)</span>
-          </label>
-          <textarea id="s-proxyips" style="min-height:66px" placeholder="ProxyIP.NL.CMLiussss.net"></textarea>
-          <div class="actions" style="margin-top:8px">
-            <button class="btn ghost sm-btn" id="btn-test-proxyip" type="button">
-              <svg class="ic ic-sm"><use href="#i-radar"/></svg>
-              <span class="fa">تست اتصالِ اولین ProxyIP از روی ورکر</span><span class="en">TEST PROXYIP FROM WORKER</span>
-            </button>
-            <span class="mono sm" id="proxyip-res"></span>
-          </div>
-
-          <div style="margin-top:12px">
-            <label class="chk">
-              <input type="checkbox" id="s-nat64-on">
-              <span><span class="fa">فعال‌سازی پشتیبان <strong>NAT64</strong> (تبدیل خودکار IPv4 به IPv6)</span><span class="en">Enable NAT64 IPv6 Fallback</span></span>
-            </label>
-            <textarea id="s-nat64" style="min-height:56px;margin-top:6px"></textarea>
-          </div>
-
-          <div class="mt-auto">
-            <label class="fld-label" for="s-chain">
-              <span class="fa">پروکسی زنجیره‌ای خروجی (SOCKS5 / HTTP برای IP ثابت — اختیاری)</span>
-              <span class="en">CHAIN OUTBOUND PROXY (SOCKS5 / HTTP FOR FIXED EXIT IP)</span>
-            </label>
-            <div class="fld">
-              <input id="s-chain" dir="ltr" type="text" placeholder="socks5://user:pass@1.2.3.4:1080">
-              <button class="btn ghost sm-btn" id="btn-test-chain" type="button">TEST</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Official Telegram Web Proxy Card -->
-        <div class="card field-full">
-          <p class="kicker">
-            <svg class="ic"><use href="#i-send"/></svg>
-            <span class="fa">پروکسیِ رسمیِ تلگرام (Telegram Web Proxy — بدون نیاز به برنامه‌جانبی)</span>
-            <span class="en">OFFICIAL TELEGRAM WEB PROXY (DESKTOP &amp; ANDROID)</span>
-          </p>
-          <label class="chk">
-            <input type="checkbox" id="s-tgproxy">
-            <span>
-              <span class="fa">فعال‌سازی <strong>پروکسی رسمی تلگرام (<code>tg://webproxy</code>)</strong> روی همین ورکر با رمزنگاری سرتاسری MTProto</span>
-              <span class="en">Enable Official Telegram Web Proxy (<code>tg://webproxy</code>) on this Worker</span>
-            </span>
-          </label>
-          <div class="field-grid" style="margin-top:10px">
-            <div>
-              <label class="fld-label" for="s-tgsecret"><span class="fa">کلید مخفی ۳۲ کاراکتری (Secret Hex)</span><span class="en">32-CHAR HEX SECRET</span></label>
-              <div class="fld">
-                <input id="s-tgsecret" dir="ltr" type="text" maxlength="34" placeholder="auto-generated 32-hex">
-                <button class="mini" id="btn-gen-tgsecret" type="button" title="Generate new secret"><svg class="ic"><use href="#i-refresh"/></svg></button>
-              </div>
-            </div>
-            <div>
-              <label class="fld-label" for="s-tgdomain"><span class="fa">دامنهٔ اختصاصیِ پروکسی تلگرام (اختیاری — خالی = دامنهٔ فعلی ورکر)</span><span class="en">OPTIONAL CUSTOM DOMAIN (BLANK = CURRENT HOST)</span></label>
-              <input id="s-tgdomain" dir="ltr" type="text" placeholder="tg.yourdomain.com">
-            </div>
-          </div>
-          <div class="actions" style="margin-top:10px">
-            <a class="btn primary sm-btn" id="set-tg-open" href="#">
-              <svg class="ic ic-sm"><use href="#i-send"/></svg>
-              <span class="fa">اتصال یک‌ضرب در تلگرام</span><span class="en">CONNECT IN TELEGRAM</span>
-            </a>
-            <button class="btn ghost sm-btn" id="set-tg-copy" type="button">
-              <svg class="ic ic-sm"><use href="#i-copy"/></svg>
-              <span class="fa">کپی لینک اشتراک تلگرام (t.me)</span><span class="en">COPY SHAREABLE t.me LINK</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <div class="cols-even compact-net-grid"><div class="stack"><div class="card">
+<p class="kicker"><svg class="ic"><use href="#i-sliders"></use></svg><span class="fa">پروتکل‌ها، پورت‌ها و TLS</span><span class="en">PROTOCOLS, PORTS &amp; TLS</span></p>
+<div class="check-list">
+<label class="chk"><input id="s-vless" type="checkbox"/><span><strong>VLESS</strong> over WS</span></label>
+<label class="chk"><input id="s-trojan" type="checkbox"/><span><strong>Trojan</strong> over WS</span></label>
+<label class="chk field-full"><input id="s-http-on" type="checkbox"/><span><span class="fa">تولید نودهای بدون TLS (پورت‌های HTTP ۸۰/۸۰۸۰ برای دامنهٔ workers.dev)</span><span class="en">Include non-TLS HTTP ports (80/8080)</span></span></label>
+</div>
+<p class="fld-label" style="margin-top:12px"><span class="fa">پورت‌های TLS کلادفلر (همهٔ پورت‌های تیک‌خورده در اشتراک تولید می‌شوند)</span><span class="en">CLOUDFLARE TLS PORTS (ALL CHECKED PORTS EMIT NODES)</span></p>
+<div class="check-list ports-grid" id="tls-ports-box">
+<label class="chk"><input type="checkbox" value="443"/><span>443</span></label>
+<label class="chk"><input type="checkbox" value="8443"/><span>8443</span></label>
+<label class="chk"><input type="checkbox" value="2053"/><span>2053</span></label>
+<label class="chk"><input type="checkbox" value="2083"/><span>2083</span></label>
+<label class="chk"><input type="checkbox" value="2087"/><span>2087</span></label>
+<label class="chk"><input type="checkbox" value="2096"/><span>2096</span></label>
+</div>
+<p class="fld-label" style="margin-top:10px"><span class="fa">پورت‌های بدون TLS (HTTP — هنگام فعال بودن تیک بالا)</span><span class="en">CLOUDFLARE HTTP PORTS (WHEN NON-TLS IS ENABLED)</span></p>
+<div class="check-list ports-grid" id="http-ports-box">
+<label class="chk"><input type="checkbox" value="80"/><span>80</span></label>
+<label class="chk"><input type="checkbox" value="8080"/><span>8080</span></label>
+<label class="chk"><input type="checkbox" value="8880"/><span>8880</span></label>
+<label class="chk"><input type="checkbox" value="2052"/><span>2052</span></label>
+<label class="chk"><input type="checkbox" value="2082"/><span>2082</span></label>
+<label class="chk"><input type="checkbox" value="2086"/><span>2086</span></label>
+<label class="chk"><input type="checkbox" value="2095"/><span>2095</span></label>
+</div>
+<div class="field-grid mt-auto">
+<div>
+<label class="fld-label" for="s-fp"><span class="fa">اثرانگشت TLS (uTLS)</span><span class="en">uTLS FINGERPRINT</span></label>
+<select id="s-fp">
+<option value="chrome">chrome</option>
+<option value="firefox">firefox</option>
+<option value="safari">safari</option>
+<option value="ios">ios</option>
+<option value="android">android</option>
+<option value="edge">edge</option>
+<option value="randomized">randomized</option>
+</select>
+</div>
+<div>
+<label class="fld-label" for="s-alpn">ALPN</label>
+<select id="s-alpn">
+<option value="http/1.1">http/1.1 (Recommended WS)</option>
+<option value="h2,http/1.1">h2,http/1.1</option>
+<option value="h3">h3</option>
+</select>
+</div>
+<div>
+<label class="fld-label" for="s-ed"><span class="fa">دادهٔ زودهنگام (Early Data)</span><span class="en">EARLY DATA</span></label>
+<select id="s-ed">
+<option value="2048">2048 (Standard)</option>
+<option value="2560">2560 (Max)</option>
+<option value="0">0 (Off)</option>
+</select>
+</div>
+<div>
+<label class="fld-label" for="s-wspath"><span class="fa">مسیر WebSocket</span><span class="en">WS PATH</span></label>
+<input dir="ltr" id="s-wspath" type="text" value="/"/>
+</div>
+</div>
+</div><div class="card">
+<p class="kicker"><svg class="ic"><use href="#i-bolt"></use></svg><span class="fa">تنظیمات ضد فیلتر (Fragment &amp; Noise)</span><span class="en">ANTI-DPI FRAGMENTATION</span></p>
+<label class="chk">
+<input id="s-frag-on" type="checkbox"/>
+<span>
+<span class="fa">فعال‌سازی <strong>Fragment</strong> در اشتراک‌های Xray و Sing-box (عبور از فیلترینگ SNI در ایران)</span>
+<span class="en">Enable TLS Fragmentation in Xray &amp; Sing-box subscriptions</span>
+</span>
+</label>
+<div class="actions" style="margin-top:10px">
+<button class="btn ghost sm-btn frag-preset" data-i="10-20" data-l="10-20" data-p="1-1" type="button">
+<span class="fa">آزمایشی و کندتر (شدید 1-1)</span><span class="en">SEVERE (1-1)</span>
+</button>
+<button class="btn ghost sm-btn frag-preset" data-i="1-3" data-l="100-200" data-p="tlshello" type="button">
+<span class="fa">شروع پیشنهادی (TLSHello؛ بدون تضمین اتصال)</span><span class="en">TLSHELLO</span>
+</button>
+<button class="btn ghost sm-btn frag-preset" data-i="10-20" data-l="20-50" data-p="1-3" type="button">
+<span class="fa">ملایم (1-3)</span><span class="en">MILD (1-3)</span>
+</button>
+</div>
+<div class="field-grid" style="margin-top:10px">
+<div>
+<label class="fld-label" for="s-frag-pkt">Packets</label>
+<input dir="ltr" id="s-frag-pkt" type="text" value="tlshello"/>
+</div>
+<div>
+<label class="fld-label" for="s-frag-len">Length (bytes)</label>
+<input dir="ltr" id="s-frag-len" type="text" value="100-200"/>
+</div>
+<div>
+<label class="fld-label" for="s-frag-int">Interval (ms)</label>
+<input dir="ltr" id="s-frag-int" type="text" value="1-3"/>
+</div>
+<div style="display:flex;align-items:flex-end">
+<label class="chk" style="width:100%">
+<input id="s-noise" type="checkbox"/>
+<span><span class="fa">تزریق UDP Noise (Xray)</span><span class="en">UDP Noise (Xray)</span></span>
+</label>
+</div>
+</div>
+<div class="dotted" style="margin:14px 0"></div>
+<div class="mt-auto" style="padding-top:0">
+<label class="fld-label" for="s-custom-domains">
+<span class="fa">دامنه‌های سفارشی متصل به ورکر (پورت‌های انتخابی بالا؛ هر پورت باید جداگانه آزمایش شود)</span>
+<span class="en">CUSTOM DOMAINS (SELECTED PORTS; VERIFY EACH PORT IN A REAL CLIENT)</span>
+</label>
+<textarea id="s-custom-domains" placeholder="sub.yourdomain.com" style="min-height:76px"></textarea>
+<p class="hint" style="margin-top:8px">
+<span class="fa">مقادیر Fragment فقط در کانفیگ JSON کلاینت سازگار معنا دارند؛ بسته به شبکه و برنامه امتحان کنید، نه به‌عنوان راه‌حل قطعی. اشتراک Normal همچنان URI استاندارد است و Fragment واقعی را حمل نمی‌کند.</span>
+<span class="en">Fragment settings apply to compatible JSON client configs. Test them per network and app; no bypass is guaranteed. Standard Normal URIs do not carry actual Fragment settings.</span>
+</p>
+</div>
+</div></div><div class="stack"><div class="card">
+<p class="kicker"><svg class="ic"><use href="#i-radar"></use></svg><span class="fa">IPها و دامنه‌های تمیز کلادفلر + اسکنرِ مرورگر</span><span class="en">CLEAN IPs, DOMAINS &amp; BROWSER SCANNER</span></p>
+<label class="fld-label" for="s-cleanips">
+<span class="fa">فهرست IP / دامنهٔ شما (هر خط یک مورد؛ کد تقریبی کشور برای نام نود: <code>172.67.73.163#US|MCI</code>)</span>
+<span class="en">YOUR IPs / DOMAINS (ONE PER LINE; APPROX. COUNTRY TAG: <code>172.67.73.163#US|MCI</code>)</span>
+</label>
+<textarea id="s-cleanips" style="min-height:120px"></textarea>
+<div class="actions" style="margin-top:10px">
+<button class="btn primary sm-btn" id="btn-scan-user-list" type="button">
+<svg class="ic ic-sm"><use href="#i-bolt"></use></svg>
+<span class="fa">اسکن لیستِ فعلیِ شما</span><span class="en">SCAN YOUR LISTED IPs</span>
+</button>
+<button class="btn ghost sm-btn" hidden="" id="btn-prune-clean" type="button">
+<svg class="ic ic-sm"><use href="#i-check"></use></svg>
+<span class="fa">اولویت‌بندی پاسخگوها (بدون حذف IP)</span><span class="en">PRIORITIZE RESPONSES (KEEP IPs)</span>
+</button>
+<button class="btn ghost sm-btn" id="btn-scan-clean" type="button">
+<svg class="ic ic-sm"><use href="#i-radar"></use></svg>
+<span class="fa">رنج‌های رسمی کلادفلر</span><span class="en">OFFICIAL CF RANGES</span>
+</button>
+<button class="btn ghost sm-btn" id="btn-add-presets" type="button">
+<svg class="ic ic-sm"><use href="#i-plus"></use></svg>
+<span class="fa">افزودن منتخب‌ها</span><span class="en">ADD PRESETS</span>
+</button>
+</div>
+<div class="actions" style="margin-top:7px"><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
+<p class="hint"><span class="fa">زمان HTTPS از اینترنت همین مرورگر اندازه‌گیری می‌شود؛ زمان خطا پینگ موفق نیست. پاسخ IP نیز سلامت کامل تونل را تضمین نمی‌کند.</span><span class="en">HTTPS timings use this browser’s network; error durations are not successful pings or full-tunnel verification.</span></p>
+<div class="range-panel" hidden="" id="cf-ranges-panel">
+<div class="stat-strip">
+<strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" rel="noopener noreferrer" target="_blank">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"></use></svg></a></strong>
+<span class="mono sm" id="cf-ranges-total">—</span>
+</div>
+<p class="hint"><span class="fa">تعداد نمونهٔ هر رنج: ۰ تا ۱۲، مجموع حداکثر ۴۸. زمان‌ها از اینترنت همین مرورگرند. کشورِ GeoIP تقریبی است، نه مکان قطعی لبه.</span><span class="en">Choose 0–12 samples per range, 48 total max. Timings use this browser’s network. GeoIP is approximate, not a proven edge location.</span></p>
+<div class="range-list" id="cf-range-list"></div>
+<p class="hint"><span class="fa">آزمون HTTPS مستقیماً از اینترنت همین مرورگر انجام می‌شود؛ زمان پاسخ موفق، مدت تلاش ناموفق و تعداد پاسخ‌ها جدا نمایش داده می‌شوند. نتیجهٔ خطا به‌عنوان IP سالم ذخیره نمی‌شود.</span><span class="en">HTTPS probes run on this browser’s network. Successful response time and failed-attempt duration are reported separately; errors are never ranked as healthy IPs.</span></p>
+<div class="actions"><button class="btn primary sm-btn" id="btn-scan-ranges" type="button"><svg class="ic ic-sm"><use href="#i-radar"></use></svg><span class="fa">نمونه‌گیری و بررسی نامزدها</span><span class="en">SAMPLE &amp; PROBE CANDIDATES</span></button></div>
+</div>
+<p class="hint" hidden="" id="scan-summary"></p>
+<div class="scan-grid" hidden="" id="scan-results"></div>
+</div><div class="card">
+<p class="kicker"><svg class="ic"><use href="#i-globe"></use></svg><span class="fa">خروجیِ ورکر: ProxyIP، NAT64 و پروکسی زنجیره‌ای</span><span class="en">OUTBOUND: PROXYIP, NAT64 &amp; CHAIN</span></p>
+<label class="fld-label" for="s-proxyips">
+<span class="fa">فهرست ProxyIP (برای باز شدن سایت‌های پشت کلادفلر مثل speedtest.net — هر خط <code>host</code> یا <code>host:port</code>)</span>
+<span class="en">PROXY IPs (FALLBACK FOR CLOUDFLARE-HOSTED SITES LIKE SPEEDTEST)</span>
+</label>
+<textarea id="s-proxyips" placeholder="ProxyIP.NL.CMLiussss.net" style="min-height:66px"></textarea>
+<div class="actions" style="margin-top:8px">
+<button class="btn ghost sm-btn" id="btn-test-proxyip" type="button">
+<svg class="ic ic-sm"><use href="#i-radar"></use></svg>
+<span class="fa">تست اتصالِ اولین ProxyIP از روی ورکر</span><span class="en">TEST PROXYIP FROM WORKER</span>
+</button>
+<span class="mono sm" id="proxyip-res"></span>
+</div>
+<div style="margin-top:12px">
+<label class="chk">
+<input id="s-nat64-on" type="checkbox"/>
+<span><span class="fa">فعال‌سازی پشتیبان <strong>NAT64</strong> (تبدیل خودکار IPv4 به IPv6)</span><span class="en">Enable NAT64 IPv6 Fallback</span></span>
+</label>
+<textarea id="s-nat64" style="min-height:56px;margin-top:6px"></textarea>
+</div>
+<div class="mt-auto">
+<label class="fld-label" for="s-chain">
+<span class="fa">پروکسی زنجیره‌ای خروجی (SOCKS5 / HTTP برای IP ثابت — اختیاری)</span>
+<span class="en">CHAIN OUTBOUND PROXY (SOCKS5 / HTTP FOR FIXED EXIT IP)</span>
+</label>
+<div class="fld">
+<input dir="ltr" id="s-chain" placeholder="socks5://user:pass@1.2.3.4:1080" type="text"/>
+<button class="btn ghost sm-btn" id="btn-test-chain" type="button">TEST</button>
+</div>
+</div>
+</div></div><div class="card field-full">
+<p class="kicker">
+<svg class="ic"><use href="#i-send"></use></svg>
+<span class="fa">پروکسیِ رسمیِ تلگرام (Telegram Web Proxy — بدون نیاز به برنامه‌جانبی)</span>
+<span class="en">OFFICIAL TELEGRAM WEB PROXY (DESKTOP &amp; ANDROID)</span>
+</p>
+<label class="chk">
+<input id="s-tgproxy" type="checkbox"/>
+<span>
+<span class="fa">فعال‌سازی <strong>پروکسی رسمی تلگرام (<code>tg://webproxy</code>)</strong> روی همین ورکر با رمزنگاری سرتاسری MTProto</span>
+<span class="en">Enable Official Telegram Web Proxy (<code>tg://webproxy</code>) on this Worker</span>
+</span>
+</label>
+<div class="field-grid" style="margin-top:10px">
+<div>
+<label class="fld-label" for="s-tgsecret"><span class="fa">کلید مخفی ۳۲ کاراکتری (Secret Hex)</span><span class="en">32-CHAR HEX SECRET</span></label>
+<div class="fld">
+<input dir="ltr" id="s-tgsecret" maxlength="34" placeholder="auto-generated 32-hex" type="text"/>
+<button class="mini" id="btn-gen-tgsecret" title="Generate new secret" type="button"><svg class="ic"><use href="#i-refresh"></use></svg></button>
+</div>
+</div>
+<div>
+<label class="fld-label" for="s-tgdomain"><span class="fa">دامنهٔ اختصاصیِ پروکسی تلگرام (اختیاری — خالی = دامنهٔ فعلی ورکر)</span><span class="en">OPTIONAL CUSTOM DOMAIN (BLANK = CURRENT HOST)</span></label>
+<input dir="ltr" id="s-tgdomain" placeholder="tg.yourdomain.com" type="text"/>
+</div>
+</div>
+<div class="actions" style="margin-top:10px">
+<a class="btn primary sm-btn" href="#" id="set-tg-open">
+<svg class="ic ic-sm"><use href="#i-send"></use></svg>
+<span class="fa">اتصال یک‌ضرب در تلگرام</span><span class="en">CONNECT IN TELEGRAM</span>
+</a>
+<button class="btn ghost sm-btn" id="set-tg-copy" type="button">
+<svg class="ic ic-sm"><use href="#i-copy"></use></svg>
+<span class="fa">کپی لینک اشتراک تلگرام (t.me)</span><span class="en">COPY SHAREABLE t.me LINK</span>
+</button>
+</div>
+</div></div>
 
       <div class="actions">
         <button class="btn primary" id="save-net" type="button">
@@ -1206,7 +1193,7 @@
           <div class="stack" style="margin-top:6px;gap:12px;flex:1">
             <div style="display:flex;flex-direction:column;flex:1">
               <label class="fld-label" for="r-proxy-list"><span class="fa">دامنه‌های اجباری با تونل (تحریم‌شکن / هوش مصنوعی — هر خط یک دامنه)</span><span class="en">FORCE PROXY DOMAINS (AI / SANCTIONED)</span></label>
-              <textarea id="r-proxy-list" style="flex:1;min-height:120px"></textarea>
+              <textarea id="r-proxy-list" style="min-height:120px"></textarea>
             </div>
             <div style="display:flex;flex-direction:column;flex:1">
               <label class="fld-label" for="r-direct-list"><span class="fa">دامنه‌های همیشه مستقیم (Direct — هر خط یک دامنه)</span><span class="en">FORCE DIRECT DOMAINS</span></label>
@@ -1257,10 +1244,8 @@
           </div>
         </div>
 
-        <p class="labor" style="margin:8px 0 0">
-          <span class="fa">این ابزار از <strong>مرورگر مدیر</strong> پاسخ شبکهٔ چند میزبان را مشاهده می‌کند و مسیر آپلود و دانلود تا همین Worker را با نمونه‌های محدود می‌سنجد. درخواست‌های بدون CORS وضعیت HTTP، تحریم یا علت خطا را ثابت نمی‌کنند؛ پورتِ یک میزبان دیگر نیز سلامت دامنهٔ Worker شما را اثبات نمی‌کند. پیشنهادها برآوردند، نه تضمین شبکهٔ همهٔ مشترکان.</span>
-          <span class="en">This tool observes browser transport responses and samples upload/download to this Worker. Opaque no-CORS requests cannot reveal HTTP status, geo restrictions, or the reason for failure. A port response on a different host does not prove your Worker works there. Recommendations reflect the admin's network, not every subscriber's.</span>
-        </p>
+        <p class="labor advisor-intro"><span class="fa">آزمون مسیر خود پنل: تأخیر و نوسان، WebSocket واقعی، آپلود/دانلود، DNS رمزنگاری و پورت‌های TLS. پیشنهادها فقط پس از تأیید شما ذخیره می‌شوند.</span><span class="en">Measure this Worker’s latency, jitter, WebSocket, transfers, encrypted DNS and TLS ports. Review before applying.</span></p>
+        <div class="advisor-progress" id="adv-progress" hidden><div class="progress-track"><i id="adv-progress-bar"></i></div><span id="adv-stage" role="status" aria-live="polite"></span><button class="btn ghost sm-btn" id="btn-adv-cancel" type="button"><span class="fa">توقف</span><span class="en">STOP</span></button></div>
 
         <div class="adv-summary" id="adv-summary-box">
           <div class="adv-verdict" id="adv-verdict">
@@ -1268,6 +1253,10 @@
             <span class="en">Run browser transport and bounded Worker upload/download probes. An inconclusive result does not prove a site is blocked.</span>
           </div>
           <div class="adv-path-metrics" id="adv-path-metrics" hidden>
+            <div><span><span class="fa">تأخیر میانهٔ پنل</span><span class="en">MEDIAN RTT</span></span><strong id="adv-rtt" class="mono">—</strong></div>
+            <div><span><span class="fa">نوسان / بی‌پاسخ</span><span class="en">JITTER / NO REPLY</span></span><strong id="adv-jitter" class="mono">—</strong></div>
+            <div><span>WebSocket</span><strong id="adv-ws" class="mono">—</strong></div>
+            <div><span><span class="fa">تاخیر هنگام انتقال</span><span class="en">LOADED RTT</span></span><strong id="adv-loaded" class="mono">—</strong></div>
             <div><span><span class="fa">دریافت از Worker</span><span class="en">WORKER DOWNLOAD</span></span><strong class="mono" id="adv-down">—</strong></div>
             <div><span><span class="fa">ارسال به Worker</span><span class="en">WORKER UPLOAD</span></span><strong class="mono" id="adv-up">—</strong></div>
           </div>
@@ -1299,8 +1288,8 @@
             </div>
             <div style="margin-top:10px">
               <label class="chk">
-                <input type="checkbox" id="s-infonodes">
-                <span><span class="fa">نمایش ردیف‌های اطلاع‌رسانیِ مصرف و انقضا در بالای اشتراک (همراه با اعلان رایگان بودن سرویس)</span><span class="en">Show bandwidth &amp; expiry info rows in URI subscriptions</span></span>
+                <input type="checkbox" id="s-infonodes" checked disabled aria-disabled="true">
+                <span><span class="fa">نمایش اجباری مصرف، انقضا و رایگان‌بودن سرویس در بالای اشتراک</span><span class="en">Show bandwidth &amp; expiry info rows in URI subscriptions</span></span>
               </label>
             </div>
             <div class="actions mt-auto">

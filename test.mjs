@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.2 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
+ * NIGHTLINE v2.5.3 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -237,7 +237,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.5.2 Full Live Verification Suite (15/15) ═══');
+  console.log('═══ NIGHTLINE v2.5.3 Full Live Verification Suite (15/15) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -261,9 +261,12 @@ async function main() {
       '--var',
       `NL_GH_RAW_BASE:${MOCK_BASE}/ghraw`,
     ],
-    { stdio: ['ignore', 'pipe', 'pipe'] }
+    { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' }
   );
 
+  function stopTestServer() {
+    try { if (process.platform !== 'win32') process.kill(-proc.pid, 'SIGTERM'); else proc.kill('SIGTERM'); } catch {}
+  }
   let serverLogs = '';
   proc.stdout.on('data', (d) => { serverLogs += d.toString(); });
   proc.stderr.on('data', (d) => { serverLogs += d.toString(); });
@@ -272,16 +275,16 @@ async function main() {
     let ready = false;
     for (let i = 0; i < 40; i++) {
       try {
-        const r = await fetch(`${BASE}/health`);
+        const r = await fetch(`${BASE}/health`, { signal: AbortSignal.timeout(2000) });
         if (r.ok) { ready = true; break; }
       } catch {}
       await sleep(300);
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.2) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.3) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.5.2', 'Health version must be 2.5.2');
+    assert.equal(health.version, '2.5.3', 'Health version must be 2.5.3');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -304,6 +307,14 @@ async function main() {
     assert.equal(spTooLarge.status, 413, 'Upload probe must reject bodies above 128 KiB');
     console.log(`✓ [1/15] /health + /api/client-info + /api/speed-probe -> version=${health.version}, 64KB down/up + upload limit OK`);
 
+    await new Promise((resolve,reject)=>{
+      const socket=new WebSocket(`ws://127.0.0.1:${PORT}/api/network/ws`,{headers:{Origin:BASE}});
+      const timeout=setTimeout(()=>{socket.close();reject(Error('Diagnostic WebSocket timed out'));},5000);
+      socket.on('open',()=>socket.send(JSON.stringify({type:'nl-ping',id:'e2e-rtt'})));
+      socket.on('message',data=>{const reply=JSON.parse(data.toString());assert.equal(reply.type,'nl-pong');assert.equal(reply.id,'e2e-rtt');clearTimeout(timeout);socket.close();resolve();});socket.on('error',reject);
+    });
+    console.log('✓ [network] Diagnostic WebSocket echoed a nonce on the actual local Worker');
+
     // ── TEST 2: Setup Panel & Verify No remarkPrefix + Default ProxyIPs + TgProxy ──
     const setupRes = await fetch(`${BASE}/api/setup`, {
       method: 'POST',
@@ -314,7 +325,7 @@ async function main() {
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.5.2');
+    assert.equal(boot.version, '2.5.3');
     assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
     assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -434,6 +445,8 @@ async function main() {
 
     await page.goto(`${BASE}/panel`, { waitUntil: 'networkidle' });
 
+    // Worker UI decompression and initialization are asynchronous.
+    await page.waitForSelector('#free-notice-modal:not([hidden])', { timeout: 15000 });
     // Free Notice Popup Modal
     assert.equal(await page.locator('#free-notice-modal').isVisible(), true);
     await page.click('#btn-free-close');
@@ -596,6 +609,8 @@ async function main() {
     const recsCount = await page.locator('#adv-recs li').count();
     assert(recsCount >= 4, 'Advisor must explain uncertainty and transferable settings');
     assert.equal(await page.locator('#adv-path-metrics').isVisible(), true);
+    assert((await page.locator('#adv-ws').innerText()).includes('ms'), 'Advisor must measure a real WebSocket RTT');
+    assert((await page.locator('#adv-rtt').innerText()).includes('ms'));
     assert((await page.locator('#adv-up').textContent()).includes('بی‌پاسخ'), 'Upload failure must be visible without claiming an ISP cap');
     const verdictBadges = await page.locator('#adv-grid').innerText();
     assert(!verdictBadges.includes('FILTERED') && !verdictBadges.includes('GEO-SANCTION'), 'Opaque browser probes must not claim filtering or sanctions');
@@ -615,6 +630,7 @@ async function main() {
     // ── TEST 12: Official CIDR selector + approximate country flags ONLY in node names ──
     await page.click('.tab-btn[data-tab="net"]');
     await page.waitForSelector('#pane-net:not([hidden])');
+    await page.check('#scan-geo');
     await context.route('https://ipwho.is/**', (route) => route.fulfill({
       status: 200, contentType: 'application/json',
       headers: { 'access-control-allow-origin': '*' },
@@ -623,7 +639,9 @@ async function main() {
     await page.fill('#s-cleanips', ['www.speedtest.net#Speedtest', '1.1.1.1#CF-One', '203.0.113.1#BlackholeTest'].join(String.fromCharCode(10)));
     await page.click('#btn-scan-user-list');
     await page.waitForFunction(() => document.querySelectorAll('#scan-results .scan-item').length === 3, null, { timeout: 16000 });
-    assert((await page.locator('#scan-summary').textContent()).includes('نامزدِ تأییدنشده'), 'Raw IP must be labeled unverified, not healthy');
+    assert((await page.locator('#scan-summary').textContent()).includes('HTTPS'), 'Scanner must report browser HTTPS observations');
+    const failedIP = page.locator('#scan-results .scan-item').filter({hasText:'203.0.113.1'});
+    assert((await failedIP.innerText()).includes('مدت میانهٔ تلاش'), 'Failed IP must show attempt duration, never pretend it is successful ping');
     if (await page.locator('#btn-prune-clean').isVisible()) await page.click('#btn-prune-clean');
     assert((await page.locator('#s-cleanips').inputValue()).includes('203.0.113.1'), 'TLS errors must not silently prune unverified IPs');
     // The user-list probe must NOT turn a reserved TEST-NET address into a fake country flag.
@@ -657,6 +675,9 @@ async function main() {
     await page.click('.tab-btn[data-tab="sub"]');
     const directory = page.locator('#pane-sub .client-directory');
     assert.equal(await directory.isVisible(), true, 'Official app directory must belong to the subscription tab');
+    assert.equal(await directory.locator('.client-link').count(), await directory.locator('.client-link use[href="#i-external"]').count(), 'Every client link needs its outgoing arrow');
+    assert.equal(await directory.locator('a[href="https://github.com/WhiteDNS/WhiteVPN-Desktop"]').count(), 3);
+    assert.equal(await directory.locator('a[href="https://whitedns.online/tools/coreforge/"]').count(), 1);
     assert.equal(await directory.locator('.client-os').count(), 5, 'Directory must group Windows, Linux, Android, macOS, iOS');
     assert.equal(await directory.locator('a[href="https://github.com/2dust/v2rayN"]').count(), 3);
     assert.equal(await directory.locator('a[href="https://apps.apple.com/us/app/shadowrocket/id932747118"]').count(), 1);
@@ -734,7 +755,8 @@ async function main() {
     assert(guideHasLinks.hasDashLink && guideHasLinks.hasDocsLink && guideHasLinks.permItems === 3, 'Mini guide popup must contain official pre-filled links');
     assert.deepEqual(guideHasLinks.readPermissions, [
       { key: 'account_analytics', type: 'read' }, { key: 'account_settings', type: 'read' },
-    ], 'Read-only template must not request Worker edit permission');
+      { key: 'workers_scripts', type: 'edit' },
+    ], 'Complete template must request all three permissions');
     assert.deepEqual(guideHasLinks.updatePermissions[2], { key: 'workers_scripts', type: 'edit' }, 'Self-update permission must be optional');
     await page.click('#btn-cf-guide-close');
 
@@ -815,15 +837,15 @@ async function main() {
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 15/15 NIGHTLINE v2.5.2 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 NIGHTLINE v2.5.3 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));
-    proc.kill('SIGTERM');
+    stopTestServer();
     mockSrv.close();
     process.exit(1);
   } finally {
-    proc.kill('SIGTERM');
+    stopTestServer();
     mockSrv.close();
   }
   process.exit(0);

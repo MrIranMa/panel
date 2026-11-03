@@ -161,7 +161,7 @@ let speedBuf64K = null;
 function getSpeedBuffer(byteLen) {
   if (!speedBuf64K) {
     speedBuf64K = new Uint8Array(65536);
-    for (let i = 0; i < 65536; i++) speedBuf64K[i] = (i * 73 + 19) & 0xff;
+    crypto.getRandomValues(speedBuf64K);
   }
   const clamped = Math.max(1024, Math.min(262144, Number(byteLen) || 32768));
   if (clamped <= 65536) return speedBuf64K.subarray(0, clamped);
@@ -171,6 +171,26 @@ function getSpeedBuffer(byteLen) {
     out.set(slice, off);
   }
   return out;
+}
+
+function handleDiagnosticWebSocket(request, url) {
+  if (request.headers.get('origin') !== url.origin) return new Response('Origin denied', { status: 403 });
+  const pair = new WebSocketPair();
+  const client = pair[0], server = pair[1];
+  server.accept();
+  let count = 0;
+  const timer = setTimeout(() => { try { server.close(1000, 'Test complete'); } catch {} }, 20000);
+  server.addEventListener('message', event => {
+    if (++count > 12 || typeof event.data !== 'string' || event.data.length > 256) { server.close(1008, 'Limit'); return; }
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type !== 'nl-ping' || !/^[a-zA-Z0-9-]{1,80}$/.test(data.id || '')) { server.close(1008, 'Invalid test'); return; }
+      server.send(JSON.stringify({ type: 'nl-pong', id: data.id }));
+    } catch { server.close(1008, 'Invalid test'); }
+  });
+  server.addEventListener('close', () => { clearTimeout(timer); try { server.close(1000, 'Test complete'); } catch {} });
+  server.addEventListener('error', () => { clearTimeout(timer); try { server.close(1011, 'Test error'); } catch {} });
+  return new Response(null, { status: 101, webSocket: client });
 }
 
 export default {
@@ -195,6 +215,7 @@ export default {
 
       // 1) WebSocket Upgrade: Official Telegram Web Proxy (`/api/v1/ws`) OR VLESS/Trojan Tunnel
       if (upgradeHeader === 'websocket') {
+        if (path === '/api/network/ws') return handleDiagnosticWebSocket(request, url);
         const wsProto = request.headers.get('sec-websocket-protocol') || '';
         if (path === '/api/v1/ws' && wsProto.includes('tproxy-lane-v1.')) {
           return await handleTgWebSocket(request, url, runtime.settings);
@@ -425,6 +446,9 @@ async function handleApi(request, url, env, runtime) {
 
   // ---- POST /api/setup ----
   if (path === '/api/setup' && method === 'POST') {
+    if (String(env.SETUP_LOCKED || '') === 'true') {
+      return json({ ok: false, error: 'راه‌اندازی عمومی در نصب خودکار بسته است؛ برای انتشار KV صبر کنید یا از بازیابی مدیریت استفاده کنید.' }, 403);
+    }
     if (!runtime.kvBound) {
       return json(
         {

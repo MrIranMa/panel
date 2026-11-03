@@ -39,7 +39,8 @@ const config = JSON.parse(read(P('config.json')));
 const pkg = JSON.parse(read(P('package.json')));
 const VERSION = pkg.version || '2.3.0';
 
-fs.mkdirSync(P('assets/fonts'), { recursive: true });
+const BUILD_PAGES = process.argv.includes('--pages');
+fs.mkdirSync(P('.arena/fonts'), { recursive: true });
 fs.mkdirSync(P('src/generated'), { recursive: true });
 fs.mkdirSync(P('dist'), { recursive: true });
 
@@ -133,7 +134,7 @@ const subsets = {
 
 function dataUri(file, chars) {
   const src = P('src/ui/vendor', file);
-  const cachedSubset = P('assets/fonts', path.basename(file));
+  const cachedSubset = P('.arena/fonts', path.basename(file));
   const unicodes = [...new Set(chars)]
     .filter((c) => c.codePointAt(0) >= 0x20)
     .map((c) => 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'))
@@ -184,13 +185,14 @@ for (const [k, v] of Object.entries(fontVars)) {
 }
 const minCss = (await esbuild.transform(rawStyle, { loader: 'css', minify: true })).code.trim();
 const minQr = (await esbuild.transform(read(P('src/ui/vendor/qrcode.js')), { loader: 'js', minify: true })).code.trim();
-const minApp = (await esbuild.transform(read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
+const minApp = (await esbuild.transform(read(P('src/ui/network.js')) + '\n' + read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
 
 let indexTemplate = read(P('src/ui/index.html')).replaceAll('{{VERSION}}', VERSION);
 // Embed original icons from each application's official repository: no runtime CDN dependency.
 for (const [key, file] of Object.entries({
   HIDDIFY: 'hiddify.svg', CLASH: 'clash-verge.svg', SINGBOX: 'sing-box.svg',
   V2RAYNG: 'v2rayng.png', V2RAYN: 'v2rayn.png',
+  KARING: 'karing.png', PATTN: 'pattn.png', PATTNG: 'pattng.png', WHITEVPN: 'whitevpn.png', COREFORGE: 'coreforge.png',
 })) {
   const mime = file.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
   const data = fs.readFileSync(P('src/ui/assets', file)).toString('base64');
@@ -205,8 +207,8 @@ const fullPreviewHtml = indexTemplate
   .replace('{{APP}}', () => minApp);
 
 // `panel-preview.html` is standalone readable HTML for local preview
-fs.writeFileSync(P('panel-preview.html'), fullPreviewHtml);
-console.log(`· panel-preview.html ${(Buffer.byteLength(fullPreviewHtml) / 1024).toFixed(0)} KB`);
+fs.writeFileSync(P('.arena/panel-preview.html'), fullPreviewHtml);
+console.log(`· .arena/panel-preview.html ${(Buffer.byteLength(fullPreviewHtml) / 1024).toFixed(0)} KB`);
 
 // Shell template with compact markers so `minCss` + `minQr` + `skylineHtml` are stored ONLY ONCE
 const shellTemplate = indexTemplate
@@ -598,23 +600,26 @@ export async function getPanelHtml() {
   return finalCode;
 }
 
+if (BUILD_PAGES) {
 const pagesWorkerCode = await compileStealthWorker(
   false,
-  '// NIGHTLINE v2.2 — Cloudflare Pages Edition (_worker.js)'
+  `// NIGHTLINE v${VERSION} — Cloudflare Pages Edition (_worker.js)`
 );
 fs.writeFileSync(P('dist/_worker.js'), pagesWorkerCode);
 console.log(`· pages _worker.js   ${(Buffer.byteLength(pagesWorkerCode) / 1024).toFixed(1)} KB`);
 
+}
+
 const standaloneCode = await compileStealthWorker(
   true,
-  '// NIGHTLINE v2.2 — Cloudflare Workers Standalone Edition'
+  `// NIGHTLINE v${VERSION} — Cloudflare Workers Standalone Edition`
 );
 fs.writeFileSync(P('worker-single-file.js'), standaloneCode);
 console.log(`· worker-single-file ${(Buffer.byteLength(standaloneCode) / 1024).toFixed(1)} KB`);
 
 /* ------------------------------------------- Build-time signature audit */
 
-for (const target of ['worker-single-file.js', 'dist/_worker.js', 'dist/index.html']) {
+for (const target of ['worker-single-file.js', ...(BUILD_PAGES ? ['dist/_worker.js', 'dist/index.html'] : [])]) {
   const txt = read(P(target));
   const hits = AUDIT_KEYWORDS.filter((kw) => txt.toLowerCase().includes(kw));
   if (hits.length > 0) {
@@ -625,8 +630,10 @@ console.log(`· signature audit    0 matches across all ${AUDIT_KEYWORDS.length}
 
 /* -------------------------------------------------------- Pages zip archive */
 
-const zipPath = P('nightline-pages.zip');
+if (BUILD_PAGES) {
+const zipPath = P('dist/nightline-pages.zip');
 if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 execFileSync('zip', ['-q', '-r', zipPath, 'index.html', '_worker.js'], { cwd: P('dist') });
 console.log(`· nightline-pages.zip ${(fs.statSync(zipPath).size / 1024).toFixed(1)} KB`);
+}
 console.log('· build complete');

@@ -1,14 +1,19 @@
 {
   "name": "nightline",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node build.mjs && node build-installer.mjs",
     "dev": "node build.mjs && wrangler dev --local",
     "deploy": "node build.mjs && wrangler deploy",
     "test": "node test.mjs",
-    "shots": "node build.mjs && node shot.mjs"
+    "build:installer": "node build-installer.mjs",
+    "test:regression": "node regression.mjs",
+    "test:installer": "node test-installer.mjs",
+    "test:network": "node test-network.mjs",
+    "build:pages": "node build.mjs --pages && node build-installer.mjs",
+    "deploy:installer": "wrangler deploy --config wrangler.installer.toml"
   },
-  "description": "NIGHTLINE v2.5.2 — Free & open-source serverless VLESS, Trojan & Official Telegram Web Proxy panel on Cloudflare Workers & Pages (Multi-user KV, Fragment, Smart ISP Advisor, GitHub Self-Updater, CF Quota Monitor, Private DoH).",
+  "description": "NIGHTLINE v2.5.3 \u2014 Free & open-source serverless VLESS, Trojan & Official Telegram Web Proxy panel on Cloudflare Workers & Pages (Multi-user KV, Fragment, Smart ISP Advisor, GitHub Self-Updater, CF Quota Monitor, Private DoH).",
   "devDependencies": {
     "@babel/generator": "^7.29.12",
     "@babel/parser": "^7.29.12",
@@ -20,6 +25,9 @@
     "qrcode-generator": "^2.0.4",
     "wrangler": "^4.86.0",
     "ws": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "private": true,
   "type": "module"

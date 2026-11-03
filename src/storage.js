@@ -14,7 +14,7 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'NIGHTLINE';
-export const PANEL_VERSION = '2.5.2';
+export const PANEL_VERSION = '2.5.3';
 export const GITHUB_REPO = 'youdidking/NightLine';
 export const GITHUB_REPO_URL = 'https://github.com/youdidking/NightLine';
 export const STATE_KEY = 'nl:state:v2';
@@ -61,10 +61,10 @@ export const DEFAULT_SETTINGS = {
   tgProxyDomain: '',
 
   enableFragment: true,
-  fragmentMode: 'severe',
-  fragmentPackets: '1-1',
-  fragmentLength: '10-20',
-  fragmentInterval: '10-20',
+  fragmentMode: 'tlshello',
+  fragmentPackets: 'tlshello',
+  fragmentLength: '100-200',
+  fragmentInterval: '1-3',
   enableNoise: false,
 
   upstreamDoH: 'https://1.1.1.1/dns-query',
@@ -142,6 +142,12 @@ const ALLOWED_HTTP_PORTS = [80, 8080, 8880, 2052, 2082, 2086, 2095];
 const ALLOWED_FPS = ['chrome', 'firefox', 'safari', 'ios', 'android', 'edge', 'randomized'];
 const ALLOWED_ALPNS = ['http/1.1', 'h2,http/1.1', 'h2', 'h3'];
 
+function validFragmentRange(value, min, max) {
+  if (!/^\d+(-\d+)?$/.test(value)) return false;
+  const [lo, hi = lo] = value.split('-').map(Number);
+  return lo >= min && hi >= lo && hi <= max;
+}
+
 export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
   const safePatch = patch && typeof patch === 'object' ? patch : {};
   const rawCur = current && typeof current === 'object' ? current : {};
@@ -149,13 +155,13 @@ export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
   for (const k of Object.keys(DEFAULT_SETTINGS)) {
     if (rawCur[k] !== undefined) base[k] = rawCur[k];
   }
-  const next = { ...base };
+  const next = { ...base, showSubInfoNodes: true };
 
   for (const boolKey of [
     'enableVless', 'enableTrojan', 'killSwitch', 'enableHttpPorts', 'enableECH',
     'enableNAT64', 'enableTgProxy', 'enableFragment', 'enableNoise', 'bypassIran', 'bypassLAN',
     'bypassChina', 'bypassRussia', 'blockQuic', 'blockAds', 'blockAdult',
-    'sanctionBypass', 'showSubInfoNodes',
+    'sanctionBypass',
   ]) {
     if (typeof safePatch[boolKey] === 'boolean') next[boolKey] = safePatch[boolKey];
   }
@@ -230,15 +236,15 @@ export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
   }
   if (typeof safePatch.fragmentPackets === 'string') {
     const fp = safePatch.fragmentPackets.trim();
-    if (/^(tlshello|\d+-\d+|\d+)$/.test(fp)) next.fragmentPackets = fp;
+    if (fp === 'tlshello' || validFragmentRange(fp, 1, 65535)) next.fragmentPackets = fp;
   }
   if (typeof safePatch.fragmentLength === 'string') {
     const fl = safePatch.fragmentLength.trim();
-    if (/^\d+(-\d+)?$/.test(fl)) next.fragmentLength = fl;
+    if (validFragmentRange(fl, 1, 16384)) next.fragmentLength = fl;
   }
   if (typeof safePatch.fragmentInterval === 'string') {
     const fi = safePatch.fragmentInterval.trim();
-    if (/^\d+(-\d+)?$/.test(fi)) next.fragmentInterval = fi;
+    if (validFragmentRange(fi, 0, 1000)) next.fragmentInterval = fi;
   }
 
   if (typeof safePatch.upstreamDoH === 'string') {

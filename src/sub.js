@@ -303,7 +303,7 @@ export function buildUriLines(userView, settings, requestHost) {
     `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent(FREE_NOTICE_FA)}`
   );
 
-  if (settings.showSubInfoNodes) {
+  { // Mandatory subscription usage/expiry notices; never user-configurable.
     const used = formatBytes(userView.usedBytes);
     const total = userView.limitBytes > 0 ? formatBytes(userView.limitBytes) : '∞ نامحدود';
     const expLabel = userView.effectiveExpiresAt > 0
@@ -397,9 +397,9 @@ export function buildXrayConfigs(userView, settings, requestHost) {
 
     if (useFrag) {
       const fragSettings = {
-        domainStrategy: 'AsIs',
+        domainStrategy: 'UseIP',
         fragment: {
-          packets: settings.fragmentPackets || '1-1',
+          packets: settings.fragmentPackets || 'tlshello',
           length: settings.fragmentLength || '10-20',
           interval: settings.fragmentInterval || '10-20',
         },
