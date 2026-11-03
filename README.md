@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img alt="رایگان" src="https://img.shields.io/badge/قیمت-رایگان-brightgreen?style=flat-square">
-  <img alt="متن‌باز" src="https://img.shields.io/badge/متن‌باز-✓-blue?style=flat-square">
+  <img alt="Free" src="https://img.shields.io/badge/Price-Free-brightgreen?style=flat-square">
+  <img alt="Open Source" src="https://img.shields.io/badge/Open_Source-✓-blue?style=flat-square">
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white">
-  <img alt="نسخه" src="https://img.shields.io/badge/نسخه-2.5.3-orange?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/Version-2.5.3-orange?style=flat-square">
 </p>
 
 ---
