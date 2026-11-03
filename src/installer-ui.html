@@ -21,10 +21,13 @@
     <section class="main-column">
       <div class="section-heading"><span class="issue" dir="ltr">01 / ACCESS</span><h2>کلید ورود به نصب</h2></div>
       <form id="install" novalidate>
+        <label for="install-target">روش نصب</label>
+        <select id="install-target" name="target"><option value="workers">Workers — workers.dev</option><option value="pages">Pages — pages.dev</option></select>
+        <p class="target-note" id="target-note">ساخت Worker جدید و فضای KV اختصاصی</p>
         <label for="token">توکن API کلادفلر</label>
         <div class="token-field"><svg><use href="#key"/></svg><input id="token" type="password" dir="ltr" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Cloudflare API Token" aria-describedby="token-help"><button type="button" id="reveal" aria-label="نمایش یا پنهان‌کردن توکن">نمایش</button></div>
-        <div class="form-meta"><small id="token-help">توکن فقط برای همین نصب ارسال می‌شود؛ ذخیره نمی‌شود.</small><a href="{{TOKEN_TEMPLATE}}" id="token-template" target="_blank" rel="noopener noreferrer">ساخت توکن آماده <svg><use href="#arrow"/></svg></a></div>
-        <details class="permissions"><summary>چهار مجوز موردنیاز توکن</summary><p>منابع توکن را به یک اکانت محدود کنید؛ مجوز ویرایش Worker مهم است.</p><ul dir="ltr"><li>Account Analytics · Read</li><li>Account Settings · Read</li><li>Workers Scripts · Edit</li><li>Workers KV Storage · Edit</li></ul></details>
+        <div class="form-meta"><small id="token-help">توکن فقط برای همین نصب ارسال می‌شود؛ ذخیره نمی‌شود.</small><a href="{{TOKEN_TEMPLATE}}" data-workers="{{TOKEN_TEMPLATE}}" data-pages="{{PAGES_TOKEN_TEMPLATE}}" id="token-template" target="_blank" rel="noopener noreferrer">ساخت توکن آماده <svg><use href="#arrow"/></svg></a></div>
+        <details class="permissions"><summary>مجوزهای موردنیاز روش انتخاب‌شده</summary><p>منابع توکن را به یک اکانت محدود کنید؛ توکن فقط باید مجوزهای روش انتخاب‌شده را داشته باشد.</p><ul dir="ltr"><li>Account Analytics · Read</li><li>Account Settings · Read</li><li id="deploy-permission">Workers Scripts · Edit</li><li>Workers KV Storage · Edit</li></ul></details>
         <button class="primary" type="submit" id="go"><svg><use href="#cloud"/></svg><span id="go-label">نصب پنل رایگان من</span><span class="button-arrow">←</span></button>
       </form>
       <noscript><p class="error-note">برای نمایش مراحل نصب، JavaScript مرورگر باید فعال باشد.</p></noscript>
@@ -37,8 +40,8 @@
           <li data-step="package"><span class="step-icon"><svg><use href="#box"/></svg></span><div><strong>دریافت آخرین نسخه</strong><small>مخزن رسمی youdidking/NightLine</small></div><span class="step-state">در انتظار</span></li>
           <li data-step="storage"><span class="step-icon"><svg><use href="#box"/></svg></span><div><strong>ساخت فضای اختصاصی KV</strong><small>بدون تغییر کاربران پنل‌های دیگر</small></div><span class="step-state">در انتظار</span></li>
           <li data-step="security"><span class="step-icon"><svg><use href="#shield"/></svg></span><div><strong>تعیین مدیریت و امنیت</strong><small>گذرواژهٔ تصادفی و قفل راه‌اندازی عمومی</small></div><span class="step-state">در انتظار</span></li>
-          <li data-step="worker"><span class="step-icon"><svg><use href="#code"/></svg></span><div><strong>ارسال و نصب Worker</strong><small>اتصال پنل به فضای ذخیره‌سازی</small></div><span class="step-state">در انتظار</span></li>
-          <li data-step="publish"><span class="step-icon"><svg><use href="#cloud"/></svg></span><div><strong>انتشار آدرس پنل</strong><small>فعال‌سازی workers.dev</small></div><span class="step-state">در انتظار</span></li>
+          <li data-step="worker"><span class="step-icon"><svg><use href="#code"/></svg></span><div><strong>ارسال و نصب پنل</strong><small>اتصال پنل به فضای ذخیره‌سازی</small></div><span class="step-state">در انتظار</span></li>
+          <li data-step="publish"><span class="step-icon"><svg><use href="#cloud"/></svg></span><div><strong>انتشار آدرس پنل</strong><small>انتشار در نشانی روش انتخاب‌شده</small></div><span class="step-state">در انتظار</span></li>
           <li data-step="verify"><span class="step-icon"><svg><use href="#check"/></svg></span><div><strong>بررسی و تحویل اطلاعات ورود</strong><small>نمایش نتیجه در همین صفحه</small></div><span class="step-state">در انتظار</span></li>
         </ol>
         <details id="log-panel"><summary>جزئیات رویدادها</summary><ol class="event-log" id="event-log" aria-live="polite"></ol></details>

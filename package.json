@@ -9,6 +9,7 @@
     "build:installer": "node build-installer.mjs",
     "test:regression": "node regression.mjs",
     "test:installer": "node test-installer.mjs",
+    "test:pages": "node test-pages.mjs && node test-pages-runtime.mjs",
     "test:releases": "node test-releases.mjs",
     "test:network": "node test-network.mjs",
     "build:pages": "node build.mjs --pages && node build-installer.mjs",

@@ -8,7 +8,7 @@ const officialWorker=fs.readFileSync('worker-single-file.js');
 const officialRelease={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.3/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
 const PORT=20100+Math.floor(Math.random()*300),MOCK=20500+Math.floor(Math.random()*300);
 const BASE='http://127.0.0.1:'+PORT,TOKEN='cloudflare_valid_token_01234567890123456789';
-let uploads=0,stateDoc=null,metadata='',requests=[];
+let uploads=0,stateDoc=null,metadata='',requests=[],pagesUploads=0;
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');requests.push([req.method,url.pathname]);
  const chunks=[];for await(const chunk of req)chunks.push(chunk);const body=Buffer.concat(chunks).toString();
@@ -23,6 +23,13 @@ const server=http.createServer(async(req,res)=>{
  else if(url.pathname.endsWith('/workers/subdomain'))result={subdomain:'community-account'};
  else if(url.pathname.endsWith('/storage/kv/namespaces')&&req.method==='POST')result={id:'b'.repeat(32)};
  else if(url.pathname.includes('/values/'))stateDoc=JSON.parse(body);
+ else if(url.pathname.endsWith('/pages/projects')&&req.method==='POST'){
+  const project=JSON.parse(body);assert.equal(project.deployment_configs.production.kv_namespaces.KV.namespace_id,'b'.repeat(32));assert.equal(project.deployment_configs.preview.env_vars.SETUP_LOCKED.value,'true');result={name:project.name};
+ }
+ else if(url.pathname.endsWith('/deployments')&&req.method==='POST'){
+  const form=await new Request('http://local',{method:'POST',headers:{'content-type':req.headers['content-type']},body:Buffer.concat(chunks)}).formData();
+  assert.equal(form.get('manifest'),'{}');assert.equal(await form.get('_worker.js').text(),officialWorker.toString());pagesUploads++;result={id:'page-test-deployment',latest_stage:{name:'deploy',status:'success'}};
+ }
  else if(url.pathname.includes('/workers/scripts/')&&req.method==='PUT'){uploads++;metadata=body;}
  res.end(JSON.stringify({success:true,result}));
 });
@@ -56,6 +63,13 @@ try{
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile installer must not overflow');
  await page.screenshot({path:'.arena/installer-mobile.png',fullPage:true});
+ const pages=await context.newPage();await pages.goto(BASE);await pages.selectOption('#install-target','pages');
+ const pagesPerms=JSON.parse(new URL(await pages.locator('#token-template').getAttribute('href')).searchParams.get('permissionGroupKeys'));
+ assert(pagesPerms.some(p=>p.key==='page'&&p.type==='edit'));assert(!pagesPerms.some(p=>p.key==='workers_scripts'));assert((await pages.locator('#deploy-permission').textContent()).includes('Pages'));
+ await pages.fill('#token',TOKEN);await pages.click('#go');await pages.waitForSelector('#result:not([hidden])',{timeout:30000});
+ assert.match(await pages.locator('#panel-url').innerText(),/^https:\/\/nightline-free-[a-f0-9]{12}\.pages\.dev\/panel$/);assert.equal(pagesUploads,1);assert.equal(await pages.locator('.steps [data-state="done"]').count(),7);assert.equal(await pages.locator('#install-target').isDisabled(),true);
+ await pages.setViewportSize({width:390,height:844});assert(await pages.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ fs.mkdirSync('docs/screenshots',{recursive:true});await pages.screenshot({path:'docs/screenshots/installer-pages.jpg',quality:90,fullPage:true});
  const fail=await context.newPage();await fail.goto(BASE);await fail.fill('#token','cloudflare_wrong_token_01234567890123456789');await fail.click('#go');
  await fail.waitForFunction(()=>document.getElementById('form-status').classList.contains('error'));
  assert((await fail.locator('#form-status').innerText()).includes('403'));assert.equal(await fail.locator('#go').isEnabled(),true);
@@ -64,7 +78,7 @@ try{
  const events=(await streamed.text()).trim().split('\n').map(JSON.parse);
  assert(events.some(e=>e.type==='stage'&&e.state==='running'));assert(events.at(-1).type==='done');assert.equal(events.at(-1).verified,true);
  assert.equal(errors.length,0,errors.join('\n'));
- console.log('PASS installer real workerd + Chromium: no JS errors, token validation, live NDJSON progress, seven stages, same-site completion, errors, naming, KV security, mobile layout and no persisted credentials.');
+ console.log('PASS installer real workerd + Chromium: no JS errors, token validation, live NDJSON progress, seven stages, same-site completion, errors, naming, KV security, mobile layout, Workers/Pages menu, Pages token template, full Pages upload and no persisted credentials.');
  console.log('Cloudflare account operations were served by a local mock; this is not a live account deployment certification.');
 }catch(e){console.error(logs.slice(-2500));throw e;}
 finally{if(browser)await browser.close();try{if(process.platform!=='win32')process.kill(-proc.pid,'SIGTERM');else proc.kill('SIGTERM');}catch{}server.closeAllConnections();server.close();}
