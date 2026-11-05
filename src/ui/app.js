@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.4 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.5 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -816,10 +816,14 @@
       var currentUser=getSelectedUser(),settings=STATE.settings||{},tunnel={ok:false,reason:'no-identity'};
       if(currentUser){
         var protocol=settings.enableVless?'vless':'trojan';
-        tunnel=await N.tunnelProbe((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+((settings.wsPath||'/').split('?')[0]||'/'),{protocol:protocol,uuid:currentUser.uuid,trojanHash:currentUser.trojanHash},{signal:signal,timeout:8000});
+        var tunnelSamples=[];
+        for(var probeIndex=0;probeIndex<3&&!signal.aborted;probeIndex++){tunnelSamples.push(await N.tunnelProbe((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+((settings.wsPath||'/').split('?')[0]||'/'),{protocol:protocol,uuid:currentUser.uuid,trojanHash:currentUser.trojanHash},{signal:signal,timeout:8000}));}
+        var accepted=tunnelSamples.filter(function(v){return v.ok;});
+        tunnel=accepted.length>=2?Object.assign({},accepted[0],{ms:N.median(accepted.map(function(v){return v.ms;})),replies:accepted.length,attempts:tunnelSamples.length}):Object.assign({},tunnelSamples[tunnelSamples.length-1]||tunnel,{ok:false,reason:accepted.length?'unstable-tunnel':(tunnelSamples[tunnelSamples.length-1]||tunnel).reason,replies:accepted.length,attempts:tunnelSamples.length});
+
       }
-      var tunnelReasons={'no-identity':'کاربر معتبر انتخاب نشده','websocket-error':'ارتباط WS/TLS برقرار نشد','websocket-timeout':'مهلت برقراری WebSocket تمام شد','tunnel-timeout':'پس از WS پاسخ HTTP نرسید','closed-before-http':'تونل پیش از پاسخ HTTP بسته شد','http-denied':'مقصد پاسخ HTTP ناموفق داد','invalid-response':'پاسخ غیرمنتظره','invalid-http-response':'پاسخ HTTP معتبر نبود','cancelled':'آزمون متوقف شد'};
-      $('adv-tunnel').textContent=tunnel.ok?tunnel.protocol.toUpperCase()+' · HTTP '+tunnel.status+' · '+tunnel.ms+' ms':tr('تأیید نشد: ','Not verified: ')+tr(tunnelReasons[tunnel.reason]||'پاسخ کامل دریافت نشد',tunnel.reason);
+      var tunnelReasons={'unstable-tunnel':'پاسخ تکرارشوندهٔ کافی نبود','no-identity':'کاربر معتبر انتخاب نشده','websocket-error':'ارتباط WS/TLS برقرار نشد','websocket-timeout':'مهلت برقراری WebSocket تمام شد','tunnel-timeout':'پس از WS پاسخ HTTP نرسید','closed-before-http':'تونل پیش از پاسخ HTTP بسته شد','http-denied':'مقصد پاسخ HTTP ناموفق داد','invalid-response':'پاسخ غیرمنتظره','invalid-http-response':'پاسخ HTTP معتبر نبود','cancelled':'آزمون متوقف شد'};
+      $('adv-tunnel').textContent=tunnel.ok?tunnel.protocol.toUpperCase()+' · HTTP '+tunnel.status+' · '+tunnel.ms+' ms · '+tunnel.replies+'/'+tunnel.attempts:tr('تأیید نشد: ','Not verified: ')+tr(tunnelReasons[tunnel.reason]||'پاسخ کامل دریافت نشد',tunnel.reason);
       if(signal.aborted)throw Error('cancelled');
       $('adv-path-metrics').hidden=false;
       $('adv-rtt').textContent=base.ms===null?'—':base.ms+' ms · '+base.replies+'/'+base.attempts;
@@ -863,10 +867,13 @@
       advisorStage(95,'۴ از ۴ · آماده‌سازی پیشنهادها؛ بدون اعمال خودکار','4/4 · Preparing changes for review');
       var patch={},s=STATE.settings||{},recs=[];
       function rec(fa,en){recs.push([fa,en]);}
-      if(tunnel.ok&&s.alpn!=='http/1.1'){
-        patch.alpn='http/1.1';
-        rec('مسیر دامنه با WebSocket پاسخ داد؛ HTTP/1.1 فقط به‌عنوان پیشنهاد سازگاری WS عرضه می‌شود.','The domain WebSocket replied; HTTP/1.1 is offered only as a WS compatibility setting.');
-      }
+      var iranPolicy=$('adv-policy')&&$('adv-policy').value==='iran';
+      if(iranPolicy&&tunnel.ok){
+        patch={alpn:'http/1.1',earlyData:0,enableHttpPorts:false,bypassIran:true,bypassLAN:true,bypassChina:false,bypassRussia:false,blockQuic:true};
+        var measured443=results.some(function(r){return r.target.kind==='port'&&r.target.port===443&&r.ok;});if(measured443)patch.tlsPorts=[443];
+        rec('پیشنهاد ایران پس از پاسخ تکرارشوندهٔ تونل: HTTP/1.1، بدون Early Data و پورت HTTP؛ سایت‌های ایرانی و شبکهٔ محلی مستقیم. UDP/443 اپ برای سازگاری TCP مسدود می‌شود. این سیاست سازگاری است، نه اثبات بهترین Fragment برای اپراتور.','Iran compatibility proposal after repeated tunnel replies: HTTP/1.1, no Early Data/plain HTTP, Iranian/local routes direct, application UDP/443 blocked. This is a policy, not a measured best-fragment claim.');
+      }else if(!iranPolicy){rec('فقط اندازه‌گیری انتخاب شده است؛ هیچ تغییر تنظیمی پیشنهاد نمی‌شود.','Observation-only mode: no settings patch.');}
+      else rec('تونل پاسخ کافی نداد؛ پروفایل ایران به‌عنوان تنظیم آزمایش‌شده پیشنهاد نشد. ابتدا خروجی پایه را در کلاینت تست کنید.','Insufficient tunnel replies: no tested-settings proposal; try the baseline in your client.');
       rec('برای انتخاب واقعی IP و Fragment، خروجی «انتخاب خودکار در Xray» را وارد برنامه کنید؛ هستهٔ برنامه مسیرها را آزمایش و کم‌تأخیرترین مسیر پاسخگو را انتخاب می‌کند.','For actual IP/Fragment selection, import the automatic Xray profile. The client core tests paths and selects the lowest-latency responding route.');
       rec('RTT صفحه یا خطای یک سایت باعث تغییر DNS، Early Data، طول Fragment یا فهرست IP شما نمی‌شود.','Page RTT or a failed website does not change DNS, Early Data, Fragment sizes or your IP list.');
       rec(tunnel.ok?'عبور HTTP از تونل دامنه تأیید شد؛ این نتیجه به معنی تست تک‌تک IPها نیست.':'عبور HTTP از تونل دامنه تأیید نشد؛ ابتدا خروجی پایهٔ 443 را در برنامه امتحان کنید.','The domain tunnel test is distinct from candidate scanning and client-core path selection.');
@@ -958,6 +965,7 @@
 
   function applyAppearance() {
     html.setAttribute('data-lang', lang);
+    document.querySelectorAll('option[data-en]').forEach(function(o){o.textContent=o.getAttribute('data-'+lang);});
     html.setAttribute('lang', lang === 'fa' ? 'fa' : 'en');
     html.setAttribute('dir', lang === 'fa' ? 'rtl' : 'ltr');
     html.setAttribute('data-theme', theme);
@@ -1036,7 +1044,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.4',
+      version: '2.5.5',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1074,7 +1082,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.4)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.5)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1181,11 +1189,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.4',
-          latestVersion: '2.5.4',
+          currentVersion: '2.5.5',
+          latestVersion: '2.5.5',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.4 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.5 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1195,8 +1203,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.4',
-          targetVersion: '2.5.4',
+          previousVersion: '2.5.5',
+          targetVersion: '2.5.5',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -2088,280 +2096,54 @@
     };
   }
 
-  var scannerController=null, scannerRunning=false,scanCalibration=null;
-  function scanBusy(on){
-    scannerRunning=on;
-    ['btn-scan-user-list','btn-scan-ranges','btn-scan-clean'].forEach(function(id){if($(id))$(id).disabled=on;});
-    if($('btn-scan-stop'))$('btn-scan-stop').hidden=!on;
-  }
-  if($('btn-scan-stop'))$('btn-scan-stop').onclick=function(){if(scannerController)scannerController.abort();};
-  async function probeSingleCleanEntry(entry) {
-    if(isSandboxPreview)return {entry:entry,ok:false,ms:9999,attemptMs:null,replies:0,attempts:0,reason:'offline-preview'};
-    var r=await globalThis.NLNetwork.cleanProbe(entry,{
-      calibration:scanCalibration,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined
-    });
-    r.entry=entry;r.responseMs=r.ms;r.sortMs=r.ok?r.ms:r.candidate?10000+r.candidateMs:999999;r.ms=r.ok?r.ms:9999;return r;
-  }
-  async function probeBatch(entries, concurrency){
-    var done=0;
-    $('scan-control').hidden=false;$('scan-control').textContent=tr('سنجش HTTP پنل…','Measuring panel HTTP…');
-    var control=await globalThis.NLNetwork.sample('/api/ping',{check:'health',credentials:'same-origin',timeout:4000,signal:scannerController?scannerController.signal:undefined},3);
-    $('scan-control').textContent=control.ok?tr('پینگ HTTP پنل: ','Panel HTTP RTT: ')+control.ms+' ms · '+tr('نوسان: ','jitter: ')+(control.jitter===null?'—':control.jitter+' ms')+tr(' · مستقل از IPهای فهرست',' · not the listed IPs'):tr('پاسخ HTTP پنل پایدار نبود.','Panel HTTP response was unstable.');
-    $('scan-summary').textContent=tr('خودآزمایی اسکنر و بررسی مسیر…','Calibrating scanner…');
-    scanCalibration=await globalThis.NLNetwork.scannerCalibration({baseMs:control.ms||100,timeout:Number($('scan-timeout').value),signal:scannerController?scannerController.signal:undefined});
-    $('scan-calibration').hidden=false;$('scan-calibration').textContent=scanCalibration.heuristicAllowed?tr('آزمون کنترل انجام شد؛ نامزدها برای تست در برنامه مرتب می‌شوند.','Control check completed; candidates are ranked for client testing.'):tr('این مسیر به آدرس‌های کنترل هم واکنش نشان می‌دهد؛ فقط پاسخ‌های HTTP قابل تأییدند. انتخاب واقعی را با خروجی خودکار Xray انجام دهید.','Control addresses also reacted; only HTTP replies are confirmed. Use the automatic Xray profile for actual selection.');
-    entries=entries.filter(function(e){return [443,2053,2083,2087,2096,8443].indexOf(e.port)>=0;});
-    return globalThis.NLNetwork.bounded(entries,concurrency||4,async function(entry){
-      var result=await probeSingleCleanEntry(entry);done++;
-      $('scan-summary').textContent=tr('سنجش از اینترنت من: ','Testing from my network: ')+done+'/'+entries.length;
-      return result;
-    },scannerController?scannerController.signal:undefined);
-  }
-  function scanBadge(r){
-    if(r.ok)return 'HTTP · '+r.responseMs+' ms';
-    if(r.candidate)return tr('نامزد · واکنش ','CANDIDATE · REACTION ')+r.candidateMs+' ms';
-    return tr('بدون سیگنال قابل‌اتکا','NO RELIABLE SIGNAL');
-  }
-  function scanDetail(r){
-    if(r.ok)return tr('پاسخ واقعی HTTP؛ اتصال کانفیگ جدا بررسی می‌شود.','Actual HTTP reply; config connectivity is a separate test.');
-    if(r.candidate)return tr('برآورد مرورگر؛ برای تأیید از خروجی خودکار Xray استفاده کنید.','Browser estimate; verify through automatic Xray testing.');
-    return tr('این مورد انتخاب خودکار نمی‌شود.','Not automatically selected.');
-  }
-
-  var geoCountryCache = Object.create(null);
-  function attachCountryToEntry(entry, cc) {
-    if (!/^[A-Z]{2}$/.test(cc || '') || !entry.isRawIp) return;
-    var note = entry.remark.replace(/^[A-Z]{2}\|/i, '').trim();
-    if (note === entry.bareHost) note = 'Scan';
-    entry.countryCode = cc;
-    entry.rawLine = entry.addrPart + '#' + cc + '|' + (note || 'Scan');
-  }
-
-  async function enrichScanCountries(results) {
-    var targets = results.filter(function (r) { return r.entry.isRawIp && !r.entry.countryCode; }).slice(0, 48);
-    var pos = 0;
-    async function work() {
-      while (pos < targets.length) {
-        var entry = targets[pos++].entry;
-        var ip = entry.bareHost;
-        if (/^(?:127\.|10\.|192\.168\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|169\.254\.|0\.|22[4-9]\.|23\d\.|24\d\.|25\d\.)/.test(ip) ||
-            /^172\.(?:1[6-9]|2\d|3[01])\./.test(ip) || /^(?:fe80:|fc|fd|::1$)/i.test(ip)) continue;
-        var cc = Object.prototype.hasOwnProperty.call(geoCountryCache, ip) ? geoCountryCache[ip] : '';
-        if (!cc && !Object.prototype.hasOwnProperty.call(geoCountryCache, ip)) {
-          if (isSandboxPreview) cc = 'US';
-          else {
-            var ctrl = new AbortController();
-            var tid = setTimeout(function () { ctrl.abort(); }, 3000);
-            try {
-              var geo = await fetch('https://ipwho.is/' + encodeURIComponent(ip) + '?fields=success,country_code', {
-                signal: ctrl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
-              });
-              var data = geo.ok ? await geo.json() : null;
-              cc = data && data.success === true && /^[A-Z]{2}$/.test(data.country_code || '') ? data.country_code : '';
-            } catch (e) { cc = ''; }
-            finally { clearTimeout(tid); }
-          }
-          geoCountryCache[ip] = cc;
-        }
-        if (cc) attachCountryToEntry(entry, cc);
-      }
+  var scannerController=null,scannerRunning=false,scanCalibration=null,officialRanges=null;
+  var scanCounts={tested:0,http:0,candidates:0,timeouts:0},scanGoal=0,scanRangeMode=false;
+  function scanBusy(on){scannerRunning=on;['btn-scan-user-list','btn-scan-ranges','btn-scan-clean','btn-country-list'].forEach(function(id){if($(id))$(id).disabled=on;});$('btn-scan-stop').hidden=!on;}
+  $('btn-scan-stop').onclick=function(){if(scannerController)scannerController.abort();};
+  function updateScanSummary(stopped){$('scan-summary').textContent=(stopped?tr('متوقف شد · ','Stopped · '):'')+scanCounts.tested+(Number.isFinite(scanGoal)?'/'+scanGoal:tr(' · پیوسته',' · continuous'))+tr(' بررسی · HTTP: ',' tested · HTTP: ')+scanCounts.http+tr(' · نامزد: ',' · candidates: ')+scanCounts.candidates+tr(' · بی‌پاسخ: ',' · timed out: ')+scanCounts.timeouts+tr('؛ نمایش ۴۰۰ نتیجهٔ آخر؛ هیچ IPی حذف نمی‌شود.','; latest 400 rows shown; no IP is removed.');}
+  function scanBadge(r){if(r.kind==='unstable')return 'HTTP '+r.replies+'/'+r.attempts+' · '+tr('ناپایدار','UNSTABLE');if(r.ok)return 'HTTP · '+r.responseMs+' ms';if(r.candidate)return tr('نامزد · واکنش ','CANDIDATE · REACTION ')+r.candidateMs+' ms';return r.kind==='timeout'?tr('بی‌پاسخ · مهلت تمام شد','TIMEOUT'):tr('تأیید نشده','UNCONFIRMED');}
+  function scanDetail(r){if(r.kind==='unstable')return tr('پاسخ HTTP دریافت شد اما تکرارپذیر نبود.','HTTP replied, but not consistently.');return r.ok?tr('پاسخ واقعی؛ اتصال کانفیگ را جدا تست کنید.','Actual response; verify config connectivity separately.'):r.candidate?tr('سرنخ مرورگر؛ تأیید نهایی با کلاینت.','Browser candidate; verify in client.'):r.kind==='timeout'?tr('در این تلاش پاسخی نرسید؛ قطع قطعی یا فیلترینگ ثابت نشده است.','No response before the deadline; not proof of blocking.'):tr('خطای مرورگر یا مسیر؛ وضعیت اتصال نامعلوم است.','Browser/path error; connectivity remains unknown.');}
+  function attachCountryToEntry(entry,cc){if(!entry.isRawIp)return;var note=entry.remark.replace(/^[A-Z]{2}\|/i,'').trim();if(note===entry.bareHost)note='Scan';entry.countryCode=cc||'';entry.rawLine=entry.addrPart+'#'+(cc?cc+'|':'')+(note||'Scan');}
+  async function enrichScanCountries(results,force){
+    var targets=results.filter(function(r){return r.entry.isRawIp;});
+    for(var i=0;i<targets.length;i+=16){if(scannerController&&scannerController.signal.aborted)break;var part=targets.slice(i,i+16);
+      var response=await fetch('/api/tools/geoip',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({ips:part.map(function(r){return r.entry.bareHost;})}),signal:scannerController?scannerController.signal:undefined});
+      if(!response.ok)continue;var data=await response.json();(data.results||[]).forEach(function(g,j){var r=part[j];if(!r)return;r.entry.geo=g;if(g.countryCode)attachCountryToEntry(r.entry,g.countryCode);else if(g.confidence==='conflict'||force)attachCountryToEntry(r.entry,'');if(r.element){var field=r.element.querySelector('.scan-country');field.textContent=(r.entry.countryCode||'CC ?')+' · '+(g.confidence==='two-sources'?tr('۲ منبع','2 sources'):g.confidence==='conflict'?tr('اختلاف منابع','conflict'):tr('GeoIP تقریبی','approx. GeoIP'));field.title=(g.sources||[]).join(' + ');}});
     }
-    await Promise.all([work(), work(), work()]);
   }
-
-  if ($('btn-scan-user-list')) {
-    $('btn-scan-user-list').onclick = async function () {
-      if(scannerRunning)return;
-      var rawLines=textToLines($('s-cleanips').value),parsedList=rawLines.map(parseUserCleanLine).filter(Boolean);
-      if(!parsedList.length||parsedList.length>64){showToast('فهرست باید ۱ تا ۶۴ مورد داشته باشد','List must contain 1–64 entries');return;}
-      scannerController=new AbortController();scanBusy(true);
-      var box=$('scan-results'),sum=$('scan-summary');box.hidden=false;box.innerHTML='';sum.hidden=false;
-      $('btn-prune-clean').hidden=true;sum.textContent=tr('شروع سنجش مستقیم از اینترنت شما…','Starting direct tests from your network…');
-      try{
-        var results=await probeBatch(parsedList,4);
-        if($('scan-geo')&&$('scan-geo').checked&&!scannerController.signal.aborted)await enrichScanCountries(results);
-        if(scannerController.signal.aborted){sum.textContent=tr('اسکن متوقف شد؛ فهرست شما تغییر نکرد.','Stopped; your list is unchanged.');return;}
-        $('s-cleanips').value=parsedList.map(function(p){return p.rawLine;}).join('\n');
-        results.sort(function(a,b){return a.sortMs-b.sortMs;});lastUserScanCandidates=results.filter(function(r){return r.ok||r.candidate;});
-        sum.textContent=tr('سنجش کامل: ','Completed: ')+results.length+tr(' مورد · پاسخ HTTP/HTTPS: ',' entries · HTTP/HTTPS replies: ')+results.filter(function(r){return r.ok;}).length+tr(' · نامزد تخمینی: ',' · estimated candidates: ')+results.filter(function(r){return r.kind==='candidate';}).length+tr('؛ هیچ IPی با خطا حذف نشد.','; no failed IP was removed.');
-        $('btn-prune-clean').hidden=!lastUserScanCandidates.length;
-        results.forEach(function(r){
-          var item=document.createElement('div');item.className='scan-item';
-          item.innerHTML='<span class="scan-entry mono" dir="ltr">'+esc(r.entry.bareHost+(r.entry.port!==443?':'+r.entry.port:''))+'</span><span class="badge'+(r.ok?' ok':'')+'">'+esc(scanBadge(r))+'</span><small class="scan-detail">'+esc(scanDetail(r))+'</small>';
-          box.appendChild(item);
-        });
-      }catch(e){sum.textContent=tr('اسکن کامل نشد؛ فهرست قبلی حفظ شد.','Scan incomplete; previous list retained.');}
-      finally{scanBusy(false);}
-    };
+  function appendScanResult(r){
+    if(scannerController.signal.aborted)return;scanCounts.tested++;if(r.ok)scanCounts.http++;else if(r.candidate)scanCounts.candidates++;else if(r.kind==='timeout')scanCounts.timeouts++;
+    if(r.ok||r.candidate){lastUserScanCandidates.push(r);lastUserScanCandidates.sort(function(a,b){return a.sortMs-b.sortMs;});if(lastUserScanCandidates.length>500)lastUserScanCandidates.length=500;}
+    var item=document.createElement('div');item.className='scan-item '+(scanRangeMode?'range-result ':'')+(r.ok?'state-ok':r.candidate?'state-candidate':r.kind==='timeout'?'state-bad':'state-unknown');
+    item.innerHTML='<span class="scan-entry mono" dir="ltr">'+esc(r.entry.bareHost+(r.entry.port!==443?':'+r.entry.port:''))+' <small class="scan-country">'+esc(r.entry.countryCode||'CC ?')+'</small></span><span class="badge '+(r.ok?'ok':r.kind==='timeout'?'bad':r.candidate?'candidate':'')+'">'+esc(scanBadge(r))+'</span><small class="scan-detail">'+esc(scanDetail(r))+'</small>';
+    if(scanRangeMode){var manual=document.createElement('input');manual.className='range-manual-cc mono';manual.maxLength=2;manual.placeholder=tr('کد کشور دستی','CC');manual.setAttribute('aria-label','Manual country code');item.appendChild(manual);var add=document.createElement('button');add.type='button';add.className='btn ghost sm-btn';add.innerHTML=svgIcon('plus','ic-sm')+'<span>ADD</span>';add.onclick=function(){var cc=manual.value.trim().toUpperCase()||r.entry.countryCode;if(cc&&!/^[A-Z]{2}$/.test(cc)){showToast('کد کشور دو حرفی باشد','Use a two-letter code');return;}if(cc)attachCountryToEntry(r.entry,cc);var lines=textToLines($('s-cleanips').value).filter(function(l){return l.split('#')[0].trim()!==r.entry.addrPart;});lines.push(r.entry.rawLine);$('s-cleanips').value=lines.join('\n');add.disabled=true;add.innerHTML=svgIcon('check','ic-sm')+' ADDED';};item.appendChild(add);}
+    r.element=item;var box=$('scan-results');box.appendChild(item);while(box.children.length>400)box.firstElementChild.remove();updateScanSummary(false);
   }
-
-  if ($('btn-prune-clean')) {
-    $('btn-prune-clean').onclick = function () {
-      if (!lastUserScanCandidates.length) return;
-      var current = textToLines($('s-cleanips').value);
-      var priority = new Set(lastUserScanCandidates.map(function (r) { return r.entry.addrPart; }));
-      var first = [], rest = [];
-      current.forEach(function (line) {
-        var address = line.split('#')[0].trim();
-        (priority.has(address) ? first : rest).push(line);
-      });
-      $('s-cleanips').value = first.concat(rest).join('\n');
-      $('btn-prune-clean').hidden = true;
-      showToast('نامزدها اولویت گرفتند؛ هیچ IPی حذف نشد. برای اعمال در Normal ذخیره کنید', 'Prioritized candidates; kept all IPs. Save to update Normal');
-    };
+  async function calibrateScanner(){
+    $('scan-control').hidden=false;$('scan-control').textContent=tr('بررسی مسیر اینترنت شما…','Checking your network…');
+    var signal=scannerController.signal,N=globalThis.NLNetwork,control=await N.sample('/api/ping',{check:'health',credentials:'same-origin',timeout:3000,signal:signal},3);
+    $('scan-control').textContent=control.ok?'HTTP '+control.ms+' ms · '+tr('پاسخ پنل؛ مستقل از IPها','panel response, separate from candidate IPs'):tr('پاسخ پنل پایدار نبود','Panel response was unstable');
+    scanCalibration=await N.scannerCalibration({baseMs:control.ms||100,timeout:Number($('scan-timeout').value),signal:signal});
+    $('scan-calibration').hidden=false;$('scan-calibration').textContent=scanCalibration.heuristicAllowed?tr('سبز: پاسخ واقعی · زرد: نامزد تخمینی · قرمز: پایان مهلت بدون پاسخ · خاکستری: نامشخص','Green: actual response · amber: candidate · red: timeout · gray: unknown'):tr('پاسخ به آدرس کنترل دیده شد؛ سیگنال‌های خطا، نامزد سالم اعلام نمی‌شوند.','Control addresses reacted; error signals are not treated as healthy candidates.');
   }
-
-  // Cloudflare's own published IPv4/IPv6 lists are loaded through the same-origin Worker.
-  // The browser cannot establish the subscription's Host/SNI by fetching a raw IP.
-  var officialRanges = null;
-  function sampleCidrAddresses(cidr, count, family) {
-    var pair = cidr.split('/');
-    var bits = Number(pair[1]);
-    var output = [];
-    if (family === 4) {
-      var octets = pair[0].split('.').map(Number);
-      if (octets.length !== 4 || bits < 0 || bits > 32) return output;
-      var ipNumber = (((octets[0] * 256 + octets[1]) * 256 + octets[2]) * 256 + octets[3]) >>> 0;
-      var total = Math.pow(2, 32 - bits);
-      var net = (ipNumber & (bits ? (0xffffffff << (32 - bits)) : 0)) >>> 0;
-      var seen = new Set();
-      for (var i = 0; i < count; i++) {
-        var offset = Math.floor(((i + Math.random()) / count) * total);
-        if (total > 2) offset = Math.max(1, Math.min(total - 2, offset));
-        var v = (net + offset) >>> 0;
-        if (seen.has(v)) continue;
-        seen.add(v);
-        output.push([v >>> 24, (v >>> 16) & 255, (v >>> 8) & 255, v & 255].join('.'));
-      }
-      return output;
-    }
-    if (bits < 0 || bits > 128 || pair[0].split('::').length > 2) return output;
-    var sides = pair[0].split('::');
-    var lhs = sides[0] ? sides[0].split(':') : [];
-    var rhs = sides.length === 2 && sides[1] ? sides[1].split(':') : [];
-    var zeros = 8 - lhs.length - rhs.length;
-    if (zeros < 0 || (sides.length === 1 && zeros !== 0)) return output;
-    var words = lhs.concat(Array(zeros).fill('0'), rhs);
-    var base = words.reduce(function (acc, h) { return (acc << 16n) + BigInt('0x' + h); }, 0n);
-    var hostBits = BigInt(128 - bits);
-    var size = 1n << hostBits;
-    var network = (base >> hostBits) << hostBits;
-    var seenV6 = new Set();
-    for (var j = 0; j < count && BigInt(j) < size; j++) {
-      var span = size / BigInt(count);
-      var rand = new Uint32Array(4);
-      crypto.getRandomValues(rand);
-      var entropy = rand.reduce(function (acc, word) { return (acc << 32n) + BigInt(word); }, 0n);
-      var offsetV6 = span > 0n ? BigInt(j) * span + (entropy % span) : BigInt(j);
-      var v6 = network + offsetV6;
-      var v6str = Array.from({ length: 8 }, function (_, k) {
-        return Number((v6 >> BigInt((7 - k) * 16)) & 65535n).toString(16);
-      }).join(':');
-      if (!seenV6.has(v6str)) { seenV6.add(v6str); output.push('[' + v6str + ']'); }
-    }
-    return output;
+  async function probeBatch(entries,concurrency){
+    return globalThis.NLNetwork.bounded(entries.filter(function(e){return [443,2053,2083,2087,2096,8443].indexOf(e.port)>=0;}),concurrency,async function(entry){
+      var r=await globalThis.NLNetwork.cleanProbe(entry,{calibration:scanCalibration,timeout:Number($('scan-timeout').value),signal:scannerController.signal});r.entry=entry;r.responseMs=r.ms;r.sortMs=r.ok?r.ms:r.candidate?10000+r.candidateMs:999999;appendScanResult(r);return r;
+    },scannerController.signal);
   }
-
-  $('btn-scan-clean').onclick = async function () {
-    var loadBtn = $('btn-scan-clean');
-    loadBtn.disabled = true;
-    try {
-      var data = await api('/api/cf/ip-ranges');
-      if (!data || !Array.isArray(data.ipv4) || !Array.isArray(data.ipv6) || !data.ipv4.length) throw new Error('Official range feed is unavailable');
-      officialRanges = data;
-      var rows = $('cf-range-list');
-      rows.innerHTML = '';
-      var ipv4Total = 0;
-      data.ipv4.concat(data.ipv6).forEach(function (cidr, i) {
-        var ipv4 = i < data.ipv4.length;
-        var mask = Number(cidr.split('/')[1]);
-        var countText = ipv4 ? Math.pow(2, 32 - mask).toLocaleString('en-US') : ('2^' + (128 - mask));
-        if (ipv4) ipv4Total += Math.pow(2, 32 - mask);
-        var row = document.createElement('label');
-        row.className = 'range-row';
-        row.innerHTML = '<span class="range-key"><span class="badge">IPv' + (ipv4 ? '4' : '6') + '</span> ' +
-          '<span class="mono" dir="ltr">' + esc(cidr) + '</span></span>' +
-          '<span class="range-count mono" dir="ltr">' + esc(countText) + ' IP</span>' +
-          '<input type="number" class="range-samples" min="0" max="12" step="1" value="' + (i < 3 ? '4' : '0') + '" data-cidr="' + esc(cidr) + '" data-family="' + (ipv4 ? '4' : '6') + '" aria-label="Samples for ' + esc(cidr) + '">';
-        rows.appendChild(row);
-      });
-      $('cf-ranges-total').textContent = data.ipv4.length + ' IPv4 + ' + data.ipv6.length + ' IPv6 · ' + ipv4Total.toLocaleString('en-US') + ' IPv4 IPs';
-      $('cf-ranges-panel').hidden = false;
-      $('scan-summary').hidden = false;
-      $('scan-summary').textContent = tr(
-        'فهرست ' + (data.stale ? 'کش‌شدهٔ قدیمیِ ' : '') + 'رسمی کلادفلر بارگذاری شد. تعداد نمونهٔ هر رنج را مشخص کنید؛ درخواست‌های HTTPS روی اینترنت همین مرورگر اجرا می‌شوند.',
-        (data.stale ? 'An older cached ' : 'The ') + 'official Cloudflare list is loaded. Choose a count per CIDR; HTTPS probes use this browser’s network.'
-      );
-    } catch (err) {
-      $('cf-ranges-panel').hidden = true;
-      showToast('دریافت رنج رسمی ناموفق بود؛ از رنج حدسی استفاده نشد', 'Official range feed unavailable; no guessed fallback');
-    } finally { loadBtn.disabled = false; }
+  function beginScan(range,goal){scannerController=new AbortController();scanCalibration=null;scanRangeMode=range;scanGoal=goal;scanCounts={tested:0,http:0,candidates:0,timeouts:0};lastUserScanCandidates=[];scanBusy(true);$('btn-prune-clean').hidden=true;$('scan-results').hidden=false;$('scan-results').innerHTML='';$('scan-summary').hidden=false;updateScanSummary(false);}
+  $('btn-scan-user-list').onclick=async function(){
+    if(scannerRunning)return;var entries=textToLines($('s-cleanips').value).map(parseUserCleanLine).filter(Boolean);if(!entries.length){showToast('ابتدا فهرست را وارد کنید','Enter a list first');return;}
+    beginScan(false,entries.length);try{await calibrateScanner();for(var i=0;i<entries.length&&!scannerController.signal.aborted;i+=32){var results=await probeBatch(entries.slice(i,i+32),Number($('scan-parallel').value));if($('scan-geo').checked)await enrichScanCountries(results,false);}if(!scannerController.signal.aborted)$('s-cleanips').value=entries.map(function(e){return e.rawLine;}).join('\n');}catch(e){if(!scannerController.signal.aborted)showToast('آزمون ناقص ماند؛ فهرست حفظ شد','Incomplete; list retained');}finally{$('btn-prune-clean').hidden=!lastUserScanCandidates.length;updateScanSummary(scannerController.signal.aborted);scanBusy(false);}
   };
-
-  $('btn-scan-ranges').onclick = async function () {
-    if (!officialRanges || scannerRunning) return;
-    var fields = Array.from($('cf-range-list').querySelectorAll('input.range-samples'));
-    var selections = [], requested = 0;
-    for (var i = 0; i < fields.length; i++) {
-      var n = Number(fields[i].value);
-      if (!Number.isInteger(n) || n < 0 || n > 12) {
-        showToast('تعداد هر رنج باید عدد صحیح ۰ تا ۱۲ باشد', 'Samples per CIDR must be an integer between 0 and 12'); return;
-      }
-      if (n) { requested += n; selections.push({ cidr: fields[i].dataset.cidr, family: Number(fields[i].dataset.family), count: n }); }
-    }
-    if (!requested || requested > 48) {
-      showToast('مجموع نمونه‌ها باید بین ۱ و ۴۸ باشد', 'Total samples must be between 1 and 48'); return;
-    }
-    var btn = $('btn-scan-ranges'), box = $('scan-results'), summary = $('scan-summary');
-    scannerController=new AbortController();scanBusy(true);
-    if ($('btn-prune-clean')) $('btn-prune-clean').hidden = true;
-    box.hidden = false; box.innerHTML = ''; summary.hidden = false;
-    summary.textContent = tr('در حال بررسی ' + requested + ' نامزد و دریافت کد کشور تقریبی…', 'Probing ' + requested + ' candidates and looking up approximate countries…');
-    try {
-      var raw = [];
-      selections.forEach(function (sel) {
-        sampleCidrAddresses(sel.cidr, sel.count, sel.family).forEach(function (ip) {
-          var item = parseUserCleanLine(ip + '#CF-Scan');
-          if (item) raw.push(item);
-        });
-      });
-      var results = await probeBatch(raw, 4);
-      if($('scan-geo')&&$('scan-geo').checked&&!scannerController.signal.aborted)await enrichScanCountries(results);
-      if(scannerController.signal.aborted){summary.textContent=tr('اسکن متوقف شد.','Scan stopped.');return;}
-      results.sort(function (a, b) { return a.sortMs - b.sortMs; });
-      var tlsCount = results.filter(function (r) { return r.ok; }).length;
-      var ccCount = results.filter(function (r) { return r.entry.countryCode; }).length;
-      summary.textContent = tr(
-        results.length + ' نمونه از رنج‌های رسمی · ' + tlsCount + ' پاسخ HTTP/HTTPS · ' + ccCount + ' کد کشورِ تقریبی. این نتیجه اتصال Worker را تأیید نمی‌کند؛ پس از افزودن، در کلاینت واقعی آزمایش و برای انتشار در Normal ذخیره کنید.',
-        results.length + ' official-range samples · ' + tlsCount + ' HTTP/HTTPS responses · ' + ccCount + ' approximate country codes. This does NOT verify the Worker connection; add and test in your actual client, then save for the Normal subscription.'
-      );
-      results.forEach(function (r) {
-        var item = document.createElement('div');
-        item.className = 'scan-item range-result';
-        item.innerHTML = '<span class="scan-entry mono" dir="ltr">' + esc(r.entry.bareHost) +
-          ' <small>' + esc(r.entry.countryCode || 'CC ?') + '</small></span>' +
-          '<span class="badge">' + esc(scanBadge(r)) + '</span>' +
-          (r.entry.countryCode ? '' : '<input class="range-manual-cc mono" type="text" maxlength="2" placeholder="CC" aria-label="ISO country code for ' + esc(r.entry.bareHost) + '">') +
-          '<button class="btn ghost sm-btn" type="button">' + svgIcon('plus', 'ic-sm') + '<span>ADD</span></button>';
-        var detail=document.createElement('small');detail.className='scan-detail';detail.textContent=scanDetail(r);item.appendChild(detail);
-        var addBtn = item.querySelector('button');
-        addBtn.onclick = function () {
-          var manual = item.querySelector('.range-manual-cc');
-          var cc = r.entry.countryCode || (manual ? manual.value.trim().toUpperCase() : '');
-          if(cc&&!/^[A-Z]{2}$/.test(cc)){showToast('کد کشور باید دو حرف باشد','Use a two-letter country code');return;}
-          if(cc)attachCountryToEntry(r.entry, cc);
-          var cur = textToLines($('s-cleanips').value).filter(function (line) { return line.split('#')[0].trim() !== r.entry.addrPart; });
-          cur.push(r.entry.rawLine);
-          $('s-cleanips').value = cur.join('\n');
-          addBtn.disabled = true;
-          addBtn.innerHTML = svgIcon('check', 'ic-sm') + '<span>ADDED</span>';
-          showToast('نامزد اضافه شد؛ بعد از آزمایش واقعی، تنظیمات را ذخیره کنید', 'Candidate added; client-test it, then save settings');
-        };
-        box.appendChild(item);
-      });
-    } catch (err) {
-      summary.textContent = tr('بررسی به نتیجه نرسید؛ هیچ IPی تأیید نشده است.', 'Probe incomplete; no IP was verified.');
-    } finally { scanBusy(false); }
+  $('btn-prune-clean').onclick=function(){var priority=new Set(lastUserScanCandidates.map(function(r){return r.entry.addrPart;})),first=[],rest=[];textToLines($('s-cleanips').value).forEach(function(line){(priority.has(line.split('#')[0].trim())?first:rest).push(line);});$('s-cleanips').value=first.concat(rest).join('\n');showToast('اولویت‌بندی بدون حذف؛ برای انتشار ذخیره کنید','Prioritized without removal; save to publish');};
+  $('btn-country-list').onclick=async function(){if(scannerRunning)return;var entries=textToLines($('s-cleanips').value).map(parseUserCleanLine).filter(Boolean);scannerController=new AbortController();scanBusy(true);try{await enrichScanCountries(entries.map(function(e){return {entry:e};}),true);if(!scannerController.signal.aborted)$('s-cleanips').value=entries.map(function(e){return e.rawLine;}).join('\n');showToast('برچسب‌ها بازبینی شدند؛ مکان لبهٔ Anycast از GeoIP معلوم نمی‌شود. برای انتشار ذخیره کنید.','GeoIP labels reviewed, not physical anycast locations. Save to publish.');}catch(e){showToast('دریافت کشور کامل نشد؛ نتیجهٔ نامعلوم ساخته نشد','Country lookup incomplete; no guessed location');}finally{scanBusy(false);}};
+  $('btn-scan-clean').onclick=async function(){if(scannerRunning)return;this.disabled=true;try{var data=await api('/api/cf/ip-ranges');if(!data||!Array.isArray(data.ipv4)||!Array.isArray(data.ipv6))throw Error('ranges');officialRanges=data;$('cf-range-list').innerHTML='';var total=0;data.ipv4.concat(data.ipv6).forEach(function(cidr,i){var v4=i<data.ipv4.length,bits=Number(cidr.split('/')[1]),size=v4?Math.pow(2,32-bits):null;if(v4)total+=size;var row=document.createElement('label');row.className='range-row';row.innerHTML='<input type="checkbox" class="range-select" '+(i<3?'checked':'')+' data-cidr="'+esc(cidr)+'" data-family="'+(v4?4:6)+'"><span class="range-key mono" dir="ltr">'+esc(cidr)+'</span><span class="range-count mono">'+(v4?size.toLocaleString('en-US'):'2^'+(128-bits))+' IP</span>';$('cf-range-list').appendChild(row);});$('cf-ranges-total').textContent=data.ipv4.length+' IPv4 + '+data.ipv6.length+' IPv6 · '+total.toLocaleString('en-US')+' IPv4 IPs';$('cf-ranges-panel').hidden=false;}catch(e){showToast('دریافت فهرست رسمی ناموفق بود','Official range feed unavailable');}finally{this.disabled=false;}};
+  ['all','v4','v6','none'].forEach(function(kind){$('ranges-'+kind).onclick=function(){$('cf-range-list').querySelectorAll('.range-select').forEach(function(input){input.checked=kind==='all'||kind==='v4'&&input.dataset.family==='4'||kind==='v6'&&input.dataset.family==='6';});};});
+  $('btn-scan-ranges').onclick=async function(){
+    if(!officialRanges||scannerRunning)return;var choices=Array.from($('cf-range-list').querySelectorAll('.range-select:checked'));if(!choices.length){showToast('حداقل یک رنج انتخاب کنید','Select a range');return;}
+    var budget=$('scan-budget').value==='continuous'?Infinity:Number($('scan-budget').value),iterators=choices.map(function(c){return globalThis.NLNetwork.cidrIterator(c.dataset.cidr);}),cursor=0,issued=0;
+    beginScan(true,budget);try{await calibrateScanner();while(issued<budget&&iterators.length&&!scannerController.signal.aborted){var chunk=[];while(chunk.length<32&&issued<budget&&iterators.length){cursor%=iterators.length;var ip=iterators[cursor].next();if(ip===null){iterators.splice(cursor,1);continue;}cursor++;issued++;chunk.push(parseUserCleanLine(ip+'#CF-Scan'));}var results=await probeBatch(chunk,Number($('scan-parallel').value));if($('scan-geo').checked)await enrichScanCountries(results,false);await new Promise(function(r){setTimeout(r,0);});}}catch(e){if(!scannerController.signal.aborted)showToast('اسکن کامل نشد؛ نتایج دریافت‌شده حفظ شدند','Scan incomplete; received results retained');}finally{updateScanSummary(scannerController.signal.aborted);scanBusy(false);}
   };
 
   $('btn-test-proxyip').onclick = async function () {
@@ -2380,13 +2162,41 @@
     var target = $('s-chain').value.trim();
     if (!target) { showToast('آدرس پروکسی زنجیره‌ای خالی است', 'Enter chain proxy URL'); return; }
     try {
-      var r = await api('/api/test-proxyip', 'POST', { target: target });
-      if (r.ok) showToast('اتصال زنجیره‌ای برقرار است (' + r.latencyMs + 'ms)', 'Chain OK (' + r.latencyMs + 'ms)');
+      var r = await api('/api/test-proxyip', 'POST', { target: target,kind:'chain' });
+      if (r.ok) showToast('احراز هویت و CONNECT به 443 از Worker موفق بود؛ اتصال کلاینت را هم تست کنید (' + r.latencyMs + 'ms)', 'Chain OK (' + r.latencyMs + 'ms)');
       else showToast('خطا: ' + r.error, 'Failed: ' + r.error);
     } catch (e) {
       showToast(e.message, e.message);
     }
   };
+
+  var warpSession=null,warpBackedUp=false;
+  function warpStatus(fa,en){$('warp-status').textContent=tr(fa,en);}
+  function warpDownload(name,value,type){var blob=new Blob([value],{type:type||'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);}
+  function showWarpCredentials(){var c=warpSession&&warpSession.credentials;$('warp-xray').disabled=!c;$('warp-wg').disabled=!c||c.kind!=='wireguard';$('warp-backup').disabled=!warpSession;if(c){$('warp-endpoint').value=c.endpoint;$('warp-port').value=c.kind==='masque'&&$('warp-mode').value==='h2'?443:c.port;}}
+  $('warp-register').onclick=async function(){
+    if(isSandboxPreview){warpStatus('پیش‌نمایش دستگاه واقعی نمی‌سازد.','Preview does not register devices.');return;}
+    if(!$('warp-consent').checked){warpStatus('ابتدا شرایط و ثبت دستگاه را تأیید کنید.','Confirm WARP terms and device registration first.');return;}
+    var W=globalThis.NLWarp,kind=$('warp-kind').value;
+    if(warpSession&&warpSession.credentials&&warpSession.kind===kind){showWarpCredentials();warpStatus('کلید فعلی آماده است؛ برای جلوگیری از ثبت تکراری از همان خروجی استفاده کنید.','Existing credentials are ready; reuse them instead of registering again.');return;}
+    if(warpSession&&warpSession.credentials&&!warpBackedUp&&!confirm(tr('کلید قبلی پشتیبان ندارد. ثبت پروتکل دیگر جای آن را در حافظه می‌گیرد؛ ادامه می‌دهید؟','Previous credentials are not backed up. Replace the in-memory profile?')))return;
+    this.disabled=true;
+    try{
+      if(!warpSession||warpSession.kind!==kind){warpSession={kind:kind,material:await W.generateWarpMaterial(kind)};warpBackedUp=false;}
+      if(!warpSession.device){warpStatus('ثبت دستگاه با کلید عمومی؛ کلید خصوصی ارسال نمی‌شود…','Registering device with public key only…');var registered=await api('/api/warp/register','POST',{kind:kind,key:kind==='masque'?warpSession.material.bootstrapKey:warpSession.material.publicKey,consent:true});warpSession.device=registered.device;if(!warpSession.device||!warpSession.device.id||!warpSession.device.token)throw Error('پاسخ ثبت ناقص است');}
+      $('warp-backup').disabled=false;
+      var device=warpSession.device;
+      if(kind==='masque'){warpStatus('تکمیل MASQUE با کلید P-256 محلی…','Enrolling locally generated P-256 MASQUE key…');var enrolled=await api('/api/warp/enroll','POST',{id:device.id,token:device.token,publicKey:warpSession.material.publicKey});device=enrolled.device;}
+      warpSession.credentials=await W.makeWarpCredentials(kind,warpSession.material,device);showWarpCredentials();
+      warpStatus('خروجی آماده است؛ این نتیجه تست اتصال نیست. ابتدا پشتیبان را بگیرید و سپس کانفیگ را در کلاینت سازگار آزمایش کنید.','Config ready, not connectivity-tested. Download a backup, then test in a compatible client.');
+    }catch(e){warpStatus((warpSession&&warpSession.device?'دستگاه ثبت شد اما خروجی کامل نشد؛ می‌توانید با همان دستگاه دوباره تکمیل کنید. ':'ثبت کامل نشد؛ کانفیگ موفق ساخته نشد. ')+(e.message||''),'Registration/export incomplete: '+e.message);}
+    finally{this.disabled=false;}
+  };
+  $('warp-backup').onclick=function(){if(!warpSession)return;warpDownload('nightline-warp-private-backup.json',JSON.stringify({nightlineWarpBackup:1,session:warpSession},null,2));warpBackedUp=true;};
+  $('warp-import').onchange=async function(){var file=this.files&&this.files[0];if(!file||file.size>65536){warpStatus('فایل پشتیبان باید JSON زیر ۶۴ کیلوبایت باشد.','Backup must be JSON below 64 KB.');return;}try{var b=JSON.parse(await file.text());if(b.nightlineWarpBackup!==1||!['masque','wireguard'].includes(b.session&&b.session.kind))throw Error('Unsupported backup');if(b.session.credentials)await globalThis.NLWarp.validateWarpCredentials(b.session.credentials);else if(!b.session.device||!b.session.material)throw Error('Incomplete backup');warpSession=b.session;warpBackedUp=true;$('warp-kind').value=warpSession.kind;showWarpCredentials();warpStatus('پشتیبان وارد شد؛ خروجی آماده را بگیرید یا ثبت ناقص را با همان دستگاه تکمیل کنید.','Backup imported; export config or finish pending enrollment.');}catch(e){warpStatus('پشتیبان پذیرفته نشد: '+e.message,'Backup rejected: '+e.message);}};
+  function warpOptions(){return {endpoint:$('warp-endpoint').value.trim(),port:Number($('warp-port').value),mode:$('warp-mode').value,fragment:$('warp-fragment').checked};}
+  $('warp-xray').onclick=function(){try{var c=warpSession.credentials;warpDownload('nightline-warp-'+c.kind+'.json',JSON.stringify(globalThis.NLWarp.buildWarpXray(c,warpOptions()),null,2));}catch(e){warpStatus(e.message,e.message);}};
+  $('warp-wg').onclick=function(){try{warpDownload('nightline-warp.conf',globalThis.NLWarp.buildWireGuardConf(warpSession.credentials,warpOptions()),'text/plain;charset=utf-8');}catch(e){warpStatus(e.message,e.message);}};
 
   $('f-pass').addEventListener('submit', async function (ev) {
     ev.preventDefault();
@@ -2704,7 +2514,7 @@
   /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
 
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.4';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.5';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if ($('gh-upd-dot')) {

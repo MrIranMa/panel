@@ -1030,7 +1030,7 @@
 </p>
 </div>
 </div></div><div class="stack"><div class="card">
-<p class="kicker"><svg class="ic"><use href="#i-radar"></use></svg><span class="fa">IP و دامنه · بررسی پاسخ مرورگر</span><span class="en">IP &amp; DOMAIN RESPONSE CHECK</span></p>
+<p class="kicker"><svg class="ic"><use href="#i-radar"></use></svg><span class="fa">رادار IP و دامنه · وضعیت زنده</span><span class="en">IP &amp; DOMAIN RESPONSE CHECK</span></p>
 <label class="fld-label" for="s-cleanips">
 <span class="fa">فهرست IP / دامنهٔ شما (هر خط یک مورد؛ کد تقریبی کشور برای نام نود: <code>172.67.73.163#US|MCI</code>)</span>
 <span class="en">YOUR IPs / DOMAINS (ONE PER LINE; APPROX. COUNTRY TAG: <code>172.67.73.163#US|MCI</code>)</span>
@@ -1054,8 +1054,8 @@
 <span class="fa">افزودن منتخب‌ها</span><span class="en">ADD PRESETS</span>
 </button>
 </div>
-<div class="actions" style="margin-top:7px"><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
-<div class="scan-options"><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">PER-ATTEMPT TIMEOUT</span><select id="scan-timeout"><option value="2500">2.5 s</option><option value="4000" selected>4 s</option><option value="7000">7 s</option></select></label><div class="hint"><span class="fa">رادار دوکاناله: تصویر + درخواست شبکه، سه نوبت و خودآزمایی. فقط پورت‌های TLS بررسی می‌شوند؛ ورودی پورت‌های دیگر در اسکن کنار گذاشته می‌شود.</span><span class="en">Dual-channel image/fetch radar, three rounds and control checks. Only TLS ports are scanned; other port entries are skipped.</span></div></div>
+<div class="actions" style="margin-top:7px"><button class="btn ghost sm-btn" id="btn-country-list" type="button"><span class="fa">بازبینی کشور IPهای فهرست</span><span class="en">RECHECK LIST GEOIP</span></button><label class="chk"><input id="scan-geo" type="checkbox"/><span><span class="fa">برچسب کشور تقریبی (سرویس ثالث؛ اختیاری)</span><span class="en">Approximate GeoIP label (third party; optional)</span></span></label><button class="btn ghost sm-btn" hidden="" id="btn-scan-stop" type="button"><span class="fa">توقف اسکن</span><span class="en">STOP SCAN</span></button></div>
+<div class="scan-options"><label class="fld-label"><span class="fa">درخواست هم‌زمان</span><span class="en">CONCURRENCY</span><select id="scan-parallel"><option value="4">4 · آرام</option><option value="8" selected>8 · متعادل</option><option value="12">12 · سریع</option></select></label><label class="fld-label"><span class="fa">مهلت هر تلاش</span><span class="en">PER-ATTEMPT TIMEOUT</span><select id="scan-timeout"><option value="2500">2.5 s</option><option value="4000" selected>4 s</option><option value="7000">7 s</option></select></label><div class="hint"><span class="fa">رادار دوکاناله: تصویر + درخواست شبکه، سه نوبت و خودآزمایی. فقط پورت‌های TLS بررسی می‌شوند؛ ورودی پورت‌های دیگر در اسکن کنار گذاشته می‌شود.</span><span class="en">Dual-channel image/fetch radar, three rounds and control checks. Only TLS ports are scanned; other port entries are skipped.</span></div></div>
 <p class="hint"><span class="fa">گام ۱: نامزدهای شبکه را پیدا و اضافه کنید. گام ۲: با خروجی خودکار Xray، اتصال کانفیگ را در خود برنامه بررسی کنید. «واکنش» برآورد مرورگر است، نه تأیید اتصال.</span><span class="en">Find candidates, then use the automatic Xray profile to test config connectivity. Browser reaction time is an estimate, not connection proof.</span></p>
 <p class="hint" hidden id="scan-control"></p><p class="hint" hidden id="scan-calibration"></p>
 <div class="range-panel" hidden="" id="cf-ranges-panel">
@@ -1063,14 +1063,26 @@
 <strong class="fld-label" style="margin:0"><span class="fa">منبع: </span><span class="en">SOURCE: </span><a class="inline-link mono" href="https://api.cloudflare.com/client/v4/ips" rel="noopener noreferrer" target="_blank">Cloudflare Public IP API <svg class="ic ic-sm"><use href="#i-external"></use></svg></a></strong>
 <span class="mono sm" id="cf-ranges-total">—</span>
 </div>
-<p class="hint"><span class="fa">تعداد نمونهٔ هر رنج: ۰ تا ۱۲، مجموع حداکثر ۴۸. زمان‌ها از اینترنت همین مرورگرند. کشورِ GeoIP تقریبی است، نه مکان قطعی لبه.</span><span class="en">Choose 0–12 samples per range, 48 total max. Timings use this browser’s network. GeoIP is approximate, not a proven edge location.</span></p>
+<div class="range-toolbar"><label class="fld-label"><span class="fa">حجم اسکن کل</span><span class="en">SCAN SIZE</span><select id="scan-budget"><option value="64" data-fa="64 · سریع" data-en="64 · Quick">64 · سریع</option><option value="256" selected data-fa="256 · متعادل" data-en="256 · Balanced">256 · متعادل</option><option value="1024" data-fa="1024 · عمیق" data-en="1024 · Deep">1024 · عمیق</option><option value="4096" data-fa="4096 · گسترده" data-en="4096 · Broad">4096 · گسترده</option><option value="continuous" data-fa="پیوسته · تا زدن توقف" data-en="Continuous · until stopped">پیوسته · تا زدن توقف</option></select></label><div class="actions"><button type="button" class="btn ghost sm-btn" id="ranges-all">همه</button><button type="button" class="btn ghost sm-btn" id="ranges-v4">IPv4</button><button type="button" class="btn ghost sm-btn" id="ranges-v6">IPv6</button><button type="button" class="btn ghost sm-btn" id="ranges-none">هیچ‌کدام</button></div></div>
+<p class="hint"><span class="fa">رنج‌ها را تیک بزنید و حجم را یک بار انتخاب کنید. سقف ۱۲/۴۸ حذف شده است؛ حالت پیوسته تا توقف شما ادامه دارد. برای حفظ سرعت، ۴۰۰ ردیف آخر نمایش داده می‌شود. کشور GeoIP محل قطعی لبهٔ کلادفلر نیست.</span><span class="en">Check ranges and choose a total budget once. Continuous mode runs until stopped; the latest 400 rows are displayed. GeoIP is not physical anycast location.</span></p>
 <div class="range-list" id="cf-range-list"></div>
 <p class="hint"><span class="fa">پاسخ واقعی و نامزدهای تخمینی جدا هستند؛ خطا پینگ نیست و نامزد تخمینی خودکار به‌عنوان سالم اولویت نمی‌گیرد.</span><span class="en">Real responses and estimated candidates are separate; errors are not pings and candidates are never prioritized as healthy IPs.</span></p>
 <div class="actions"><button class="btn primary sm-btn" id="btn-scan-ranges" type="button"><svg class="ic ic-sm"><use href="#i-radar"></use></svg><span class="fa">نمونه‌گیری و بررسی نامزدها</span><span class="en">SAMPLE &amp; PROBE CANDIDATES</span></button></div>
 </div>
 <p class="hint" hidden="" id="scan-summary"></p>
 <div class="scan-grid" hidden="" id="scan-results"></div>
-</div><div class="card">
+</div><div class="card"><details id="warp-section"><summary><svg class="ic"><use href="#i-shield"/></svg><span class="fa">WARP · تولید کانفیگ مستقل WireGuard و MASQUE</span><span class="en">WARP · STANDALONE WIREGUARD / MASQUE</span></summary>
+<p class="hint"><span class="fa">Worker فقط ثبت دستگاه را انجام می‌دهد؛ اتصال WARP روی برنامهٔ شما اجرا می‌شود. این خروجی‌ها مستقل‌اند؛ زنجیره و محدودیت مصرف/اعتبار کاربران Worker روی آن‌ها اعمال نمی‌شود. کلید خصوصی در مرورگر ساخته و فقط تا تازه‌سازی صفحه در حافظه می‌ماند؛ فایل پشتیبان را محرمانه نگه دارید.</span><span class="en">Registration relay only; WARP runs in your client, independently of Worker user quotas/expiry. Private keys stay in browser memory; download and protect a backup.</span></p>
+<div class="form-grid"><label class="fld-label"><span class="fa">پروتکل</span><span class="en">Protocol</span><select id="warp-kind"><option value="masque" data-fa="MASQUE · Xray جدید · H2/TCP یا H3/UDP" data-en="MASQUE · recent Xray · H2/TCP or H3/UDP">MASQUE · Xray جدید · H2/TCP یا H3/UDP</option><option value="wireguard" data-fa="WireGuard · UDP · WireGuard / Xray" data-en="WireGuard · UDP · WireGuard / Xray">WireGuard · UDP · WireGuard / Xray</option></select></label><label class="fld-label"><span class="fa">انتقال MASQUE</span><span class="en">MASQUE transport</span><select id="warp-mode"><option value="h2" data-fa="H2 / TCP · گزینهٔ شروع برای محدودیت UDP" data-en="H2 / TCP · start here if UDP is restricted">H2 / TCP · گزینهٔ شروع برای محدودیت UDP</option><option value="h3" data-fa="H3 / QUIC · نیازمند UDP در دسترس" data-en="H3 / QUIC · requires reachable UDP">H3 / QUIC · نیازمند UDP در دسترس</option></select></label></div>
+<label class="chk"><input id="warp-consent" type="checkbox"><span><span class="fa">با </span><a class="inline-link" href="https://www.cloudflare.com/application/terms/" target="_blank" rel="noopener noreferrer"><span class="fa">شرایط WARP کلادفلر</span><span class="en">Cloudflare WARP terms</span> <svg class="ic ic-sm"><use href="#i-external"/></svg></a> <span class="fa">موافقم و ایجاد دستگاه را درخواست می‌کنم.</span><span class="en">I accept the terms and request device registration.</span></span></label>
+<div class="actions"><button class="btn primary sm-btn" type="button" id="warp-register"><span class="fa">ثبت دستگاه و ساخت کلید</span><span class="en">Register device & generate keys</span></button><button class="btn ghost sm-btn" type="button" id="warp-backup" disabled><span class="fa">پشتیبان کلیدهای محرمانه</span><span class="en">Private-key backup</span></button><label class="btn ghost sm-btn"><span class="fa">ورود پشتیبان</span><span class="en">Import backup</span><input id="warp-import" type="file" accept="application/json,.json" hidden></label></div>
+<p id="warp-status" class="hint" role="status" aria-live="polite"><span class="fa">ثبت جدید فقط با دکمهٔ بالا انجام می‌شود؛ از APIهای عمومی واسطه برای گرفتن کلید استفاده نمی‌شود.</span><span class="en">Only the button above registers a device; no third-party credential pools are used.</span></p>
+<div class="form-grid"><label class="fld-label"><span class="fa">مقصد اختصاصی WARP</span><span class="en">WARP endpoint</span><input type="text" class="mono" dir="ltr" id="warp-endpoint" placeholder="از پاسخ ثبت دریافت می‌شود"></label><label class="fld-label"><span class="fa">پورت</span><span class="en">Port</span><input type="number" id="warp-port" value="443" min="1" max="65535"></label></div>
+<p class="hint"><span class="fa">برای WARP از هر IP معمولی کلادفلر نمی‌توان استفاده کرد؛ کلید عمومی MASQUE باید با گواهی مقصد مطابقت داشته باشد. H2 از TCP و WireGuard/H3 از UDP استفاده می‌کنند؛ پنل وضعیت UDP را از مرورگر حدس نمی‌زند.</span><span class="en">Not every Cloudflare IP supports WARP. The MASQUE public key must match the endpoint certificate. H2 uses TCP; WireGuard/H3 need UDP. This panel does not infer UDP reachability from browser errors.</span></p>
+<label class="chk"><input id="warp-fragment" type="checkbox"><span><span class="fa">Fragment آزمایشی برای MASQUE H2؛ انتخاب بهترین مقدار نیازمند تست کلاینت است.</span><span class="en">Experimental MASQUE H2 fragmentation; test settings in your client.</span></span></label>
+<div class="actions"><button class="btn sm-btn" id="warp-xray" type="button" disabled><span class="fa">دانلود JSON کامل Xray</span><span class="en">Download full Xray JSON</span></button><button class="btn sm-btn" id="warp-wg" type="button" disabled><span class="fa">دانلود WireGuard .conf</span><span class="en">Download WireGuard .conf</span></button></div>
+</details></div>
+<div class="card">
 <p class="kicker"><svg class="ic"><use href="#i-globe"></use></svg><span class="fa">خروجیِ ورکر: ProxyIP، NAT64 و پروکسی زنجیره‌ای</span><span class="en">OUTBOUND: PROXYIP, NAT64 &amp; CHAIN</span></p>
 <label class="fld-label" for="s-proxyips">
 <span class="fa">فهرست ProxyIP (برای باز شدن سایت‌های پشت کلادفلر مثل speedtest.net — هر خط <code>host</code> یا <code>host:port</code>)</span>
@@ -1093,10 +1105,10 @@
 </div>
 <div class="mt-auto">
 <label class="fld-label" for="s-chain">
-<span class="fa">پروکسی زنجیره‌ای خروجی (SOCKS5 / HTTP برای IP ثابت — اختیاری)</span>
+<span class="fa">پروکسی زنجیره‌ای خروجی · SOCKS5 / HTTP / HTTPS CONNECT</span>
 <span class="en">CHAIN OUTBOUND PROXY (SOCKS5 / HTTP FOR FIXED EXIT IP)</span>
 </label>
-<div class="fld">
+<p class="hint"><span class="fa">این اتصال از Worker به پروکسی شماست، نه از مرورگر. آدرس باید از اینترنت عمومی در دسترس باشد؛ 127.0.0.1 و آدرس شبکهٔ خانه در Worker به دستگاه شما اشاره نمی‌کنند. در خرابی زنجیره، خروج مستقیم جایگزین نمی‌شود تا IP ثابت نشت نکند.</span><span class="en">Worker-to-proxy connection, not browser-to-proxy. Use a publicly reachable address. Chain failure is fail-closed: no silent direct-IP fallback.</span></p><div class="fld">
 <input dir="ltr" id="s-chain" placeholder="socks5://user:pass@1.2.3.4:1080" type="text"/>
 <button class="btn ghost sm-btn" id="btn-test-chain" type="button">TEST</button>
 </div>
@@ -1230,7 +1242,7 @@
             <span class="fa">مشاور شبکه و انتخاب مسیر در کلاینت</span>
             <span class="en">SMART BROWSER ISP &amp; CONNECTIVITY ADVISOR</span>
           </p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><label class="fld-label"><span class="fa">پیشنهاد تنظیمات</span><span class="en">POLICY</span><select id="adv-policy"><option value="iran">ایران · سازگاری و عبور مستقیم داخلی</option><option value="observe">فقط اندازه‌گیری · بدون پیشنهاد تغییر</option></select></label>
             <button class="btn primary sm-btn" id="btn-adv-run" type="button">
               <svg class="ic ic-sm" id="adv-run-ic"><use href="#i-radar"/></svg>
               <span class="fa">آزمون شبکه و تونل من</span><span class="en">RUN FULL ISP DIAGNOSTIC</span>

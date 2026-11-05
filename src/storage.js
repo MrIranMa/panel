@@ -14,7 +14,7 @@ import {
 } from './crypto.js';
 
 export const PANEL_BRAND = 'NIGHTLINE';
-export const PANEL_VERSION = '2.5.4';
+export const PANEL_VERSION = '2.5.5';
 export const GITHUB_REPO = 'youdidking/NightLine';
 export const GITHUB_REPO_URL = 'https://github.com/youdidking/NightLine';
 export const STATE_KEY = 'nl:state:v2';
@@ -223,12 +223,12 @@ export function sanitizeSettings(patch = {}, current = DEFAULT_SETTINGS) {
     'customDirectDomains', 'customProxyDomains', 'customBlockDomains',
   ]) {
     if (safePatch[listKey] !== undefined) {
-      next[listKey] = cleanStringList(safePatch[listKey], 80);
+      next[listKey] = cleanStringList(safePatch[listKey], listKey==='cleanIPs'?4096:80);
     }
   }
 
   if (typeof safePatch.chainProxy === 'string') {
-    next.chainProxy = safePatch.chainProxy.trim().slice(0, 240);
+    next.chainProxy = safePatch.chainProxy.trim().slice(0, 2048);
   }
 
   if (typeof safePatch.fragmentMode === 'string' && ['severe', 'tlshello', 'mild', 'custom'].includes(safePatch.fragmentMode)) {

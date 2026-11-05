@@ -1,3 +1,4 @@
+import { connectChain } from './chain.js';
 /**
  * NIGHTLINE — Hardened Multi-Protocol Relay Engine (VLESS + Trojan + DoH + ProxyIP/NAT64/Chain).
  *
@@ -32,6 +33,7 @@ async function getSocketConnect() {
 
 function isValidSocketHost(host) {
   if (!host || host.length > 255) return false;
+  if(host.includes(':')&&!host.includes('['))return /^[0-9a-fA-F:.]+$/.test(host);
   if (host.startsWith('[') && host.endsWith(']')) {
     return /^\[[0-9a-fA-F:.]+\]$/.test(host);
   }
@@ -42,14 +44,14 @@ function isValidSocketHost(host) {
  * Safely open a Cloudflare TCP socket via lazy `cloudflare:sockets` import and
  * disarm asynchronous `.opened`/`.closed` unhandled promise rejections.
  */
-async function safeConnect(hostname, port) {
-  const cleanHost = String(hostname || '').trim();
+async function safeConnect(hostname, port, options) {
+  const cleanHost = String(hostname || '').trim().replace(/^\[|\]$/g,'');
   const cleanPort = Number(port);
   if (!isValidSocketHost(cleanHost) || !Number.isInteger(cleanPort) || cleanPort < 1 || cleanPort > 65535) {
     throw new Error(`Invalid target endpoint: ${cleanHost}:${port}`);
   }
   const connectFn = await getSocketConnect();
-  const sock = connectFn({ hostname: cleanHost, port: cleanPort });
+  const sock = connectFn({ hostname: cleanHost, port: cleanPort }, options);
   if (sock && sock.opened && typeof sock.opened.catch === 'function') {
     sock.opened.catch(() => {});
   }
@@ -132,7 +134,7 @@ export function parseEndpoint(raw, fallbackPort = 443) {
   const v6Match = clean.match(/^\[([^\]]+)\](?::(\d+))?$/);
   if (v6Match) {
     const p = v6Match[2] ? Number(v6Match[2]) : fallbackPort;
-    if (!Number.isInteger(p) || p < 1 || p > 65535) return null;
+    if (!Number.isInteger(p) || p < 0 || p > 65535 || (p===0&&Boolean(v6Match[2]))) return null;
     const host = `[${v6Match[1]}]`;
     if (!isValidSocketHost(host)) return null;
     return {
@@ -676,13 +678,14 @@ async function startTcpSession({
   try {
     if (settings.chainProxy) {
       const chained = await dialChainProxy(settings.chainProxy, addressRemote, portRemote);
-      await attachAndPipe(chained.socket, chained.leftover, true);
+      await attachAndPipe(chained.socket, chained.leftover, false);
       return;
     }
 
     const directSocket = await safeConnect(addressRemote, portRemote);
     await attachAndPipe(directSocket, null, true);
   } catch {
+    if(settings.chainProxy){terminateSession();return;}
     await fallbackDial();
   }
 }
@@ -805,133 +808,7 @@ async function resolveNat64Target(address, prefixes, upstreamDoH) {
   }
 }
 
-async function dialChainProxy(chainSpec, targetHost, targetPort) {
-  const raw = /^https?:\/\/|^socks5?:\/\//i.test(String(chainSpec || '').trim())
-    ? String(chainSpec).trim()
-    : `socks5://${String(chainSpec || '').trim()}`;
-
-  let u;
-  try {
-    u = new URL(raw);
-  } catch {
-    throw new Error('Invalid chain proxy URL');
-  }
-
-  const proto = u.protocol.replace(':', '').toLowerCase();
-  const proxyHost = u.hostname;
-  const proxyPort = Number(u.port) || (proto.startsWith('socks') ? 1080 : 8080);
-  const username = u.username ? safeDecodeURIComponent(u.username) : '';
-  const password = u.password ? safeDecodeURIComponent(u.password) : '';
-
-  const socket = await safeConnect(proxyHost, proxyPort);
-  try {
-    if (socket.opened) await socket.opened;
-  } catch (err) {
-    safeCloseSocket(socket);
-    throw err;
-  }
-  const writer = socket.writable.getWriter();
-  const reader = socket.readable.getReader();
-  if (writer.closed && typeof writer.closed.catch === 'function') writer.closed.catch(() => {});
-  if (writer.ready && typeof writer.ready.catch === 'function') writer.ready.catch(() => {});
-  if (reader.closed && typeof reader.closed.catch === 'function') reader.closed.catch(() => {});
-
-  let rxBuf = new Uint8Array(0);
-  const readAtLeast = async (n) => {
-    while (rxBuf.byteLength < n) {
-      const { value, done } = await reader.read();
-      if (done) throw new Error('Chain proxy closed prematurely');
-      const chunk = await toBytes(value);
-      const merged = new Uint8Array(rxBuf.byteLength + chunk.byteLength);
-      merged.set(rxBuf, 0);
-      merged.set(chunk, rxBuf.byteLength);
-      rxBuf = merged;
-    }
-    const slice = rxBuf.subarray(0, n);
-    rxBuf = rxBuf.subarray(n);
-    return slice;
-  };
-
-  let succeeded = false;
-  try {
-    if (proto === 'socks5' || proto === 'socks') {
-      const methods = username ? new Uint8Array([0x05, 0x02, 0x00, 0x02]) : new Uint8Array([0x05, 0x01, 0x00]);
-      await writer.write(methods);
-      const greet = await readAtLeast(2);
-      if (greet[0] !== 0x05 || greet[1] === 0xff) throw new Error('SOCKS5 auth method rejected');
-
-      if (greet[1] === 0x02) {
-        const uBytes = ENC.encode(username);
-        const pBytes = ENC.encode(password);
-        if (uBytes.length > 255 || pBytes.length > 255) throw new Error('SOCKS5 credentials too long');
-        const authFrame = new Uint8Array(3 + uBytes.length + pBytes.length);
-        authFrame[0] = 0x01;
-        authFrame[1] = uBytes.length;
-        authFrame.set(uBytes, 2);
-        authFrame[2 + uBytes.length] = pBytes.length;
-        authFrame.set(pBytes, 3 + uBytes.length);
-        await writer.write(authFrame);
-        const authRes = await readAtLeast(2);
-        if (authRes[1] !== 0x00) throw new Error('SOCKS5 credentials rejected');
-      }
-
-      const cleanTarget = String(targetHost || '').replace(/^\[|\]$/g, '');
-      const hBytes = ENC.encode(cleanTarget);
-      if (!hBytes.length || hBytes.length > 255) throw new Error('Target domain length invalid for SOCKS5');
-      const req = new Uint8Array(7 + hBytes.length);
-      req[0] = 0x05;
-      req[1] = 0x01;
-      req[2] = 0x00;
-      req[3] = 0x03;
-      req[4] = hBytes.length;
-      req.set(hBytes, 5);
-      req[5 + hBytes.length] = (targetPort >> 8) & 0xff;
-      req[6 + hBytes.length] = targetPort & 0xff;
-      await writer.write(req);
-
-      const repHead = await readAtLeast(4);
-      if (repHead[1] !== 0x00) throw new Error(`SOCKS5 connect failed (code ${repHead[1]})`);
-      const atyp = repHead[3];
-      if (atyp === 1) await readAtLeast(6);
-      else if (atyp === 4) await readAtLeast(18);
-      else if (atyp === 3) {
-        const dlen = (await readAtLeast(1))[0];
-        await readAtLeast(dlen + 2);
-      }
-    } else if (proto === 'http') {
-      const authHeader = username
-        ? `Proxy-Authorization: Basic ${utf8ToBase64(`${username}:${password}`)}\r\n`
-        : '';
-      const connectReq =
-        `CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\n` +
-        `Host: ${targetHost}:${targetPort}\r\n` +
-        authHeader +
-        `Proxy-Connection: Keep-Alive\r\n\r\n`;
-      await writer.write(ENC.encode(connectReq));
-
-      let headerText = '';
-      while (!headerText.includes('\r\n\r\n')) {
-        const b = await readAtLeast(1);
-        headerText += String.fromCharCode(b[0]);
-        if (headerText.length > 8192) throw new Error('HTTP proxy header overflow');
-      }
-      if (!/^HTTP\/1\.[01]\s+200\b/i.test(headerText)) {
-        throw new Error('HTTP CONNECT rejected');
-      }
-    } else {
-      throw new Error(`Unsupported chain protocol: ${proto}`);
-    }
-    succeeded = true;
-  } finally {
-    try { writer.releaseLock(); } catch {}
-    try { reader.releaseLock(); } catch {}
-    if (!succeeded) {
-      safeCloseSocket(socket);
-    }
-  }
-
-  return { socket, leftover: rxBuf };
-}
+async function dialChainProxy(spec,host,port){return connectChain(spec,host,port,safeConnect);}
 
 /* -------------------------------------------------------- UDP DNS over DoH */
 
@@ -1302,17 +1179,11 @@ export async function probeOutboundEndpoint(spec) {
       tid = setTimeout(() => rej(new Error('Timeout (5s)')), 5000);
     });
 
-    if (/^(socks5?|http):\/\//i.test(raw)) {
-      const chainPromise = dialChainProxy(raw, 'example.com', 80);
-      // Disarm late rejection/resolution if timeout wins
-      chainPromise
-        .then((res) => { if (openedSock !== res.socket) safeCloseSocket(res.socket); })
-        .catch(() => {});
-
-      const chained = await Promise.race([chainPromise, timeoutPromise]);
-      openedSock = chained.socket;
-      safeCloseSocket(chained.socket);
-      return { ok: true, target: raw.replace(/\/\/.*@/, '//***@'), latencyMs: Date.now() - t0 };
+    if (/^(socks5?h?|https?):\/\//i.test(raw)) {
+      clearTimeout(tid);tid=null;
+      const chained = await connectChain(raw,'www.gstatic.com',443,safeConnect,4800);
+      openedSock=chained.socket;safeCloseSocket(openedSock);
+      return { ok: true, stage:'authenticated-connect-443', target: raw.replace(/\/\/.*@/, '//***@'), latencyMs: Date.now() - t0 };
     }
 
     const ep = parseEndpoint(raw, 443);

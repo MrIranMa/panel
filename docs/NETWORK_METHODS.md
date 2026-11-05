@@ -1,4 +1,4 @@
-# روش‌های شبکه در ۲.۵.۴
+# روش‌های شبکه در ۲.۵.۵
 
 ## سه سطح متفاوت
 
@@ -19,3 +19,26 @@
 مرجع محدودیت درخواست HTTP در صفحهٔ امن: https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Mixed_content
 
 مرجع TCP خروجی Cloudflare، نه دست‌کاری TLS ورودی کاربر: https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/
+
+## جزئیات تازهٔ ۲.۵.۵
+
+### زنجیره
+`src/chain.js` اتصال TCP/TLS واقعی، handshake مرحله‌ای، احراز هویت، deadline و cleanup را جدا می‌کند. شکست پروکسی مسیر مستقیم را باز نمی‌کند. بررسی CONNECT443 صرفاً توان عبور پروکسی از همان مقصد/پورت است. سیاست پورت یا فایروال سرور مقصد همچنان می‌تواند اتصال را رد کند.
+
+### رنج و کشور
+پیمایش CIDR حافظهٔ ثابت و بدون تکرار است. اندازهٔ اسکن 64/256/1024/4096 یا پیوسته و هم‌زمانی 4/8/12 است. حداکثر 400 نتیجهٔ اخیر در DOM، 500 نتیجهٔ برتر و 4096 IP ذخیره‌شدنی‌اند؛ این‌ها محدودیت مصرف حافظه‌اند، نه سقف مجموع اسکن پیوسته. GeoIP اختیاری با دو منبع ipwho.is و ipapi.co، کنترل IP پاسخ و کش حداکثر شش‌ساعته است. ممکن است فقط یک منبع پاسخ دهد؛ سطح اطمینان جداست و اختلاف به کشور ساختگی تبدیل نمی‌شود. پرس‌وجوی پایگاه از Worker است، اما اندازه‌گیری شبکه از مرورگر بازدیدکننده انجام می‌شود.
+
+### WARP
+MASQUE جدید براساس راهنمای رسمی Xray از `streamSettings.method:"masque"` و کلید P-256 استفاده می‌کند؛ کلید WireGuard قابل استفادهٔ مجدد نیست. endpoint و pin از پاسخ ثبت دریافت می‌شوند، TLS بررسی می‌شود و Mux اضافه نشده است. H2 روی TCP و H3/WireGuard روی UDP است؛ مرورگر توان UDP کلاینت را اثبات نمی‌کند. خروجی WireGuard استاندارد full-tunnel است و مسیریابی دامنهٔ ایران ندارد؛ خروجی Xray مستقل فقط `.ir`/محلی و رنج خصوصی را مستقیم می‌کند، نه کل geosite/geoip ایران.
+
+فایل پشتیبان شامل کلید خصوصی و token دستگاه است؛ آن را عمومی نکنید. سرور فقط کلید عمومی و شناسه/token لازم ثبت را relay می‌کند. محدودیت مصرف و تاریخ کاربران Worker در WARP مستقل اجرا نمی‌شود. Cloudflare می‌تواند API ثبت را محدود یا تغییر دهد؛ موفقیت ساختار کانفیگ، گواهی اتصال زنده نیست.
+
+مراجع پیاده‌سازی:
+- https://xtls.github.io/en/document/level-2/warp.html
+- https://xtls.github.io/en/config/outbounds/masque.html
+- https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/
+- https://github.com/bia-pain-bache/BPB-Worker-Panel
+- https://github.com/JamesYoonbot/WARP-MASQUE
+- https://github.com/DarknessShade/Masque-Generator
+
+در بررسی پنل‌های مشابه، معماری تولید کلید و ثبت WARP استفاده شد؛ pool عمومی کلید، خاموش‌کردن TLS یا schema قدیمی کپی نشده است. این پروژه هیچ تونل ورودی UDP روی Worker وعده نمی‌دهد.

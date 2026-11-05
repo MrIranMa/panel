@@ -1,3 +1,6 @@
+import { warpAction } from './warp-api.js';
+import { lookupCountries } from './geo.js';
+import { parseChainProxy } from './chain.js';
 /**
  * NIGHTLINE — Cloudflare Worker & Pages Entrypoint (Free-Tier 10ms CPU optimized).
  */
@@ -546,6 +549,16 @@ async function handleApi(request, url, env, runtime) {
 
   const state = await loadRuntimeState(env, true);
 
+  if((path==='/api/warp/register'||path==='/api/warp/enroll')&&method==='POST'){
+    const body=await readJsonBody(request);try{return json({ok:true,device:await warpAction(path.endsWith('/register')?'register':'enroll',body,request)});}catch(e){return json({ok:false,error:e.message||'WARP operation failed'},400);}
+  }
+
+  if(path==='/api/tools/geoip'&&method==='POST'){
+    const body=await readJsonBody(request);if(body.__parseError)return json({ok:false,error:body.__parseError},400);
+    if(!Array.isArray(body.ips)||body.ips.length>16||body.ips.some(ip=>typeof ip!=='string'||ip.length>64))return json({ok:false,error:'هر درخواست کشور حداکثر ۱۶ IP دارد؛ بقیه خودکار نوبت‌بندی می‌شوند.'},400);
+    return json({ok:true,results:await lookupCountries(body.ips)});
+  }
+
   // ---- GET /api/cf/ip-ranges: official public Cloudflare CIDRs, no CF token ----
   if (path === '/api/cf/ip-ranges' && method === 'GET') {
     if (cfIpRangesCache && Date.now() - cfIpRangesCache.fetchedAt < 6 * 3600_000) {
@@ -597,6 +610,8 @@ async function handleApi(request, url, env, runtime) {
     const patch = await readJsonBody(request);
     if (patch.__parseError) return json({ ok: false, error: patch.__parseError }, 400);
 
+    if(Array.isArray(patch.cleanIPs)&&patch.cleanIPs.length>4096)return json({ok:false,error:'ذخیرهٔ فهرست بیش از ۴۰۹۶ مورد مجاز نیست؛ اسکن پیوسته سقف تعداد ندارد.'},400);
+    if(patch.chainProxy!==undefined){try{parseChainProxy(patch.chainProxy);}catch(e){return json({ok:false,error:e.message},400);}}
     state.settings = sanitizeSettings(patch, state.settings);
     appendLog(state, 'settings', 'تنظیمات هسته و مسیریابی به‌روزرسانی شد');
     const saved = await saveRuntimeState(env, state);
@@ -810,7 +825,8 @@ async function handleApi(request, url, env, runtime) {
   if ((path === '/api/tools/probe-proxy' || path === '/api/test-proxyip') && method === 'POST') {
     const body = await readJsonBody(request);
     if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
-    const result = await probeOutboundEndpoint(body.target || '');
+    let target=body.target||'';if(body.kind==='chain'){try{parseChainProxy(target);if(!/^[a-z]+:\/\//i.test(target))target='socks5://'+target;}catch(e){return json({ok:false,error:e.message},400);}}
+    const result = await probeOutboundEndpoint(target);
     return json(result);
   }
 
