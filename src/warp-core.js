@@ -1,4 +1,4 @@
-/* Client-side WARP material and standalone configs. Private keys never need to leave the browser. */
+/* WARP key material and client configs: direct enrollment or explicitly consented provider imports. */
 const bytes64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
 const decode64=s=>Uint8Array.from(atob(String(s||'')),c=>c.charCodeAt(0));
 function rawIP(value){const s=String(value||'').split('/')[0];if(s.includes(':')){return new URL('http://['+s.replace(/^\[|\]$/g,'')+']/').hostname.slice(1,-1);}if(!/^\d{1,3}(\.\d{1,3}){3}$/.test(s)||s.split('.').some(v=>Number(v)>255))throw Error('آدرس داخلی WARP نامعتبر است');return s;}

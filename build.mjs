@@ -109,6 +109,7 @@ const sourceText = [
   'src/ui/index.html',
   'src/ui/app.js',
   'src/warp-core.js',
+  'src/warp-provider.js',
   'src/sub.js',
   'src/worker.js',
   'src/storage.js',
@@ -186,7 +187,8 @@ for (const [k, v] of Object.entries(fontVars)) {
 }
 const minCss = (await esbuild.transform(rawStyle, { loader: 'css', minify: true })).code.trim();
 const minQr = (await esbuild.transform(read(P('src/ui/vendor/qrcode.js')), { loader: 'js', minify: true })).code.trim();
-const minApp = (await esbuild.transform(read(P('src/ui/network.js')) + '\n' + read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
+const providerBundle=await esbuild.build({stdin:{contents:"import * as W from './src/warp-provider.js';globalThis.NLMasque=W;",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',minify:true,target:'es2022'});
+const minApp = (await esbuild.transform(providerBundle.outputFiles[0].text+'\n'+read(P('src/ui/network.js')) + '\n' + read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
 
 let indexTemplate = read(P('src/ui/index.html')).replaceAll('{{VERSION}}', VERSION);
 // Embed original icons from each application's official repository: no runtime CDN dependency.

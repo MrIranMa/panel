@@ -1,9 +1,9 @@
-NightLine 2.5.6 — Third-party acknowledgement
+NightLine 2.5.7 — Third-party acknowledgement
 
 DarknessShade / Masque-Generator
 https://github.com/DarknessShade/Masque-Generator
-Account-to-config workflow and MASQUE export inspiration.
-The NightLine relay registers devices with Cloudflare directly; no third-party credential pool is used.
+API-pool rotation, public-list import, usque JSON normalization and MASQUE export workflow adapted from the user-supplied reference HTML.
+The reference API pool is used only after explicit consent. These third-party providers know the credentials they supply; public-list credentials are shared. Direct Cloudflare enrollment remains optional.
 
 MIT License
 
@@ -27,9 +27,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-BPB-Worker-Panel — ProxyIP / chain separation concept and protocol research only; no source code copied in this release.
-https://github.com/bia-pain-bache/BPB-Worker-Panel
 
 Xray WARP documentation:
 https://xtls.github.io/en/document/level-2/warp.html

@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.6 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.7 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -1044,7 +1044,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.6',
+      version: '2.5.7',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1082,7 +1082,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.6)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.7)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1129,7 +1129,7 @@
     return list;
   }
 
-  async function api(path, method, body) {
+  async function api(path, method, body, timeoutMs) {
     method = method || 'GET';
     if (isSandboxPreview) {
       var ds = ensureDemoStore();
@@ -1189,11 +1189,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.6',
-          latestVersion: '2.5.6',
+          currentVersion: '2.5.7',
+          latestVersion: '2.5.7',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.6 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.7 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1203,8 +1203,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.6',
-          targetVersion: '2.5.6',
+          previousVersion: '2.5.7',
+          targetVersion: '2.5.7',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -1260,7 +1260,7 @@
     }
 
     var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-    var tid = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 15000) : null;
+    var tid = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, timeoutMs||15000) : null;
     var opts = {
       method: method,
       credentials: 'same-origin',
@@ -2171,19 +2171,37 @@
     }
   };
 
-  var warpAccounts=[];
+  var warpAccounts=[],warpBusy=false,warpController=null,warpCache=new Map(),warpLoads=new Map();
+  var masqueProvider=globalThis.NLMasque.createMasqueProvider({storage:LS});
   function warpStatus(fa,en){$('warp-status').textContent=tr(fa,en);}
   function warpDownload(name,value,type){var blob=new Blob([value],{type:type||'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);}
-  function managedWarpUrl(conf){var u=getSelectedUser();if(!u)return '';var kind=$('warp-kind').value;return subBaseUrl(u)+'?format='+(conf?'warp-conf':'warp-'+kind)+'&transport='+$('warp-mode').value;}
-  function showManagedWarp(){var u=getSelectedUser(),kind=$('warp-kind').value,a=warpAccounts.find(function(x){return x.kind===kind;});$('warp-selected').textContent=tr('کاربر منتخب: ','Selected user: ')+(u?u.name:'—');$('warp-xray').disabled=!a||!a.ready;$('warp-copy').disabled=!a||!a.ready;$('warp-wg').disabled=kind!=='wireguard'||!a||!a.ready;warpStatus(a&&a.ready?'حساب در همین پروژه آماده است؛ لینک با همان توکن کاربر به حساب ذخیره‌شده اشاره می‌کند.':a&&a.pending?'ثبت ناقص ذخیره شده است؛ با همان دکمه تکمیل کنید.':'برای این کاربر هنوز حساب آماده نیست.',a&&a.ready?'Account ready in this project; user link reads stored credentials.':'No ready account yet; create or resume.');}
-  async function loadManagedWarp(){var u=getSelectedUser();if(!u)return;var uid=u.id;warpAccounts=[];showManagedWarp();try{var r=await api('/api/warp/accounts?userId='+encodeURIComponent(uid),'GET');if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus(e.message,e.message);}}
-  $('warp-refresh').onclick=loadManagedWarp;$('warp-kind').onchange=showManagedWarp;
+  function managedWarpUrl(conf){var u=getSelectedUser();if(!u)return '';var q=new URLSearchParams({format:conf?'warp-conf':'warp-'+$('warp-kind').value,transport:$('warp-mode').value});var endpoint=$('warp-endpoint').value.trim(),port=$('warp-port').value;if(endpoint)q.set('endpoint',endpoint);if(port)q.set('port',port);if($('warp-fragment').checked)q.set('fragment','1');return subBaseUrl(u)+'?'+q.toString();}
+  function showManagedWarp(){var u=getSelectedUser(),kind=$('warp-kind').value,a=warpAccounts.find(function(x){return x.kind===kind;});$('warp-selected').textContent=tr('کاربر منتخب: ','Selected user: ')+(u?u.name:'—');$('warp-xray').disabled=!a||!a.ready;$('warp-copy').disabled=!a||!a.ready;$('warp-wg').hidden=kind!=='wireguard';$('warp-wg').disabled=kind!=='wireguard'||!a||!a.ready;$('warp-new').disabled=warpBusy||kind!=='masque'||$('warp-source').value!=='reference';$('warp-public-list').hidden=kind!=='masque';if(!warpBusy)warpStatus(a&&a.ready?(a.source==='public-list'?'کانفیگ آماده با کلید اشتراکی فهرست عمومی؛ دانلود یا لینک را بگیرید.':'کانفیگ آماده است؛ دانلود یا لینک کاربر را بگیرید.'):a&&a.pending?'ثبت مستقیم ناقص است؛ با گزینهٔ ثبت مستقیم تکمیل کنید.':'برای شروع، دکمهٔ دریافت و آماده‌سازی را بزنید.',a&&a.ready?(a.source==='public-list'?'Ready using a shared public-list key. Download or copy the user link.':'Config ready. Download or copy the user link.'):'Get a key to prepare this user’s config.');}
+  async function loadManagedWarp(force){var u=getSelectedUser();if(!u)return;var uid=u.id,cached=warpCache.get(uid);if(force!==true&&cached&&Date.now()-cached.at<15000){warpAccounts=cached.accounts;showManagedWarp();return;}warpAccounts=[];showManagedWarp();try{var job=warpLoads.get(uid);if(!job){job=api('/api/warp/accounts?userId='+encodeURIComponent(uid),'GET');warpLoads.set(uid,job);}var r=await job;warpCache.set(uid,{accounts:r.accounts||[],at:Date.now()});if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus(e.message,e.message);}finally{warpLoads.delete(uid);}}
+  async function saveReferenceKey(uid,result){var account={kind:'masque',source:result.source,credentials:result.credentials};await api('/api/warp/account-backup','POST',{userId:uid,kind:'masque',account:account});warpCache.delete(uid);if(getSelectedUser()&&getSelectedUser().id===uid)await loadManagedWarp(true);}
+  async function prepareWarp(listMode,fresh){
+    if(isSandboxPreview||warpBusy)return;if(!$('warp-consent').checked){warpStatus('ابتدا شرایط دریافت کلید و ذخیره را تأیید کنید.','Consent is required first.');return;}
+    var u=getSelectedUser();if(!u)return;var uid=u.id,kind=$('warp-kind').value,ready=warpAccounts.find(function(a){return a.kind===kind&&a.ready;});
+    if(!listMode&&!fresh&&ready){showManagedWarp();return;}
+    if((listMode||fresh)&&ready&&!confirm(tr('کلید قبلی این پروتکل جایگزین می‌شود؛ ادامه می‌دهید؟','Replace this protocol’s previous key?')))return;
+    warpBusy=true;warpController=new AbortController();var signal=warpController.signal,deadline=setTimeout(function(){warpController.abort();},50000);$('warp-register').disabled=true;$('warp-public-list').disabled=true;$('warp-new').disabled=true;$('warp-cancel').hidden=!(kind==='masque'&&(listMode||$('warp-source').value==='reference'));
+    try{
+      if(kind==='masque'&&(listMode||$('warp-source').value==='reference')){
+        var result=listMode?await masqueProvider.fromList({consent:true,signal:signal,publicKey:$('warp-peer').value.trim()}):await masqueProvider.acquire({consent:true,signal:signal,onProgress:function(i,n){warpStatus('در حال دریافت کلید از مرجع '+i+' از '+n+'…','Getting key from reference '+i+'/'+n+'…');}});
+        if(signal.aborted)throw Error('cancelled');warpStatus('کلید دریافت شد؛ در حال آماده‌سازی لینک کاربر…','Key received; preparing user link…');await saveReferenceKey(uid,result);
+      }else{warpStatus('در حال ثبت مستقیم حساب…','Enrolling account directly…');var r=await api('/api/warp/accounts','POST',{userId:uid,kind:kind,consent:true},25000);warpCache.set(uid,{accounts:r.accounts||[],at:Date.now()});if(getSelectedUser()&&getSelectedUser().id===uid)warpAccounts=r.accounts||[];}
+      warpBusy=false;if(getSelectedUser()&&getSelectedUser().id===uid)showManagedWarp();
+    }catch(e){warpStatus(signal.aborted?'درخواست متوقف شد؛ کانفیگ جدیدی تأیید نشد.':e.message,signal.aborted?'Stopped; no new config confirmed.':e.message);}
+    finally{clearTimeout(deadline);warpBusy=false;warpController=null;$('warp-register').disabled=false;$('warp-public-list').disabled=false;$('warp-cancel').hidden=true;$('warp-new').disabled=$('warp-kind').value!=='masque'||$('warp-source').value!=='reference';}
+  }
+  $('warp-refresh').onclick=function(){loadManagedWarp(true);};$('warp-source').onchange=showManagedWarp;
+  $('warp-kind').onchange=function(){if(warpController)warpController.abort();showManagedWarp();};
   $('warp-section').addEventListener('toggle',function(){if(this.open)loadManagedWarp();});
-  $('sel-user').addEventListener('change',function(){warpAccounts=[];showManagedWarp();if($('warp-section').open)loadManagedWarp();});
-  $('warp-register').onclick=async function(){if(isSandboxPreview)return;if(!$('warp-consent').checked){warpStatus('ابتدا رضایت ثبت و نگه‌داری کلید را تأیید کنید.','Consent is required first.');return;}var u=getSelectedUser();if(!u)return;this.disabled=true;warpStatus('در حال ساخت یا تکمیل حساب از همین Worker…','Creating or resuming account through this Worker…');try{var uid=u.id,r=await api('/api/warp/accounts','POST',{userId:uid,kind:$('warp-kind').value,consent:true});if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus('حساب کامل نشد: '+e.message,'Account incomplete: '+e.message);}finally{this.disabled=false;}};
-  $('warp-xray').onclick=function(){location.href=managedWarpUrl(false);};$('warp-wg').onclick=function(){location.href=managedWarpUrl(true);};$('warp-copy').onclick=function(){copyText(managedWarpUrl(false),'لینک حساب کاربر','User account URL');};
+  $('sel-user').addEventListener('change',function(){if(warpController)warpController.abort();warpAccounts=[];showManagedWarp();if($('warp-section').open)loadManagedWarp();});
+  $('warp-register').onclick=function(){prepareWarp(false,false);};$('warp-public-list').onclick=function(){prepareWarp(true,true);};$('warp-new').onclick=function(){prepareWarp(false,true);};$('warp-cancel').onclick=function(){if(warpController)warpController.abort();};
+  $('warp-xray').onclick=function(){location.href=managedWarpUrl(false);};$('warp-wg').onclick=function(){location.href=managedWarpUrl(true);};$('warp-copy').onclick=function(){copyText(managedWarpUrl(false),'لینک کانفیگ کاربر','User config URL');};
   $('warp-backup').onclick=async function(){var u=getSelectedUser();if(!u)return;try{var r=await api('/api/warp/account-backup?userId='+encodeURIComponent(u.id)+'&kind='+$('warp-kind').value,'GET');warpDownload('nightline-managed-warp-private.json',JSON.stringify(r,null,2));}catch(e){warpStatus(e.message,e.message);}};
-  $('warp-import').onchange=async function(){var f=this.files&&this.files[0],u=getSelectedUser();if(!f||!u||f.size>65536)return;try{var b=JSON.parse(await f.text());if(b.nightlineManagedWarp!==1)throw Error('Unsupported backup');await api('/api/warp/account-backup','POST',{userId:u.id,kind:b.account.kind,account:b.account});$('warp-kind').value=b.account.kind;await loadManagedWarp();}catch(e){warpStatus(e.message,e.message);}};
+  $('warp-import').onchange=async function(){var f=this.files&&this.files[0],u=getSelectedUser();if(!f||!u||f.size>65536)return;var uid=u.id;try{var b=JSON.parse(await f.text()),account;if(b.nightlineManagedWarp===1)account=b.account;else account={kind:'masque',source:'manual',credentials:await globalThis.NLMasque.normalizeMasqueCredential(b,{publicKey:$('warp-peer').value.trim()})};await api('/api/warp/account-backup','POST',{userId:uid,kind:account.kind,account:account});warpCache.delete(uid);if(getSelectedUser()&&getSelectedUser().id===uid){$('warp-kind').value=account.kind;await loadManagedWarp(true);}}catch(e){warpStatus(e.message,e.message);}finally{this.value='';}};
 
   $('f-pass').addEventListener('submit', async function (ev) {
     ev.preventDefault();
@@ -2504,7 +2522,7 @@
   setInterval(function(){if(STATE.mode==='admin'&&!document.hidden)checkGitHubUpdates(true);},900000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&STATE.mode==='admin'&&Date.now()-ghLastCheck>900000)checkGitHubUpdates(true);});
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.6';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.7';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if($('btn-gh-updater')){$('btn-gh-updater').classList.toggle('update-ready',!!(STATE.ghInfo&&STATE.ghInfo.updateAvailable));$('btn-gh-updater').setAttribute('aria-label',STATE.ghInfo&&STATE.ghInfo.updateAvailable?tr('نسخه جدید آماده است','New version available'):tr('بررسی بروزرسانی','Check for updates'));}

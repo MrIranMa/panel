@@ -285,11 +285,11 @@ export default {
           const kv=findKV(env)?.binding;if(!kv)return json({ok:false,error:'KV required'},503);
           const kind=warpFmt==='warp-masque'?'masque':'wireguard';const account=await readWarpAccount(kv,matched,kind);
           if(!account?.credentials)return json({ok:false,error:'حساب WARP این کاربر هنوز آماده نشده است'},404);
-          return new Response(exportWarpAccount(account,url.searchParams.get('transport')==='h3'?'h3':'h2',warpFmt==='warp-conf'),{headers:{'content-type':warpFmt==='warp-conf'?'text/plain; charset=utf-8':'application/json; charset=utf-8','cache-control':'no-store','content-disposition':'attachment; filename="nightline-'+kind+(warpFmt==='warp-conf'?'.conf':'.json')+'"'}});
+          return new Response(exportWarpAccount(account,url.searchParams.get('transport')==='h3'?'h3':'h2',warpFmt==='warp-conf',{endpoint:(url.searchParams.get('endpoint')||'').slice(0,253),port:url.searchParams.get('port')?Number(url.searchParams.get('port')):undefined,fragment:url.searchParams.get('fragment')==='1'}),{headers:{'content-type':warpFmt==='warp-conf'?'text/plain; charset=utf-8':'application/json; charset=utf-8','cache-control':'no-store','content-disposition':'attachment; filename="nightline-'+kind+(warpFmt==='warp-conf'?'.conf':'.json')+'"'}});
         }
         let labeledSettings=enrichUserView(matched).status==='active'?await refreshCountryLabels(runtime.settings):runtime.settings;
         if(enrichUserView(matched).status==='active'&&(url.searchParams.get('format')==='html'||(!url.searchParams.has('format')&&(request.headers.get('accept')||'').includes('text/html')))){
-          const kv=findKV(env)?.binding;if(kv){labeledSettings={...labeledSettings,managedWarpReady:await Promise.all(['masque','wireguard'].map(async kind=>({kind,ready:!!(await readWarpAccount(kv,matched,kind))?.credentials}))) };}
+          const kv=findKV(env)?.binding;if(kv){labeledSettings={...labeledSettings,managedWarpReady:await Promise.all(['masque','wireguard'].map(async kind=>{const a=await readWarpAccount(kv,matched,kind);return {kind,ready:!!a?.credentials,source:a?.source||'direct'};})) };}
         }
         return await serveSubscription(request, matched, labeledSettings, await getInlineAssets());
       }

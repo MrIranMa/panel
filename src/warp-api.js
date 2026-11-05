@@ -1,4 +1,4 @@
-/* Fixed-origin, admin-only registration relay. No third-party credential generators. */
+/* Fixed-origin direct Cloudflare enrollment; the optional reference-provider workflow is separate. */
 const API='https://api.cloudflareclient.com/v0a4471';let registrations=[];
 const headers={'User-Agent':'WARP for Android','CF-Client-Version':'a-6.35-4471','content-type':'application/json','accept':'application/json'};
 function b64(value,length){try{return typeof value==='string'&&atob(value).length===length;}catch{return false;}}
