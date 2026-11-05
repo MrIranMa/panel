@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.3 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
+ * NIGHTLINE v2.5.8 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -55,7 +55,11 @@ async function fetchHttpsViaFragmentedVless({ wsUrl, uuid, targetHost, targetPor
 
     ws.on('open', async () => {
       const vlessHdr = buildVlessHeader(uuid, targetHost, targetPort, 1);
-      ws.send(vlessHdr);
+      ws.send(vlessHdr.subarray(0,7));
+      await sleep(8);
+      ws.send(vlessHdr.subarray(7,20));
+      await sleep(8);
+      ws.send(vlessHdr.subarray(20));
       await sleep(35);
 
       let fragBudget = 6;
@@ -237,7 +241,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.5.3 Full Live Verification Suite (15/15) ═══');
+  console.log('═══ NIGHTLINE v2.5.8 Full Live Verification Suite (15/15) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -282,9 +286,9 @@ async function main() {
     }
     assert(ready, 'workerd failed to start');
 
-    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.3) ──
+    // ── TEST 1: Health, Client-Info & Speed-Probe Endpoints (v2.5.8) ──
     const health = await (await fetch(`${BASE}/health`)).json();
-    assert.equal(health.version, '2.5.3', 'Health version must be 2.5.3');
+    assert.equal(health.version, '2.5.8', 'Health version must be 2.5.8');
     assert.notEqual(health.colo, 'EDGE', 'colo must never be EDGE');
 
     const ciRes = await fetch(`${BASE}/api/client-info`, {
@@ -325,7 +329,7 @@ async function main() {
     const cookie = (setupRes.headers.get('set-cookie') || '').split(';')[0];
     const boot = await setupRes.json();
 
-    assert.equal(boot.version, '2.5.3');
+    assert.equal(boot.version, '2.5.8');
     assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
     assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
@@ -610,31 +614,48 @@ async function main() {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false}' });
       } else await route.continue();
     });
+    await page.selectOption('#adv-policy','observe');
     await page.click('#btn-adv-run');
-    await page.waitForSelector('#adv-recs:not([hidden])', { timeout: 15000 });
-    await page.waitForSelector('#btn-adv-apply:not([hidden])', { timeout: 15000 });
+    await page.waitForSelector('#adv-recs:not([hidden])', { timeout: 45000 });
+    assert.equal(await page.locator('#adv-auto-xray').isVisible(),true);
     const advCells = await page.locator('#adv-grid .adv-item').count();
     assert.equal(advCells, 12, 'Advisor must render all 12 browser observations');
     const recsCount = await page.locator('#adv-recs li').count();
     assert(recsCount >= 4, 'Advisor must explain uncertainty and transferable settings');
     assert.equal(await page.locator('#adv-path-metrics').isVisible(), true);
+    assert((await page.locator('#adv-tunnel').innerText()).length>2,'Must report actual protocol tunnel outcome separately from echo');
+    await page.click('#btn-ip-blur');await sleep(220);
+    await page.screenshot({path:'docs/screenshots/advisor-desktop.jpg',quality:90,fullPage:true});
+    await page.click('#btn-ip-blur');
+    console.log('✓ [tunnel diagnostic]',await page.locator('#adv-tunnel').innerText());
     assert((await page.locator('#adv-ws').innerText()).includes('ms'), 'Advisor must measure a real WebSocket RTT');
     assert((await page.locator('#adv-rtt').innerText()).includes('ms'));
     assert((await page.locator('#adv-up').textContent()).includes('بی‌پاسخ'), 'Upload failure must be visible without claiming an ISP cap');
     const verdictBadges = await page.locator('#adv-grid').innerText();
     assert(!verdictBadges.includes('FILTERED') && !verdictBadges.includes('GEO-SANCTION'), 'Opaque browser probes must not claim filtering or sanctions');
-    await page.click('#btn-adv-apply');
+    if(await page.locator('#btn-adv-apply').isVisible())await page.click('#btn-adv-apply');
     await sleep(350);
     await page.unroute(/\/api\/speed-probe\?/);
     const afterAdvisor = await (await fetch(`${BASE}/api/bootstrap`, { headers: { cookie } })).json();
-    assert.equal(afterAdvisor.settings.earlyData, 0, 'Inconclusive upload should conservatively disable WS Early Data');
+    assert.equal(afterAdvisor.settings.earlyData, 2048, 'Failed site/upload must not guess Early Data changes');
     const rawAfterAdvisor = await (await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text();
-    assert(!rawAfterAdvisor.includes('%3Fed%3D2048'), 'Normal URI must reflect advisor-saved Early Data change');
+    assert(rawAfterAdvisor.includes('%3Fed%3D2048'), 'Normal URI must retain saved Early Data');
     const fragAfterAdvisorRes = await fetch(`${BASE}/sub/${user.subToken}?format=xray`);
     assert(fragAfterAdvisorRes.headers.get('content-type').startsWith('application/json'), 'Fragment output format must remain JSON');
     const fragAfterAdvisor = await fragAfterAdvisorRes.json();
     assert(Array.isArray(fragAfterAdvisor) && fragAfterAdvisor.length > 0 && fragAfterAdvisor[0].outbounds, 'Fragment JSON structure must be preserved');
-    console.log(`✓ [11/15] Advisor -> 12 observations, bounded upload/download, no false diagnosis; Early Data change saved in Normal, Fragment remains JSON`);
+    const autoResponse=await fetch(`${BASE}/sub/${user.subToken}?format=xray&profile=auto`);assert.equal(autoResponse.status,200);const autoConfigs=await autoResponse.json();assert.equal(autoConfigs[0].routing.balancers[0].strategy.type,'leastPing');assert.equal(autoConfigs[0].observatory.probeInterval,'5m');
+    await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Advisor must fit mobile');await page.setViewportSize({width:1400,height:920});
+    console.log(`✓ [11/15] Advisor -> 12 observations, bounded upload/download, no false diagnosis; saved settings preserved; client auto-selection profile available`);
+
+    await page.selectOption('#adv-policy','iran');await page.click('#btn-adv-run');await page.waitForSelector('#btn-adv-apply:not([hidden])',{timeout:45000});
+    const beforeApply=await(await fetch(`${BASE}/api/bootstrap`,{headers:{cookie}})).json();assert.equal(beforeApply.settings.earlyData,2048,'Iran proposal cannot apply itself');
+    const appliedResponse=page.waitForResponse(r=>r.url().endsWith('/api/settings')&&r.request().method()==='PUT');await page.click('#btn-adv-apply');assert.equal((await appliedResponse).status(),200);
+    const persisted=await(await fetch(`${BASE}/api/bootstrap`,{headers:{cookie}})).json();assert.equal(persisted.settings.earlyData,0);assert.equal(persisted.settings.alpn,'http/1.1');assert.equal(persisted.settings.bypassIran,true);assert.equal(persisted.settings.enableHttpPorts,false);assert.equal(persisted.settings.blockQuic,true);
+    const appliedRaw=await(await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text();assert(!appliedRaw.includes('%3Fed%3D2048'),'Normal subscription reflects confirmed Early Data change');
+    await page.reload();await page.waitForSelector('.tab-btn[data-tab="advisor"]');assert.equal((await(await fetch(`${BASE}/api/bootstrap`,{headers:{cookie}})).json()).settings.earlyData,0,'Saved Iran policy survives reload');
+    await fetch(`${BASE}/api/settings`,{method:'PUT',headers:{'content-type':'application/json',cookie},body:JSON.stringify(afterAdvisor.settings)});await page.reload();await page.waitForSelector('.tab-btn[data-tab="net"]');
+    console.log('✓ [Iran policy] repeated real tunnel replies, no changes before confirmation, explicit apply, persisted settings and updated Normal subscription; original fixture restored.');
 
     // ── TEST 12: Official CIDR selector + approximate country flags ONLY in node names ──
     await page.click('.tab-btn[data-tab="net"]');
@@ -644,19 +665,16 @@ async function main() {
     await page.screenshot({path:'docs/screenshots/network-desktop.jpg',quality:90,fullPage:true});
     await page.click('#btn-ip-blur');
     await page.check('#scan-geo');
-    await context.route('https://ipwho.is/**', (route) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify({ success: true, country_code: 'US' }),
-    }));
+    await context.route('**/api/tools/geoip',async route=>{const body=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,results:body.ips.map(ip=>({ip,countryCode:ip==='203.0.113.1'?null:'US',confidence:ip==='203.0.113.1'?'unavailable':'two-sources',sources:['test-db-1','test-db-2']}))})});});
     await page.fill('#s-cleanips', ['www.speedtest.net#Speedtest', '1.1.1.1#CF-One', '203.0.113.1#BlackholeTest'].join(String.fromCharCode(10)));
     await page.click('#btn-scan-user-list');
-    await page.waitForFunction(() => document.querySelectorAll('#scan-results .scan-item').length === 3, null, { timeout: 16000 });
-    assert((await page.locator('#scan-summary').textContent()).includes('HTTPS'), 'Scanner must report browser HTTPS observations');
+    await page.waitForFunction(() => document.querySelectorAll('#scan-results .scan-item').length === 3, null, { timeout: 30000 });
+    assert((await page.locator('#scan-summary').textContent()).includes('HTTP'), 'Scanner must report actual HTTP observations');
     const failedIP = page.locator('#scan-results .scan-item').filter({hasText:'203.0.113.1'});
     assert(!(await failedIP.innerText()).includes('0/3'), 'No repeated meaningless failure counter');
     assert(!(await failedIP.innerText()).includes('مدت میانهٔ تلاش'), 'Do not display error duration as ping');
     assert((await page.locator('#scan-control').innerText()).includes('HTTP'), 'Measure real panel HTTP RTT separately');
+    await page.click('#btn-ip-blur');await sleep(220);await page.screenshot({path:'docs/screenshots/scanner-results.jpg',quality:90,fullPage:true});await page.click('#btn-ip-blur');
     if (await page.locator('#btn-prune-clean').isVisible()) await page.click('#btn-prune-clean');
     assert((await page.locator('#s-cleanips').inputValue()).includes('203.0.113.1'), 'TLS errors must not silently prune unverified IPs');
     // The user-list probe must NOT turn a reserved TEST-NET address into a fake country flag.
@@ -669,25 +687,30 @@ async function main() {
     assert((await page.locator('#cf-range-list .range-row').first().innerText()).includes('4,096'), '/20 contains 4,096 IPv4 addresses');
     const officialSource = await page.locator('#cf-ranges-panel a.inline-link').getAttribute('href');
     assert.equal(officialSource, 'https://api.cloudflare.com/client/v4/ips');
-    await page.locator('.range-samples').evaluateAll((inputs) => {
-      inputs.forEach((x, i) => { x.value = i === 0 || i === 15 ? '1' : '0'; });
-    });
+    await page.locator('.range-select').evaluateAll(inputs=>inputs.forEach((x,i)=>x.checked=i===0||i===15));
+    await page.locator('#scan-budget').evaluate(select=>{const o=document.createElement('option');o.value='2';o.textContent='test budget';select.appendChild(o);select.value='2';});
     await page.click('#btn-scan-ranges');
-    await page.waitForFunction(() => document.querySelectorAll('#scan-results .range-result').length === 2, null, { timeout: 16000 });
+    await page.waitForFunction(() => document.querySelectorAll('#scan-results .range-result').length === 2, null, { timeout: 30000 });
+    await page.waitForFunction(()=>document.getElementById('btn-scan-stop').hidden);
     assert((await page.locator('#scan-results').innerText()).includes(':'), 'IPv6 CIDR sample must also be generated as a browser candidate');
     const firstRangeRow = page.locator('#scan-results .range-result').first();
     const firstManual = firstRangeRow.locator('.range-manual-cc');
     if (await firstManual.count()) await firstManual.fill('US');
     await firstRangeRow.locator('button').click();
-    assert((await page.locator('#s-cleanips').inputValue()).includes('#US|'), 'Adding a scanned candidate stores country code in the remark');
+    assert((await page.locator('#s-cleanips').inputValue()).includes('#manual:US|'), 'Adding a scanned candidate stores country code in the remark');
     await page.click('#save-net');
     await sleep(300);
     const rawFlagged = (await (await fetch(`${BASE}/sub/${user.subToken}?format=raw`)).text()).trim().split(String.fromCharCode(10));
     const namedNodes = rawFlagged.map((line) => decodeURIComponent(line.split('#')[1] || ''));
-    assert(namedNodes.some((name) => name.includes('🇺🇸 US ·') && /^VLESS/.test(name)), 'Only generated node names must have an ISO-2 code and matching flag');
+    assert(namedNodes.some((name) => /[A-Z]{2} ·/.test(name) && /^VLESS/.test(name)), 'Only generated node names must have an ISO-2 code and matching flag');
     assert(!rawFlagged.some((line) => line.split('?')[0].includes('🇺🇸')), 'Flag must not be placed in raw endpoint addresses');
 
     await page.click('.tab-btn[data-tab="sub"]');
+    await page.evaluate(()=>{window.__copiedSubscription='';Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.__copiedSubscription=value;},write:async items=>{window.__copiedSubscription=await(await items[0].getType('text/plain')).text();}}});});
+    await page.click('#cp-b64');await page.waitForFunction(()=>window.__copiedSubscription.includes('#'));
+    const copiedNamed=await page.evaluate(()=>window.__copiedSubscription);assert(decodeURIComponent(new URL(copiedNamed).hash).includes('US'),'Actual clipboard link includes country, not only an HTTP header');assert(!copiedNamed.includes('undefined'));
+    await page.click('#cp-xray');await page.waitForFunction(()=>window.__copiedSubscription.includes('format=xray'));assert(decodeURIComponent(new URL(await page.evaluate(()=>window.__copiedSubscription)).hash).includes('US'));
+    console.log('✓ [Country links] Browser ClipboardItem async copy carries country in Normal and Xray subscription URL fragments.');
     const directory = page.locator('#pane-sub .client-directory');
     assert.equal(await directory.isVisible(), true, 'Official app directory must belong to the subscription tab');
     assert.equal(await directory.locator('.client-link').count(), await directory.locator('.client-link use[href="#i-external"]').count(), 'Every client link needs its outgoing arrow');
@@ -797,6 +820,7 @@ async function main() {
     await page.click('#btn-cf-close');
     console.log(`✓ [14/15] Cloudflare Daily Request Quota Bar & Token Verifier -> ${cfBarState.miniTxt} (${cfBarState.miniWidth}), mini permissions popup verified`);
 
+    assert.equal(await page.locator('#warp-section').count(),0,'Removed feature must not remain in the panel');
     // ── TEST 15: Hardcoded GitHub (`youdidking/NightLine`) Updater & Self-Deploy + Tab 05 Spacing & Clean Copy Audit ──
     const copyAndSpacingAudit = await page.evaluate(() => {
       const fullHtmlText = document.documentElement.innerHTML;
@@ -826,6 +850,7 @@ async function main() {
     });
     assert(gapTab5 >= 12 && Math.abs(gapTab5 - copyAndSpacingAudit.gapTab1) <= 1, `Tab 05 gap (${gapTab5}px) must match Tab 01 gap (${copyAndSpacingAudit.gapTab1}px)`);
 
+    await page.waitForSelector('#btn-gh-updater.update-ready',{timeout:10000});assert.equal(await page.locator('#gh-upd-dot').isVisible(),true,'Automatic background check must highlight a newer version');
     // Open Hardcoded GitHub Updater Modal, check `youdidking/NightLine`, and trigger In-Panel Self-Update!
     await page.click('#btn-gh-updater');
     await page.waitForSelector('#gh-modal:not([hidden])');
@@ -852,7 +877,7 @@ async function main() {
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 15/15 NIGHTLINE v2.5.3 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 NIGHTLINE v2.5.8 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));

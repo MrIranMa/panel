@@ -108,8 +108,6 @@ const FONTS = [
 const sourceText = [
   'src/ui/index.html',
   'src/ui/app.js',
-  'src/warp-core.js',
-  'src/warp-provider.js',
   'src/sub.js',
   'src/worker.js',
   'src/storage.js',
@@ -187,8 +185,7 @@ for (const [k, v] of Object.entries(fontVars)) {
 }
 const minCss = (await esbuild.transform(rawStyle, { loader: 'css', minify: true })).code.trim();
 const minQr = (await esbuild.transform(read(P('src/ui/vendor/qrcode.js')), { loader: 'js', minify: true })).code.trim();
-const providerBundle=await esbuild.build({stdin:{contents:"import * as W from './src/warp-provider.js';globalThis.NLMasque=W;",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',minify:true,target:'es2022'});
-const minApp = (await esbuild.transform(providerBundle.outputFiles[0].text+'\n'+read(P('src/ui/network.js')) + '\n' + read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
+const minApp = (await esbuild.transform(read(P('src/ui/network.js')) + '\n' + read(P('src/ui/app.js')), { loader: 'js', minify: true })).code.trim();
 
 let indexTemplate = read(P('src/ui/index.html')).replaceAll('{{VERSION}}', VERSION);
 // Embed original icons from each application's official repository: no runtime CDN dependency.
@@ -603,21 +600,12 @@ export async function getPanelHtml() {
   return finalCode;
 }
 
-if (BUILD_PAGES) {
-const pagesWorkerCode = await compileStealthWorker(
-  false,
-  `// NIGHTLINE v${VERSION} — Cloudflare Pages Edition (_worker.js)`
-);
-fs.writeFileSync(P('dist/_worker.js'), pagesWorkerCode);
-console.log(`· pages _worker.js   ${(Buffer.byteLength(pagesWorkerCode) / 1024).toFixed(1)} KB`);
-
-}
-
 const standaloneCode = await compileStealthWorker(
   true,
   `// NIGHTLINE v${VERSION} — Cloudflare Workers Standalone Edition`
 );
 fs.writeFileSync(P('worker-single-file.js'), standaloneCode);
+if(BUILD_PAGES){fs.writeFileSync(P('dist/_worker.js'),standaloneCode);console.log('· Pages uses the verified standalone module; no static-shell binding required.');}
 console.log(`· worker-single-file ${(Buffer.byteLength(standaloneCode) / 1024).toFixed(1)} KB`);
 
 /* ------------------------------------------- Build-time signature audit */
@@ -636,7 +624,7 @@ console.log(`· signature audit    0 matches across all ${AUDIT_KEYWORDS.length}
 if (BUILD_PAGES) {
 const zipPath = P('dist/nightline-pages.zip');
 if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-execFileSync('zip', ['-q', '-r', zipPath, 'index.html', '_worker.js'], { cwd: P('dist') });
+execFileSync('zip', ['-q', '-r', zipPath, '_worker.js'], { cwd: P('dist') });
 console.log(`· nightline-pages.zip ${(fs.statSync(zipPath).size / 1024).toFixed(1)} KB`);
 }
 console.log('· build complete');

@@ -1,15 +1,25 @@
 {
   "name": "nightline",
-  "version": "2.5.7",
+  "version": "2.5.8",
   "scripts": {
     "build": "node build.mjs && node build-installer.mjs",
     "dev": "node build.mjs && wrangler dev --local",
     "deploy": "node build.mjs && wrangler deploy",
+    "test": "node test.mjs",
     "build:installer": "node build-installer.mjs",
+    "test:regression": "node regression.mjs",
+    "test:installer": "node test-installer.mjs",
+    "test:pages": "node test-pages.mjs && node test-pages-runtime.mjs",
+    "test:releases": "node test-releases.mjs",
+    "test:core": "node test-core.mjs && node test-auto-core.mjs",
+    "test:network": "node test-network.mjs",
     "build:pages": "node build.mjs --pages && node build-installer.mjs",
-    "deploy:installer": "wrangler deploy --config wrangler.installer.toml"
+    "deploy:installer": "wrangler deploy --config wrangler.installer.toml",
+    "test:chain": "node test-chain.mjs",
+    "test:tools": "node test-tools.mjs",
+    "test:countries": "node test-tools.mjs && node test-country-runtime.mjs"
   },
-  "description": "NightLine 2.5.7 — free Cloudflare panel with simple reference-method WARP configs and multi-format subscriptions.",
+  "description": "NIGHTLINE v2.5.8 — Free & open-source serverless VLESS, Trojan & Official Telegram Web Proxy panel on Cloudflare Workers & Pages (Multi-user KV, Fragment, Smart ISP Advisor, GitHub Self-Updater, CF Quota Monitor, Private DoH).",
   "devDependencies": {
     "@babel/generator": "^7.29.12",
     "@babel/parser": "^7.29.12",

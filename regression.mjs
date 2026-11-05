@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const officialWorker=fs.readFileSync('worker-single-file.js');
-const officialRelease={tag_name:'2.5.5',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.5/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
+const officialRelease={tag_name:'2.5.8',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.8/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
 import { build } from 'esbuild';
 import { sanitizeSettings, DEFAULT_SETTINGS } from './src/storage.js';
 import installer, { TOKEN_TEMPLATE } from './src/installer.js';
@@ -50,7 +50,7 @@ globalThis.fetch=async(url,opts={})=>{
  const host=new URL(url).hostname;
  if(new URL(url).hostname==='raw.githubusercontent.com'){assert(!opts.headers.authorization);return new Response(failDownload?Buffer.from(officialWorker).fill(32):officialWorker);}
  if(host==='api.github.com'||host==='github.com'){assert(!opts.headers.authorization,'Never send CF credentials to GitHub');return host==='api.github.com'?Response.json(officialRelease):new Response(failDownload?Buffer.from(officialWorker).fill(32):officialWorker);}
- if(host.endsWith('.workers.dev'))return Response.json({ok:true,version:'2.5.5',initialized:true});
+ if(host.endsWith('.workers.dev'))return Response.json({ok:true,version:'2.5.8',initialized:true});
  const path=new URL(url).pathname.replace('/client/v4','');calls.push([opts.method||'GET',path]);
  assert.equal(opts.headers.authorization,'Bearer '+token);
  let result={};
@@ -65,7 +65,7 @@ globalThis.fetch=async(url,opts={})=>{
 const installRequest=()=>new Request('https://installer.example/install',{method:'POST',headers:{origin:'https://installer.example','content-type':'application/json'},body:JSON.stringify({token})});
 try{
  const result=await (await installer.fetch(installRequest())).json();
- assert.equal(result.ok,true,result.error);assert.equal(result.version,'2.5.5');assert.equal(result.verified,true);
+ assert.equal(result.ok,true,result.error);assert.equal(result.version,'2.5.8');assert.equal(result.verified,true);
  assert.match(result.url,/^https:\/\/nightline-free-[a-f0-9]{12}\.existing-account\.workers.dev\/panel$/);
  assert.equal(result.password.length,48);
  assert(!JSON.stringify(persisted).includes(token));assert(persisted.auth.hash||persisted.auth.passwordHash);
@@ -90,4 +90,4 @@ try{
 }finally{globalThis.fetch=originalFetch;}
 console.log('All regression groups passed. Live Cloudflare installation and Iranian ISP Fragment performance are not certified by these tests.');
 
-{const v6user={uuid:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',trojanPassword:'test',name:'IPv6',enabled:true};const nodes=sub.buildNodeDescriptors(v6user,{...DEFAULT_SETTINGS,cleanIPs:['[2606:4700::1111]#US|IPv6']},'panel.example');assert(nodes.some(n=>n.address==='2606:4700::1111'&&n.name.includes('🇺🇸 US')),'Bracketed IPv6 without explicit port must survive subscriptions with country label');console.log('PASS bracketed IPv6 clean-IP country label preserved without requiring an explicit port.');}
+{const v6user={uuid:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',trojanPassword:'test',name:'IPv6',enabled:true};const nodes=sub.buildNodeDescriptors(v6user,{...DEFAULT_SETTINGS,cleanIPs:['[2606:4700::1111]#manual:US|IPv6']},'panel.example');assert(nodes.some(n=>n.address==='2606:4700::1111'&&n.name.includes('🇺🇸 US')),'Bracketed IPv6 without explicit port must survive subscriptions with country label');console.log('PASS bracketed IPv6 clean-IP country label preserved without requiring an explicit port.');}

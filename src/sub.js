@@ -1,3 +1,4 @@
+import {countryForEntry,countryNodeLabel,parseCountryEntry,countryFlag} from './geo.js';
 /**
  * NIGHTLINE — Multi-core Subscription & Press Pass Generator.
  *
@@ -37,6 +38,7 @@ function parseCleanEntry(raw) {
   if (!ep || !ep.host) return null;
   const hostClean = ep.host.replace(/^\[|\]$/g, '');
   return {
+    geoRaw: str,
     address: hostClean,
     portOverride: ep.explicitPort ? ep.port : 0,
     remark: remark.replace(/^manual:/,'') || hostClean,
@@ -45,15 +47,7 @@ function parseCleanEntry(raw) {
 
 // Scanner stores an approximate GeoIP ISO-2 tag after #, e.g. 172.67.73.163#NL|Scan.
 // The flag is intentionally confined to subscription NODE NAMES; no connection field changes.
-function cleanIpNodeLabel(entry) {
-  const match = String(entry.remark || '').match(/^([A-Z]{2})\|(.*)$/i);
-  const isIp = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(entry.address) || entry.address.includes(':');
-  if (!match || !isIp) return entry.remark || entry.address;
-  const cc = match[1].toUpperCase();
-  const flag = String.fromCodePoint(...[...cc].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65));
-  const note = match[2].trim();
-  return `${flag} ${cc} · ${entry.address}${note ? ` · ${note}` : ''}`;
-}
+function cleanIpNodeLabel(entry,settings){return countryNodeLabel(entry.geoRaw||entry.address,settings);}
 
 export function buildWsPath(settings) {
   const base = (settings.wsPath || '/').split('?')[0] || '/';
@@ -147,7 +141,8 @@ export function buildNodeDescriptors(user, settings, requestHost) {
       address: parsed.address,
       sni: parsed.address,
       hostHeader: parsed.address,
-      tagLabel: parsed.remark || parsed.address,
+      tagLabel: cleanIpNodeLabel(parsed,settings),
+      geoRaw: parsed.geoRaw,
       ports: parsed.portOverride ? [parsed.portOverride] : allTlsPorts,
       tls: true,
     });
@@ -163,7 +158,8 @@ export function buildNodeDescriptors(user, settings, requestHost) {
       address: parsed.address,
       sni: hostOnly,
       hostHeader: hostOnly,
-      tagLabel: cleanIpNodeLabel(parsed),
+      tagLabel: cleanIpNodeLabel(parsed,settings),
+      geoRaw: parsed.geoRaw,
       ports: parsed.portOverride ? [parsed.portOverride] : allTlsPorts,
       tls: true,
     });
@@ -184,7 +180,8 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         address: parsed.address,
         sni: '',
         hostHeader: parsed.address,
-        tagLabel: parsed.remark || parsed.address,
+        tagLabel: cleanIpNodeLabel(parsed,settings),
+      geoRaw: parsed.geoRaw,
         ports: parsed.portOverride ? [parsed.portOverride] : allHttpPorts,
         tls: false,
       });
@@ -194,7 +191,8 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         address: parsed.address,
         sni: '',
         hostHeader: hostOnly,
-        tagLabel: cleanIpNodeLabel(parsed),
+        tagLabel: cleanIpNodeLabel(parsed,settings),
+      geoRaw: parsed.geoRaw,
         ports: parsed.portOverride ? [parsed.portOverride] : allHttpPorts,
         tls: false,
       });
@@ -206,6 +204,7 @@ export function buildNodeDescriptors(user, settings, requestHost) {
   const alwaysShowTlsPort = allTlsPorts.length > 1;
 
   for (const t of targets) {
+    const geo=countryForEntry(parseCountryEntry(t.geoRaw||t.address),settings);
     for (const port of t.ports) {
       const portSuffix = !t.tls || alwaysShowTlsPort || port !== 443 ? `:${port}` : '';
       const protoMid = t.tls ? '' : 'HTTP · ';
@@ -215,6 +214,9 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         nodes.push({
           index: idx++,
           name,
+          countryCode:geo.countryCode||null,
+          countryConfidence:geo.confidence,
+          countryScope:geo.scope,
           protocol: 'vless',
           address: t.address,
           port,
@@ -236,6 +238,9 @@ export function buildNodeDescriptors(user, settings, requestHost) {
         nodes.push({
           index: idx++,
           name,
+          countryCode:geo.countryCode||null,
+          countryConfidence:geo.confidence,
+          countryScope:geo.scope,
           protocol: 'trojan',
           address: t.address,
           port,
@@ -760,10 +765,16 @@ export function buildClashYaml(userView, settings, requestHost) {
 
 /* ------------------------------------------- Subscription HTTP Dispatcher */
 
+export function buildSubscriptionTitle(userView,settings,requestHost){
+ const nodes=buildNodeDescriptors(userView,settings,requestHost),codes=[...new Set(nodes.map(n=>n.countryCode).filter(Boolean))];
+ const label=codes.length?codes.slice(0,8).map(cc=>countryFlag(cc)+' '+cc).join(' / ')+(codes.length>8?' +'+(codes.length-8):''):'CC ?';
+ return `${PANEL_BRAND} · ${userView.name} · ${label}`;
+}
+export function buildSubscriptionLinks(origin,userView,settings,requestHost=new URL(origin).host){
+ const title=buildSubscriptionTitle(userView,settings,requestHost),links={};for(const format of ['b64','raw','xray','singbox','clash']){const u=new URL('/sub/'+encodeURIComponent(userView.subToken),origin);u.searchParams.set('format',format);u.hash=title;links[format]=u.toString();}return links;
+}
 export function buildSubscriptionHeaders(userView, settings, requestHost) {
-  const countries=[...new Set((settings.cleanIPs||[]).map(v=>String(v).match(/#(?:manual:)?([A-Z]{2})\|/i)?.[1]?.toUpperCase()).filter(Boolean))];
-  const countryTitle=countries.map(cc=>String.fromCodePoint(...[...cc].map(c=>0x1f1e6+c.charCodeAt(0)-65))+' '+cc).join(' / ');
-  const titleB64 = utf8ToBase64(`${PANEL_BRAND} · ${userView.name}${countryTitle?' · '+countryTitle:''}`);
+  const titleB64 = utf8ToBase64(buildSubscriptionTitle(userView,settings,requestHost));
   const announceB64 = utf8ToBase64(FREE_NOTICE_FULL);
   const expSec = userView.effectiveExpiresAt > 0 ? Math.floor(userView.effectiveExpiresAt / 1000) : 0;
   return {
@@ -774,6 +785,7 @@ export function buildSubscriptionHeaders(userView, settings, requestHost) {
     'subscription-userinfo': `upload=${userView.usedUpBytes}; download=${userView.usedDownBytes}; total=${userView.limitBytes}; expire=${expSec}`,
     'profile-web-page-url': `https://${requestHost}/sub/${encodeURIComponent(userView.subToken)}`,
     'access-control-allow-origin': '*',
+    'access-control-expose-headers':'profile-title, subscription-userinfo, profile-update-interval',
   };
 }
 
@@ -962,6 +974,8 @@ function esc(s) {
 
 export function renderSubscriberPressPass(userView, settings, requestHost, assets = {}) {
   const nodes = buildNodeDescriptors(userView, settings, requestHost);
+  const namedLinks=buildSubscriptionLinks('https://'+requestHost,userView,settings);
+  const namedSub=(format='b64')=>namedLinks[format]||namedLinks.b64;
   const baseSub = `https://${requestHost}/sub/${encodeURIComponent(userView.subToken)}`;
   const dohUrl = `https://${requestHost}/dns-query/${encodeURIComponent(userView.subToken)}`;
   const usedStr = formatBytes(userView.usedBytes);
@@ -1094,26 +1108,24 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
       </table>
       <div class="meter" style="margin-top:12px"><i style="width:${pct}%"></i></div>
 
-      ${(settings.managedWarpReady||[]).some(a=>a.ready)?`<p class="kicker"><span class="fa">حساب‌های آمادهٔ WARP شما</span><span class="en">YOUR MANAGED WARP ACCOUNTS</span></p>${(settings.managedWarpReady||[]).some(a=>a.ready&&['public-list','reference-api'].includes(a.source))?'<p class="hint"><span class="fa">کلید MASQUE از مرجع ثالث دریافت شده است؛ در روش فهرست عمومی، کلید اشتراکی است.</span><span class="en">The MASQUE key is supplied by a third party; public-list keys are shared.</span></p>':''}<p class="hint"><span class="fa">این خروجی‌ها مستقیم به WARP متصل می‌شوند؛ محدودیت مصرف و انقضای Worker روی فایل دانلودشده اجرا نمی‌شود. فایل محرمانه است.</span><span class="en">These configs connect directly to WARP. Worker traffic/expiry limits do not apply to exported files. Keep credentials private.</span></p><div class="sub-grid">${settings.managedWarpReady.filter(a=>a.ready).map(a=>a.kind==='masque'?`<a class="btn sm-btn" href="${esc(baseSub+'?format=warp-masque&transport=h2')}">MASQUE · H2 / TCP</a><a class="btn ghost sm-btn" href="${esc(baseSub+'?format=warp-masque&transport=h3')}">MASQUE · H3 / QUIC</a>`:`<a class="btn sm-btn" href="${esc(baseSub+'?format=warp-wireguard')}">WireGuard · Xray</a><a class="btn ghost sm-btn" href="${esc(baseSub+'?format=warp-conf')}">WireGuard · .conf</a>`).join('')}</div>`:''}
-
       <p class="kicker" style="margin-top:22px"><span class="fa">لینک‌های اشتراکِ هوشمند</span><span class="en">SUBSCRIPTION LINKS</span></p>
       <div class="sub-grid">
-        <button class="btn primary sm-btn cp" data-val="${esc(baseSub)}"><span class="fa">کپی اشتراک عمومی (Base64)</span><span class="en">COPY NORMAL SUB</span></button>
-        <button class="btn sm-btn cp" data-val="${esc(baseSub + '?format=xray')}"><span class="fa">کپی اشتراک Fragment (ضد فیلتر)</span><span class="en">COPY XRAY FRAGMENT</span></button>
-        <button class="btn sm-btn cp" data-val="${esc(baseSub + '?format=singbox')}"><span class="fa">کپی Sing-box / Hiddify</span><span class="en">COPY SING-BOX</span></button>
-        <button class="btn sm-btn cp" data-val="${esc(baseSub + '?format=clash')}"><span class="fa">کپی Clash / Mihomo</span><span class="en">COPY CLASH YAML</span></button>
+        <button class="btn primary sm-btn cp" data-val="${esc(namedSub())}"><span class="fa">کپی اشتراک عمومی (Base64)</span><span class="en">COPY NORMAL SUB</span></button>
+        <button class="btn sm-btn cp" data-val="${esc(namedSub('xray'))}"><span class="fa">کپی اشتراک Fragment (ضد فیلتر)</span><span class="en">COPY XRAY FRAGMENT</span></button>
+        <button class="btn sm-btn cp" data-val="${esc(namedSub('singbox'))}"><span class="fa">کپی Sing-box / Hiddify</span><span class="en">COPY SING-BOX</span></button>
+        <button class="btn sm-btn cp" data-val="${esc(namedSub('clash'))}"><span class="fa">کپی Clash / Mihomo</span><span class="en">COPY CLASH YAML</span></button>
         <button class="btn ghost sm-btn cp" data-val="${esc(dohUrl)}"><span class="fa">کپی DoH اختصاصی</span><span class="en">COPY PRIVATE DoH</span></button>
       </div>
       ${tgHtmlBlock}
 
       <p class="kicker" style="margin-top:20px"><span class="fa">ورودِ یک‌ضرب به برنامه</span><span class="en">ONE-TAP CLIENT IMPORT</span></p>
       <div class="actions" style="margin-top:8px">
-        <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(baseSub)}">v2rayNG</a>
-        <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(baseSub + '?format=xray')}">v2rayNG (Frag)</a>
-        <a class="btn ghost sm-btn" href="hiddify://import/${encodeURIComponent(baseSub + '?format=singbox')}#NIGHTLINE">Hiddify</a>
-        <a class="btn ghost sm-btn" href="sing-box://import-remote-profile?url=${encodeURIComponent(baseSub + '?format=singbox')}#NIGHTLINE">Sing-box</a>
-        <a class="btn ghost sm-btn" href="streisand://import/${encodeURIComponent(baseSub)}">Streisand</a>
-        <a class="btn ghost sm-btn" href="clash://install-config?url=${encodeURIComponent(baseSub + '?format=clash')}&name=NIGHTLINE">Clash</a>
+        <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(namedSub())}">v2rayNG</a>
+        <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(namedSub('xray'))}">v2rayNG (Frag)</a>
+        <a class="btn ghost sm-btn" href="hiddify://import/${encodeURIComponent(namedSub('singbox'))}#NIGHTLINE">Hiddify</a>
+        <a class="btn ghost sm-btn" href="sing-box://import-remote-profile?url=${encodeURIComponent(namedSub('singbox'))}#NIGHTLINE">Sing-box</a>
+        <a class="btn ghost sm-btn" href="streisand://import/${encodeURIComponent(namedSub())}">Streisand</a>
+        <a class="btn ghost sm-btn" href="clash://install-config?url=${encodeURIComponent(namedSub('clash'))}&name=NIGHTLINE">Clash</a>
       </div>
     </section>
 
@@ -1124,8 +1136,8 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
         <p class="mono sm" id="s-qr-label" style="margin:10px 0 0;word-break:break-all">SUBSCRIPTION URL</p>
       </div>
       <div class="actions" style="justify-content:center;margin-top:12px">
-        <button class="btn ghost sm-btn qr-pick" data-q="${esc(baseSub)}" data-l="Normal Sub">Normal QR</button>
-        <button class="btn ghost sm-btn qr-pick" data-q="${esc(baseSub + '?format=xray')}" data-l="Fragment Sub">Fragment QR</button>
+        <button class="btn ghost sm-btn qr-pick" data-q="${esc(namedSub())}" data-l="Normal Sub">Normal QR</button>
+        <button class="btn ghost sm-btn qr-pick" data-q="${esc(namedSub('xray'))}" data-l="Fragment Sub">Fragment QR</button>
       </div>
     </section>
   </div>

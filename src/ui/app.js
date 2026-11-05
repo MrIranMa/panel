@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.7 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.8 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -217,7 +217,7 @@
       ta.style.top = '-999px';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); done(); } catch (e) {}
+      try { if(document.execCommand('copy'))done();else window.prompt(tr('کپی خودکار نشد؛ لینک را دستی کپی کنید:','Automatic copy failed; copy this link manually:'),str); } catch (e) {window.prompt(tr('لینک را دستی کپی کنید:','Copy this link manually:'),str);}
       document.body.removeChild(ta);
     }
   }
@@ -1044,7 +1044,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.7',
+      version: '2.5.8',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1082,7 +1082,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.7)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.8)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1189,11 +1189,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.7',
-          latestVersion: '2.5.7',
+          currentVersion: '2.5.8',
+          latestVersion: '2.5.8',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.7 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.8 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1203,8 +1203,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.7',
-          targetVersion: '2.5.7',
+          previousVersion: '2.5.8',
+          targetVersion: '2.5.8',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -1369,6 +1369,7 @@
       if (data.initialNodes && STATE.users[0] && STATE.selectedUserId === STATE.users[0].id) {
         STATE.currentNodes = data.initialNodes;
         renderActiveUserPass();
+        loadUserNodes(STATE.selectedUserId);
       } else {
         STATE.currentNodes = [];
         renderActiveUserPass();
@@ -1521,9 +1522,12 @@
     if (!userId) return;
     try {
       var res = await api('/api/users/' + encodeURIComponent(userId) + '/nodes', 'GET');
+      if(STATE.selectedUserId!==userId)return;
       STATE.currentNodes = res.nodes || [];
+      STATE.subscriptionMeta={userId:userId,title:res.subscriptionTitle,links:res.subscriptionLinks||{},at:Date.now()};
       renderActiveUserPass();
-    } catch (e) {}
+      return res;
+    } catch (e) {return null;}
   }
 
   $('sel-user').addEventListener('change', function () {
@@ -1622,7 +1626,7 @@
       $('u-meter').parentElement.classList.toggle('warn', u.limitBytes > 0 && pct >= 90);
     }
 
-    var base = subBaseUrl(u);
+    var base = currentSubscriptionUrl(u,'b64');
     $('open-pass').href = '/sub/' + encodeURIComponent(u.subToken);
     syncTgLinksUI();
 
@@ -1659,30 +1663,11 @@
     });
   }
 
-  $('cp-b64').onclick = function () { var u = getSelectedUser(); if (u) copyText(subBaseUrl(u), 'لینک اشتراک عمومی', 'Normal Sub URL'); };
-  $('cp-xray').onclick = function () { var u = getSelectedUser(); if (u) copyText(subBaseUrl(u) + '?format=xray', 'لینک اشتراک Fragment', 'Xray Fragment URL'); };
-  $('cp-sb').onclick = function () { var u = getSelectedUser(); if (u) copyText(subBaseUrl(u) + '?format=singbox', 'لینک Sing-box / Hiddify', 'Sing-box URL'); };
-  $('cp-clash').onclick = function () { var u = getSelectedUser(); if (u) copyText(subBaseUrl(u) + '?format=clash', 'لینک Clash / Mihomo', 'Clash URL'); };
-  $('cp-doh').onclick = function () { var u = getSelectedUser(); if (u) copyText(dohFullUrl(u), 'آدرس DoH اختصاصی', 'Private DoH URL'); };
-
-  $('qr-btn-b64').onclick = function () {
-    var u = getSelectedUser(); if (!u) return;
-    STATE.currentQrText = subBaseUrl(u);
-    $('qr-caption').textContent = 'NORMAL SUBSCRIPTION';
-    drawQrInto('main-qr', STATE.currentQrText);
-  };
-  $('qr-btn-xray').onclick = function () {
-    var u = getSelectedUser(); if (!u) return;
-    STATE.currentQrText = subBaseUrl(u) + '?format=xray';
-    $('qr-caption').textContent = 'FRAGMENT SUB (XRAY JSON)';
-    drawQrInto('main-qr', STATE.currentQrText);
-  };
-  $('qr-btn-sb').onclick = function () {
-    var u = getSelectedUser(); if (!u) return;
-    STATE.currentQrText = subBaseUrl(u) + '?format=singbox';
-    $('qr-caption').textContent = 'SING-BOX / HIDDIFY SUB';
-    drawQrInto('main-qr', STATE.currentQrText);
-  };
+  function currentSubscriptionUrl(user,format){var m=STATE.subscriptionMeta;if(m&&m.userId===user.id&&m.links[format])return m.links[format];var q=new URL(subBaseUrl(user));q.searchParams.set('format',format);q.hash='NIGHTLINE · '+user.name+' · CC ?';return q.toString();}
+  async function refreshedSubscriptionUrl(user,format){var fresh=await loadUserNodes(user.id);if(!fresh)throw Error(tr('دریافت اطلاعات تازهٔ اشتراک ناموفق بود؛ دوباره تلاش کنید.','Fresh subscription metadata could not be loaded; please retry.'));if(!getSelectedUser()||getSelectedUser().id!==user.id)throw Error(tr('کاربر تغییر کرد؛ دوباره تلاش کنید.','Selected user changed; try again.'));return currentSubscriptionUrl(user,format);}
+  [['cp-b64','b64'],['cp-xray','xray'],['cp-sb','singbox'],['cp-clash','clash']].forEach(function(pair){$(pair[0]).onclick=async function(){var u=getSelectedUser();if(!u)return;this.disabled=true;try{var pending=refreshedSubscriptionUrl(u,pair[1]);if(navigator.clipboard&&navigator.clipboard.write&&globalThis.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'text/plain':pending.then(function(link){return new Blob([link],{type:'text/plain'});})})]);showToast('لینک اشتراک با برچسب کشور رونوشت شد','Country-labelled subscription URL copied');}catch(e){copyText(await pending,'لینک اشتراک با برچسب کشور','Subscription URL with country label');}}else copyText(await pending,'لینک اشتراک با برچسب کشور','Subscription URL with country label');}catch(e){showToast(e.message,e.message);}finally{this.disabled=false;}};});
+  $('cp-doh').onclick=function(){var u=getSelectedUser();if(u)copyText(dohFullUrl(u),'آدرس DoH اختصاصی','Private DoH URL');};
+  [['qr-btn-b64','b64'],['qr-btn-xray','xray'],['qr-btn-sb','singbox']].forEach(function(pair){$(pair[0]).onclick=async function(){var u=getSelectedUser();if(!u)return;this.disabled=true;try{STATE.currentQrText=await refreshedSubscriptionUrl(u,pair[1]);$('qr-caption').textContent=(STATE.subscriptionMeta&&STATE.subscriptionMeta.title)||u.name;drawQrInto('main-qr',STATE.currentQrText);}catch(e){showToast(e.message,e.message);}finally{this.disabled=false;}};});
   if ($('qr-btn-tg')) {
     $('qr-btn-tg').onclick = function () {
       var tg = computeTgLinks(false);
@@ -2092,6 +2077,7 @@
       bareHost: bare,
       port: port,
       remark: remark || bare,
+      countryManual:/^manual:/i.test(remark),
       countryCode: geoMatch ? geoMatch[1].toUpperCase() : '',
       isRawIp: isIpv4 || isIpv6
     };
@@ -2104,12 +2090,12 @@
   function updateScanSummary(stopped){$('scan-summary').textContent=(stopped?tr('متوقف شد · ','Stopped · '):'')+scanCounts.tested+(Number.isFinite(scanGoal)?'/'+scanGoal:tr(' · پیوسته',' · continuous'))+tr(' بررسی · HTTP: ',' tested · HTTP: ')+scanCounts.http+tr(' · نامزد: ',' · candidates: ')+scanCounts.candidates+tr(' · بی‌پاسخ: ',' · timed out: ')+scanCounts.timeouts+tr('؛ نمایش ۴۰۰ نتیجهٔ آخر؛ هیچ IPی حذف نمی‌شود.','; latest 400 rows shown; no IP is removed.');}
   function scanBadge(r){if(r.kind==='unstable')return 'HTTP '+r.replies+'/'+r.attempts+' · '+tr('ناپایدار','UNSTABLE');if(r.ok)return 'HTTP · '+r.responseMs+' ms';if(r.candidate)return tr('نامزد · واکنش ','CANDIDATE · REACTION ')+r.candidateMs+' ms';return r.kind==='timeout'?tr('بی‌پاسخ · مهلت تمام شد','TIMEOUT'):tr('تأیید نشده','UNCONFIRMED');}
   function scanDetail(r){if(r.kind==='unstable')return tr('پاسخ HTTP دریافت شد اما تکرارپذیر نبود.','HTTP replied, but not consistently.');return r.ok?tr('پاسخ واقعی؛ اتصال کانفیگ را جدا تست کنید.','Actual response; verify config connectivity separately.'):r.candidate?tr('سرنخ مرورگر؛ تأیید نهایی با کلاینت.','Browser candidate; verify in client.'):r.kind==='timeout'?tr('در این تلاش پاسخی نرسید؛ قطع قطعی یا فیلترینگ ثابت نشده است.','No response before the deadline; not proof of blocking.'):tr('خطای مرورگر یا مسیر؛ وضعیت اتصال نامعلوم است.','Browser/path error; connectivity remains unknown.');}
-  function attachCountryToEntry(entry,cc){if(!entry.isRawIp)return;var note=entry.remark.replace(/^[A-Z]{2}\|/i,'').trim();if(note===entry.bareHost)note='Scan';entry.countryCode=cc||'';entry.rawLine=entry.addrPart+'#'+(cc?cc+'|':'')+(note||'Scan');}
+  function attachCountryToEntry(entry,cc){if(!entry.isRawIp)return;var note=entry.remark.replace(/^(?:manual:)?[A-Z]{2}\|/i,'').trim();if(note===entry.bareHost)note='Scan';entry.countryCode=cc||'';entry.rawLine=entry.addrPart+'#'+(cc?cc+'|':'')+(note||'Scan');}
   async function enrichScanCountries(results,force){
     var targets=results.filter(function(r){return r.entry.isRawIp;});
     for(var i=0;i<targets.length;i+=16){if(scannerController&&scannerController.signal.aborted)break;var part=targets.slice(i,i+16);
-      var response=await fetch('/api/tools/geoip',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({ips:part.map(function(r){return r.entry.bareHost;})}),signal:scannerController?scannerController.signal:undefined});
-      if(!response.ok)continue;var data=await response.json();(data.results||[]).forEach(function(g,j){var r=part[j];if(!r)return;r.entry.geo=g;if(g.countryCode)attachCountryToEntry(r.entry,g.countryCode);else if(g.confidence==='conflict'||force)attachCountryToEntry(r.entry,'');if(r.element){var field=r.element.querySelector('.scan-country');field.textContent=(r.entry.countryCode||'CC ?')+' · '+(g.confidence==='two-sources'?tr('۲ منبع','2 sources'):g.confidence==='conflict'?tr('اختلاف منابع','conflict'):tr('GeoIP تقریبی','approx. GeoIP'));field.title=(g.sources||[]).join(' + ');}});
+      var response=await fetch('/api/tools/geoip',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({ips:part.map(function(r){return r.entry.bareHost;}),refresh:!!force}),signal:scannerController?scannerController.signal:undefined});
+      if(!response.ok)continue;var data=await response.json();(data.results||[]).forEach(function(g,j){var r=part[j];if(!r)return;r.entry.geo=g;if(!r.entry.countryManual)attachCountryToEntry(r.entry,g.countryCode||'');if(r.element){var field=r.element.querySelector('.scan-country');field.textContent=(r.entry.countryCode||'CC ?')+' · '+(g.confidence==='two-sources'?tr('۲ منبع','2 sources'):r.entry.countryManual?tr('برچسب دستی','manual label'):g.confidence==='conflict'?tr('اختلاف منابع','conflict'):g.confidence==='single-source'?tr('تقریبی · ۱ منبع','approx. · 1 source'):tr('کشور نامعلوم','country unknown'));field.title=(g.sources||[]).join(' + ');}});
     }
   }
   function appendScanResult(r){
@@ -2170,38 +2156,6 @@
       showToast(e.message, e.message);
     }
   };
-
-  var warpAccounts=[],warpBusy=false,warpController=null,warpCache=new Map(),warpLoads=new Map();
-  var masqueProvider=globalThis.NLMasque.createMasqueProvider({storage:LS});
-  function warpStatus(fa,en){$('warp-status').textContent=tr(fa,en);}
-  function warpDownload(name,value,type){var blob=new Blob([value],{type:type||'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);}
-  function managedWarpUrl(conf){var u=getSelectedUser();if(!u)return '';var q=new URLSearchParams({format:conf?'warp-conf':'warp-'+$('warp-kind').value,transport:$('warp-mode').value});var endpoint=$('warp-endpoint').value.trim(),port=$('warp-port').value;if(endpoint)q.set('endpoint',endpoint);if(port)q.set('port',port);if($('warp-fragment').checked)q.set('fragment','1');return subBaseUrl(u)+'?'+q.toString();}
-  function showManagedWarp(){var u=getSelectedUser(),kind=$('warp-kind').value,a=warpAccounts.find(function(x){return x.kind===kind;});$('warp-selected').textContent=tr('کاربر منتخب: ','Selected user: ')+(u?u.name:'—');$('warp-xray').disabled=!a||!a.ready;$('warp-copy').disabled=!a||!a.ready;$('warp-wg').hidden=kind!=='wireguard';$('warp-wg').disabled=kind!=='wireguard'||!a||!a.ready;$('warp-new').disabled=warpBusy||kind!=='masque'||$('warp-source').value!=='reference';$('warp-public-list').hidden=kind!=='masque';if(!warpBusy)warpStatus(a&&a.ready?(a.source==='public-list'?'کانفیگ آماده با کلید اشتراکی فهرست عمومی؛ دانلود یا لینک را بگیرید.':'کانفیگ آماده است؛ دانلود یا لینک کاربر را بگیرید.'):a&&a.pending?'ثبت مستقیم ناقص است؛ با گزینهٔ ثبت مستقیم تکمیل کنید.':'برای شروع، دکمهٔ دریافت و آماده‌سازی را بزنید.',a&&a.ready?(a.source==='public-list'?'Ready using a shared public-list key. Download or copy the user link.':'Config ready. Download or copy the user link.'):'Get a key to prepare this user’s config.');}
-  async function loadManagedWarp(force){var u=getSelectedUser();if(!u)return;var uid=u.id,cached=warpCache.get(uid);if(force!==true&&cached&&Date.now()-cached.at<15000){warpAccounts=cached.accounts;showManagedWarp();return;}warpAccounts=[];showManagedWarp();try{var job=warpLoads.get(uid);if(!job){job=api('/api/warp/accounts?userId='+encodeURIComponent(uid),'GET');warpLoads.set(uid,job);}var r=await job;warpCache.set(uid,{accounts:r.accounts||[],at:Date.now()});if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus(e.message,e.message);}finally{warpLoads.delete(uid);}}
-  async function saveReferenceKey(uid,result){var account={kind:'masque',source:result.source,credentials:result.credentials};await api('/api/warp/account-backup','POST',{userId:uid,kind:'masque',account:account});warpCache.delete(uid);if(getSelectedUser()&&getSelectedUser().id===uid)await loadManagedWarp(true);}
-  async function prepareWarp(listMode,fresh){
-    if(isSandboxPreview||warpBusy)return;if(!$('warp-consent').checked){warpStatus('ابتدا شرایط دریافت کلید و ذخیره را تأیید کنید.','Consent is required first.');return;}
-    var u=getSelectedUser();if(!u)return;var uid=u.id,kind=$('warp-kind').value,ready=warpAccounts.find(function(a){return a.kind===kind&&a.ready;});
-    if(!listMode&&!fresh&&ready){showManagedWarp();return;}
-    if((listMode||fresh)&&ready&&!confirm(tr('کلید قبلی این پروتکل جایگزین می‌شود؛ ادامه می‌دهید؟','Replace this protocol’s previous key?')))return;
-    warpBusy=true;warpController=new AbortController();var signal=warpController.signal,deadline=setTimeout(function(){warpController.abort();},50000);$('warp-register').disabled=true;$('warp-public-list').disabled=true;$('warp-new').disabled=true;$('warp-cancel').hidden=!(kind==='masque'&&(listMode||$('warp-source').value==='reference'));
-    try{
-      if(kind==='masque'&&(listMode||$('warp-source').value==='reference')){
-        var result=listMode?await masqueProvider.fromList({consent:true,signal:signal,publicKey:$('warp-peer').value.trim()}):await masqueProvider.acquire({consent:true,signal:signal,onProgress:function(i,n){warpStatus('در حال دریافت کلید از مرجع '+i+' از '+n+'…','Getting key from reference '+i+'/'+n+'…');}});
-        if(signal.aborted)throw Error('cancelled');warpStatus('کلید دریافت شد؛ در حال آماده‌سازی لینک کاربر…','Key received; preparing user link…');await saveReferenceKey(uid,result);
-      }else{warpStatus('در حال ثبت مستقیم حساب…','Enrolling account directly…');var r=await api('/api/warp/accounts','POST',{userId:uid,kind:kind,consent:true},25000);warpCache.set(uid,{accounts:r.accounts||[],at:Date.now()});if(getSelectedUser()&&getSelectedUser().id===uid)warpAccounts=r.accounts||[];}
-      warpBusy=false;if(getSelectedUser()&&getSelectedUser().id===uid)showManagedWarp();
-    }catch(e){warpStatus(signal.aborted?'درخواست متوقف شد؛ کانفیگ جدیدی تأیید نشد.':e.message,signal.aborted?'Stopped; no new config confirmed.':e.message);}
-    finally{clearTimeout(deadline);warpBusy=false;warpController=null;$('warp-register').disabled=false;$('warp-public-list').disabled=false;$('warp-cancel').hidden=true;$('warp-new').disabled=$('warp-kind').value!=='masque'||$('warp-source').value!=='reference';}
-  }
-  $('warp-refresh').onclick=function(){loadManagedWarp(true);};$('warp-source').onchange=showManagedWarp;
-  $('warp-kind').onchange=function(){if(warpController)warpController.abort();showManagedWarp();};
-  $('warp-section').addEventListener('toggle',function(){if(this.open)loadManagedWarp();});
-  $('sel-user').addEventListener('change',function(){if(warpController)warpController.abort();warpAccounts=[];showManagedWarp();if($('warp-section').open)loadManagedWarp();});
-  $('warp-register').onclick=function(){prepareWarp(false,false);};$('warp-public-list').onclick=function(){prepareWarp(true,true);};$('warp-new').onclick=function(){prepareWarp(false,true);};$('warp-cancel').onclick=function(){if(warpController)warpController.abort();};
-  $('warp-xray').onclick=function(){location.href=managedWarpUrl(false);};$('warp-wg').onclick=function(){location.href=managedWarpUrl(true);};$('warp-copy').onclick=function(){copyText(managedWarpUrl(false),'لینک کانفیگ کاربر','User config URL');};
-  $('warp-backup').onclick=async function(){var u=getSelectedUser();if(!u)return;try{var r=await api('/api/warp/account-backup?userId='+encodeURIComponent(u.id)+'&kind='+$('warp-kind').value,'GET');warpDownload('nightline-managed-warp-private.json',JSON.stringify(r,null,2));}catch(e){warpStatus(e.message,e.message);}};
-  $('warp-import').onchange=async function(){var f=this.files&&this.files[0],u=getSelectedUser();if(!f||!u||f.size>65536)return;var uid=u.id;try{var b=JSON.parse(await f.text()),account;if(b.nightlineManagedWarp===1)account=b.account;else account={kind:'masque',source:'manual',credentials:await globalThis.NLMasque.normalizeMasqueCredential(b,{publicKey:$('warp-peer').value.trim()})};await api('/api/warp/account-backup','POST',{userId:uid,kind:account.kind,account:account});warpCache.delete(uid);if(getSelectedUser()&&getSelectedUser().id===uid){$('warp-kind').value=account.kind;await loadManagedWarp(true);}}catch(e){warpStatus(e.message,e.message);}finally{this.value='';}};
 
   $('f-pass').addEventListener('submit', async function (ev) {
     ev.preventDefault();
@@ -2522,7 +2476,7 @@
   setInterval(function(){if(STATE.mode==='admin'&&!document.hidden)checkGitHubUpdates(true);},900000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&STATE.mode==='admin'&&Date.now()-ghLastCheck>900000)checkGitHubUpdates(true);});
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.7';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.8';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
     if($('btn-gh-updater')){$('btn-gh-updater').classList.toggle('update-ready',!!(STATE.ghInfo&&STATE.ghInfo.updateAvailable));$('btn-gh-updater').setAttribute('aria-label',STATE.ghInfo&&STATE.ghInfo.updateAvailable?tr('نسخه جدید آماده است','New version available'):tr('بررسی بروزرسانی','Check for updates'));}
