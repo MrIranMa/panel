@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.5 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* NIGHTLINE v2.5.6 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
@@ -1044,7 +1044,7 @@
       effectiveExpiresAt: 0, remainingDays: 15, startOnFirstUse: true, status: 'active'
     };
     demoStore = {
-      version: '2.5.5',
+      version: '2.5.6',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
       edge: 'FRA', host: 'nightline.example.workers.dev',
       cfIntegration: {
@@ -1082,7 +1082,7 @@
       },
       users: [u1, u2],
       logs: [
-        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.5)' },
+        { ts: Date.now() - 120000, event: 'setup', detail: 'پیش‌نمایش تعاملی پنل آماده است (V2.5.6)' },
         { ts: Date.now() - 30000, event: 'settings', detail: 'پروتکل‌های VLESS + Trojan + Telegram Web Proxy فعال شد' }
       ]
     };
@@ -1189,11 +1189,11 @@
           ok: true,
           repo: OFFICIAL_GITHUB_REPO,
           repoUrl: OFFICIAL_GITHUB_URL,
-          currentVersion: '2.5.5',
-          latestVersion: '2.5.5',
+          currentVersion: '2.5.6',
+          latestVersion: '2.5.6',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.5 — Latest release installed.',
+          releaseNotes: 'NIGHTLINE v2.5.6 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
           scriptName: ds.cfIntegration.scriptName || 'nightline'
@@ -1203,8 +1203,8 @@
         return {
           ok: true,
           updated: true,
-          previousVersion: '2.5.5',
-          targetVersion: '2.5.5',
+          previousVersion: '2.5.6',
+          targetVersion: '2.5.6',
           scriptName: (body && body.scriptName) || 'nightline',
           reloadAfterMs: 1200
         };
@@ -1361,6 +1361,7 @@
       updateTelemetryKpis();
       syncCfQuotaUI();
       syncGhUpdaterUI(data.version);
+      if(!ghAutoStarted){ghAutoStarted=true;setTimeout(function(){if(STATE.mode==='admin')checkGitHubUpdates(true);},1500);}
       if (STATE.cfIntegration && STATE.cfIntegration.hasToken && !STATE.cfUsage && !cfUsageFetching) {
         refreshCfDailyUsage(false);
       }
@@ -2083,7 +2084,7 @@
     var bare = host.replace(/^\[|\]$/g, '');
     var isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(bare);
     var isIpv6 = bare.indexOf(':') >= 0;
-    var geoMatch = remark.match(/^([A-Z]{2})\|(.*)$/i);
+    var geoMatch = remark.match(/^(?:manual:)?([A-Z]{2})\|(.*)$/i);
     return {
       rawLine: line,
       addrPart: addrPart,
@@ -2116,7 +2117,7 @@
     if(r.ok||r.candidate){lastUserScanCandidates.push(r);lastUserScanCandidates.sort(function(a,b){return a.sortMs-b.sortMs;});if(lastUserScanCandidates.length>500)lastUserScanCandidates.length=500;}
     var item=document.createElement('div');item.className='scan-item '+(scanRangeMode?'range-result ':'')+(r.ok?'state-ok':r.candidate?'state-candidate':r.kind==='timeout'?'state-bad':'state-unknown');
     item.innerHTML='<span class="scan-entry mono" dir="ltr">'+esc(r.entry.bareHost+(r.entry.port!==443?':'+r.entry.port:''))+' <small class="scan-country">'+esc(r.entry.countryCode||'CC ?')+'</small></span><span class="badge '+(r.ok?'ok':r.kind==='timeout'?'bad':r.candidate?'candidate':'')+'">'+esc(scanBadge(r))+'</span><small class="scan-detail">'+esc(scanDetail(r))+'</small>';
-    if(scanRangeMode){var manual=document.createElement('input');manual.className='range-manual-cc mono';manual.maxLength=2;manual.placeholder=tr('کد کشور دستی','CC');manual.setAttribute('aria-label','Manual country code');item.appendChild(manual);var add=document.createElement('button');add.type='button';add.className='btn ghost sm-btn';add.innerHTML=svgIcon('plus','ic-sm')+'<span>ADD</span>';add.onclick=function(){var cc=manual.value.trim().toUpperCase()||r.entry.countryCode;if(cc&&!/^[A-Z]{2}$/.test(cc)){showToast('کد کشور دو حرفی باشد','Use a two-letter code');return;}if(cc)attachCountryToEntry(r.entry,cc);var lines=textToLines($('s-cleanips').value).filter(function(l){return l.split('#')[0].trim()!==r.entry.addrPart;});lines.push(r.entry.rawLine);$('s-cleanips').value=lines.join('\n');add.disabled=true;add.innerHTML=svgIcon('check','ic-sm')+' ADDED';};item.appendChild(add);}
+    if(scanRangeMode){var manual=document.createElement('input');manual.className='range-manual-cc mono';manual.maxLength=2;manual.placeholder=tr('کد کشور دستی','CC');manual.setAttribute('aria-label','Manual country code');item.appendChild(manual);var add=document.createElement('button');add.type='button';add.className='btn ghost sm-btn';add.innerHTML=svgIcon('plus','ic-sm')+'<span>ADD</span>';add.onclick=function(){var cc=manual.value.trim().toUpperCase()||r.entry.countryCode;if(cc&&!/^[A-Z]{2}$/.test(cc)){showToast('کد کشور دو حرفی باشد','Use a two-letter code');return;}if(cc)attachCountryToEntry(r.entry,cc);if(manual.value.trim()&&cc)r.entry.rawLine=r.entry.rawLine.replace('#','#manual:');var lines=textToLines($('s-cleanips').value).filter(function(l){return l.split('#')[0].trim()!==r.entry.addrPart;});lines.push(r.entry.rawLine);$('s-cleanips').value=lines.join('\n');add.disabled=true;add.innerHTML=svgIcon('check','ic-sm')+' ADDED';};item.appendChild(add);}
     r.element=item;var box=$('scan-results');box.appendChild(item);while(box.children.length>400)box.firstElementChild.remove();updateScanSummary(false);
   }
   async function calibrateScanner(){
@@ -2170,33 +2171,19 @@
     }
   };
 
-  var warpSession=null,warpBackedUp=false;
+  var warpAccounts=[];
   function warpStatus(fa,en){$('warp-status').textContent=tr(fa,en);}
   function warpDownload(name,value,type){var blob=new Blob([value],{type:type||'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},3000);}
-  function showWarpCredentials(){var c=warpSession&&warpSession.credentials;$('warp-xray').disabled=!c;$('warp-wg').disabled=!c||c.kind!=='wireguard';$('warp-backup').disabled=!warpSession;if(c){$('warp-endpoint').value=c.endpoint;$('warp-port').value=c.kind==='masque'&&$('warp-mode').value==='h2'?443:c.port;}}
-  $('warp-register').onclick=async function(){
-    if(isSandboxPreview){warpStatus('پیش‌نمایش دستگاه واقعی نمی‌سازد.','Preview does not register devices.');return;}
-    if(!$('warp-consent').checked){warpStatus('ابتدا شرایط و ثبت دستگاه را تأیید کنید.','Confirm WARP terms and device registration first.');return;}
-    var W=globalThis.NLWarp,kind=$('warp-kind').value;
-    if(warpSession&&warpSession.credentials&&warpSession.kind===kind){showWarpCredentials();warpStatus('کلید فعلی آماده است؛ برای جلوگیری از ثبت تکراری از همان خروجی استفاده کنید.','Existing credentials are ready; reuse them instead of registering again.');return;}
-    if(warpSession&&warpSession.credentials&&!warpBackedUp&&!confirm(tr('کلید قبلی پشتیبان ندارد. ثبت پروتکل دیگر جای آن را در حافظه می‌گیرد؛ ادامه می‌دهید؟','Previous credentials are not backed up. Replace the in-memory profile?')))return;
-    this.disabled=true;
-    try{
-      if(!warpSession||warpSession.kind!==kind){warpSession={kind:kind,material:await W.generateWarpMaterial(kind)};warpBackedUp=false;}
-      if(!warpSession.device){warpStatus('ثبت دستگاه با کلید عمومی؛ کلید خصوصی ارسال نمی‌شود…','Registering device with public key only…');var registered=await api('/api/warp/register','POST',{kind:kind,key:kind==='masque'?warpSession.material.bootstrapKey:warpSession.material.publicKey,consent:true});warpSession.device=registered.device;if(!warpSession.device||!warpSession.device.id||!warpSession.device.token)throw Error('پاسخ ثبت ناقص است');}
-      $('warp-backup').disabled=false;
-      var device=warpSession.device;
-      if(kind==='masque'){warpStatus('تکمیل MASQUE با کلید P-256 محلی…','Enrolling locally generated P-256 MASQUE key…');var enrolled=await api('/api/warp/enroll','POST',{id:device.id,token:device.token,publicKey:warpSession.material.publicKey});device=enrolled.device;}
-      warpSession.credentials=await W.makeWarpCredentials(kind,warpSession.material,device);showWarpCredentials();
-      warpStatus('خروجی آماده است؛ این نتیجه تست اتصال نیست. ابتدا پشتیبان را بگیرید و سپس کانفیگ را در کلاینت سازگار آزمایش کنید.','Config ready, not connectivity-tested. Download a backup, then test in a compatible client.');
-    }catch(e){warpStatus((warpSession&&warpSession.device?'دستگاه ثبت شد اما خروجی کامل نشد؛ می‌توانید با همان دستگاه دوباره تکمیل کنید. ':'ثبت کامل نشد؛ کانفیگ موفق ساخته نشد. ')+(e.message||''),'Registration/export incomplete: '+e.message);}
-    finally{this.disabled=false;}
-  };
-  $('warp-backup').onclick=function(){if(!warpSession)return;warpDownload('nightline-warp-private-backup.json',JSON.stringify({nightlineWarpBackup:1,session:warpSession},null,2));warpBackedUp=true;};
-  $('warp-import').onchange=async function(){var file=this.files&&this.files[0];if(!file||file.size>65536){warpStatus('فایل پشتیبان باید JSON زیر ۶۴ کیلوبایت باشد.','Backup must be JSON below 64 KB.');return;}try{var b=JSON.parse(await file.text());if(b.nightlineWarpBackup!==1||!['masque','wireguard'].includes(b.session&&b.session.kind))throw Error('Unsupported backup');if(b.session.credentials)await globalThis.NLWarp.validateWarpCredentials(b.session.credentials);else if(!b.session.device||!b.session.material)throw Error('Incomplete backup');warpSession=b.session;warpBackedUp=true;$('warp-kind').value=warpSession.kind;showWarpCredentials();warpStatus('پشتیبان وارد شد؛ خروجی آماده را بگیرید یا ثبت ناقص را با همان دستگاه تکمیل کنید.','Backup imported; export config or finish pending enrollment.');}catch(e){warpStatus('پشتیبان پذیرفته نشد: '+e.message,'Backup rejected: '+e.message);}};
-  function warpOptions(){return {endpoint:$('warp-endpoint').value.trim(),port:Number($('warp-port').value),mode:$('warp-mode').value,fragment:$('warp-fragment').checked};}
-  $('warp-xray').onclick=function(){try{var c=warpSession.credentials;warpDownload('nightline-warp-'+c.kind+'.json',JSON.stringify(globalThis.NLWarp.buildWarpXray(c,warpOptions()),null,2));}catch(e){warpStatus(e.message,e.message);}};
-  $('warp-wg').onclick=function(){try{warpDownload('nightline-warp.conf',globalThis.NLWarp.buildWireGuardConf(warpSession.credentials,warpOptions()),'text/plain;charset=utf-8');}catch(e){warpStatus(e.message,e.message);}};
+  function managedWarpUrl(conf){var u=getSelectedUser();if(!u)return '';var kind=$('warp-kind').value;return subBaseUrl(u)+'?format='+(conf?'warp-conf':'warp-'+kind)+'&transport='+$('warp-mode').value;}
+  function showManagedWarp(){var u=getSelectedUser(),kind=$('warp-kind').value,a=warpAccounts.find(function(x){return x.kind===kind;});$('warp-selected').textContent=tr('کاربر منتخب: ','Selected user: ')+(u?u.name:'—');$('warp-xray').disabled=!a||!a.ready;$('warp-copy').disabled=!a||!a.ready;$('warp-wg').disabled=kind!=='wireguard'||!a||!a.ready;warpStatus(a&&a.ready?'حساب در همین پروژه آماده است؛ لینک با همان توکن کاربر به حساب ذخیره‌شده اشاره می‌کند.':a&&a.pending?'ثبت ناقص ذخیره شده است؛ با همان دکمه تکمیل کنید.':'برای این کاربر هنوز حساب آماده نیست.',a&&a.ready?'Account ready in this project; user link reads stored credentials.':'No ready account yet; create or resume.');}
+  async function loadManagedWarp(){var u=getSelectedUser();if(!u)return;var uid=u.id;warpAccounts=[];showManagedWarp();try{var r=await api('/api/warp/accounts?userId='+encodeURIComponent(uid),'GET');if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus(e.message,e.message);}}
+  $('warp-refresh').onclick=loadManagedWarp;$('warp-kind').onchange=showManagedWarp;
+  $('warp-section').addEventListener('toggle',function(){if(this.open)loadManagedWarp();});
+  $('sel-user').addEventListener('change',function(){warpAccounts=[];showManagedWarp();if($('warp-section').open)loadManagedWarp();});
+  $('warp-register').onclick=async function(){if(isSandboxPreview)return;if(!$('warp-consent').checked){warpStatus('ابتدا رضایت ثبت و نگه‌داری کلید را تأیید کنید.','Consent is required first.');return;}var u=getSelectedUser();if(!u)return;this.disabled=true;warpStatus('در حال ساخت یا تکمیل حساب از همین Worker…','Creating or resuming account through this Worker…');try{var uid=u.id,r=await api('/api/warp/accounts','POST',{userId:uid,kind:$('warp-kind').value,consent:true});if(getSelectedUser()&&getSelectedUser().id===uid){warpAccounts=r.accounts||[];showManagedWarp();}}catch(e){warpStatus('حساب کامل نشد: '+e.message,'Account incomplete: '+e.message);}finally{this.disabled=false;}};
+  $('warp-xray').onclick=function(){location.href=managedWarpUrl(false);};$('warp-wg').onclick=function(){location.href=managedWarpUrl(true);};$('warp-copy').onclick=function(){copyText(managedWarpUrl(false),'لینک حساب کاربر','User account URL');};
+  $('warp-backup').onclick=async function(){var u=getSelectedUser();if(!u)return;try{var r=await api('/api/warp/account-backup?userId='+encodeURIComponent(u.id)+'&kind='+$('warp-kind').value,'GET');warpDownload('nightline-managed-warp-private.json',JSON.stringify(r,null,2));}catch(e){warpStatus(e.message,e.message);}};
+  $('warp-import').onchange=async function(){var f=this.files&&this.files[0],u=getSelectedUser();if(!f||!u||f.size>65536)return;try{var b=JSON.parse(await f.text());if(b.nightlineManagedWarp!==1)throw Error('Unsupported backup');await api('/api/warp/account-backup','POST',{userId:u.id,kind:b.account.kind,account:b.account});$('warp-kind').value=b.account.kind;await loadManagedWarp();}catch(e){warpStatus(e.message,e.message);}};
 
   $('f-pass').addEventListener('submit', async function (ev) {
     ev.preventDefault();
@@ -2513,10 +2500,14 @@
 
   /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
 
+  var ghAutoStarted=false,ghLastCheck=0;
+  setInterval(function(){if(STATE.mode==='admin'&&!document.hidden)checkGitHubUpdates(true);},900000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&STATE.mode==='admin'&&Date.now()-ghLastCheck>900000)checkGitHubUpdates(true);});
   function syncGhUpdaterUI(ver) {
-    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.5';
+    var curV = ver || (STATE.ghInfo && STATE.ghInfo.currentVersion) || '2.5.6';
     if ($('gh-mini-ver')) $('gh-mini-ver').textContent = 'V' + curV;
     if ($('gh-cur-ver')) $('gh-cur-ver').textContent = 'V' + curV;
+    if($('btn-gh-updater')){$('btn-gh-updater').classList.toggle('update-ready',!!(STATE.ghInfo&&STATE.ghInfo.updateAvailable));$('btn-gh-updater').setAttribute('aria-label',STATE.ghInfo&&STATE.ghInfo.updateAvailable?tr('نسخه جدید آماده است','New version available'):tr('بررسی بروزرسانی','Check for updates'));}
     if ($('gh-upd-dot')) {
       $('gh-upd-dot').hidden = !(STATE.ghInfo && STATE.ghInfo.updateAvailable);
     }
@@ -2537,7 +2528,7 @@
 
   async function checkGitHubUpdates(silentToast) {
     if (ghChecking) return;
-    ghChecking = true;
+    ghChecking = true;ghLastCheck=Date.now();
     var bdg = $('gh-status-badge');
     if (bdg) {
       bdg.className = 'badge';
@@ -2590,7 +2581,7 @@
         bdg.className = 'badge bad';
         bdg.textContent = tr('خطا در اتصال', 'CHECK FAILED');
       }
-      showGhMessage(err.message, false);
+      if(!silentToast)showGhMessage(err.message, false);
     } finally {
       ghChecking = false;
     }

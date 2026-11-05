@@ -1,4 +1,6 @@
-import { warpAction } from './warp-api.js';
+import {findKV} from './storage.js';
+import {createWarpAccount,readWarpAccount,warpAccountStatus,exportWarpAccount,importWarpAccount} from './warp-managed.js';
+import { refreshCountryLabels } from './geo.js';
 import { lookupCountries } from './geo.js';
 import { parseChainProxy } from './chain.js';
 /**
@@ -277,7 +279,19 @@ export default {
         if (!matched) {
           return json({ ok: false, error: 'لینک اشتراک معتبر نیست یا منقضی شده است.' }, 404);
         }
-        return await serveSubscription(request, matched, runtime.settings, await getInlineAssets());
+        const warpFmt=url.searchParams.get('format')||'';
+        if(['warp-masque','warp-wireguard','warp-conf'].includes(warpFmt)){
+          const view=enrichUserView(matched);if(view.status!=='active')return json({ok:false,error:'اشتراک فعال نیست'},403);
+          const kv=findKV(env)?.binding;if(!kv)return json({ok:false,error:'KV required'},503);
+          const kind=warpFmt==='warp-masque'?'masque':'wireguard';const account=await readWarpAccount(kv,matched,kind);
+          if(!account?.credentials)return json({ok:false,error:'حساب WARP این کاربر هنوز آماده نشده است'},404);
+          return new Response(exportWarpAccount(account,url.searchParams.get('transport')==='h3'?'h3':'h2',warpFmt==='warp-conf'),{headers:{'content-type':warpFmt==='warp-conf'?'text/plain; charset=utf-8':'application/json; charset=utf-8','cache-control':'no-store','content-disposition':'attachment; filename="nightline-'+kind+(warpFmt==='warp-conf'?'.conf':'.json')+'"'}});
+        }
+        let labeledSettings=enrichUserView(matched).status==='active'?await refreshCountryLabels(runtime.settings):runtime.settings;
+        if(enrichUserView(matched).status==='active'&&(url.searchParams.get('format')==='html'||(!url.searchParams.has('format')&&(request.headers.get('accept')||'').includes('text/html')))){
+          const kv=findKV(env)?.binding;if(kv){labeledSettings={...labeledSettings,managedWarpReady:await Promise.all(['masque','wireguard'].map(async kind=>({kind,ready:!!(await readWarpAccount(kv,matched,kind))?.credentials}))) };}
+        }
+        return await serveSubscription(request, matched, labeledSettings, await getInlineAssets());
       }
 
       // 6) Explicit Admin Panel route (/panel)
@@ -548,9 +562,22 @@ async function handleApi(request, url, env, runtime) {
   }
 
   const state = await loadRuntimeState(env, true);
+  if(path.startsWith('/api/warp/')&&request.headers.get('origin')&&request.headers.get('origin')!==url.origin)return json({ok:false,error:'Origin denied'},403);
 
-  if((path==='/api/warp/register'||path==='/api/warp/enroll')&&method==='POST'){
-    const body=await readJsonBody(request);try{return json({ok:true,device:await warpAction(path.endsWith('/register')?'register':'enroll',body,request)});}catch(e){return json({ok:false,error:e.message||'WARP operation failed'},400);}
+  if(path==='/api/warp/accounts'&&(method==='GET'||method==='POST')){
+    try{const body=method==='POST'?await readJsonBody(request):{};if(body.__parseError)throw Error(body.__parseError);
+      const uid=body.userId||url.searchParams.get('userId');const user=state.users.find(u=>u.id===uid);if(!user)throw Error('کاربر پنل را انتخاب کنید');
+      const kv=findKV(env)?.binding;if(!kv)throw Error('KV required');
+      if(method==='POST')await createWarpAccount(kv,user,body.kind,body.consent,request);
+      const accounts=await Promise.all(['masque','wireguard'].map(async kind=>warpAccountStatus(await readWarpAccount(kv,user,kind))));
+      return json({ok:true,accounts});
+    }catch(e){return json({ok:false,error:e.message},400);}
+  }
+  if(path==='/api/warp/account-backup'&&(method==='GET'||method==='POST')){
+    try{const body=method==='POST'?await readJsonBody(request):{};const user=state.users.find(u=>u.id===(body.userId||url.searchParams.get('userId')));if(!user)throw Error('کاربر معتبر نیست');const kind=body.kind||url.searchParams.get('kind');const kv=findKV(env)?.binding;if(!kv)throw Error('KV required');
+      if(method==='POST'){await importWarpAccount(kv,user,kind,body.account);return json({ok:true});}
+      const a=await readWarpAccount(kv,user,kind);if(!a)throw Error('حساب یافت نشد');return json({ok:true,nightlineManagedWarp:1,account:a});
+    }catch(e){return json({ok:false,error:e.message},400);}
   }
 
   if(path==='/api/tools/geoip'&&method==='POST'){
@@ -611,6 +638,7 @@ async function handleApi(request, url, env, runtime) {
     if (patch.__parseError) return json({ ok: false, error: patch.__parseError }, 400);
 
     if(Array.isArray(patch.cleanIPs)&&patch.cleanIPs.length>4096)return json({ok:false,error:'ذخیرهٔ فهرست بیش از ۴۰۹۶ مورد مجاز نیست؛ اسکن پیوسته سقف تعداد ندارد.'},400);
+    if(typeof patch.chainProxy==='string'&&isBareProxyIP(patch.chainProxy)){patch.proxyIPs=[patch.chainProxy.trim().replace(/^\[|\]$/g,'')];patch.chainProxy='';}
     if(patch.chainProxy!==undefined){try{parseChainProxy(patch.chainProxy);}catch(e){return json({ok:false,error:e.message},400);}}
     state.settings = sanitizeSettings(patch, state.settings);
     appendLog(state, 'settings', 'تنظیمات هسته و مسیریابی به‌روزرسانی شد');
@@ -710,13 +738,14 @@ async function handleApi(request, url, env, runtime) {
     const target = state.users.find((u) => u.id === uid);
     if (!target) return json({ ok: false, error: 'مشترک یافت نشد.' }, 404);
     const uView = enrichUserView(target);
+    const nodeSettings=await refreshCountryLabels(state.settings);
     return json({
       ok: true,
       user: buildAdminUserSummary(target, state.settings, url.host),
-      nodes: buildNodeDescriptors(uView, state.settings, url.host),
-      xrayPreview: buildXrayConfigs(uView, state.settings, url.host)[0] || null,
-      singboxPreview: buildSingboxConfig(uView, state.settings, url.host),
-      clashPreview: buildClashYaml(uView, state.settings, url.host),
+      nodes: buildNodeDescriptors(uView, nodeSettings, url.host),
+      xrayPreview: buildXrayConfigs(uView, nodeSettings, url.host)[0] || null,
+      singboxPreview: buildSingboxConfig(uView, nodeSettings, url.host),
+      clashPreview: buildClashYaml(uView, nodeSettings, url.host),
     });
   }
 
@@ -825,7 +854,7 @@ async function handleApi(request, url, env, runtime) {
   if ((path === '/api/tools/probe-proxy' || path === '/api/test-proxyip') && method === 'POST') {
     const body = await readJsonBody(request);
     if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
-    let target=body.target||'';if(body.kind==='chain'){try{parseChainProxy(target);if(!/^[a-z]+:\/\//i.test(target))target='socks5://'+target;}catch(e){return json({ok:false,error:e.message},400);}}
+    let target=body.target||'';if(body.kind==='chain'&&!isBareProxyIP(target)){try{parseChainProxy(target);if(!/^[a-z]+:\/\//i.test(target))target='socks5://'+target;}catch(e){return json({ok:false,error:e.message},400);}}
     const result = await probeOutboundEndpoint(target);
     return json(result);
   }
@@ -1864,3 +1893,5 @@ async function applyOfficialGitHubSelfUpdate({ token, accountId, scriptName, env
     reloadAfterMs: 2200,
   };
 }
+
+function isBareProxyIP(value){const s=String(value||'').trim().replace(/^\[|\]$/g,'');if(/^(?:\d{1,3}\.){3}\d{1,3}$/.test(s))return s.split('.').every(n=>Number(n)<=255);if(s.includes(':')&&!s.includes('://')){try{return !!new URL('http://['+s+']/').hostname;}catch{}}return false;}

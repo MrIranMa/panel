@@ -39,7 +39,7 @@ function parseCleanEntry(raw) {
   return {
     address: hostClean,
     portOverride: ep.explicitPort ? ep.port : 0,
-    remark: remark || hostClean,
+    remark: remark.replace(/^manual:/,'') || hostClean,
   };
 }
 
@@ -761,7 +761,9 @@ export function buildClashYaml(userView, settings, requestHost) {
 /* ------------------------------------------- Subscription HTTP Dispatcher */
 
 export function buildSubscriptionHeaders(userView, settings, requestHost) {
-  const titleB64 = utf8ToBase64(`${PANEL_BRAND} · ${userView.name}`);
+  const countries=[...new Set((settings.cleanIPs||[]).map(v=>String(v).match(/#(?:manual:)?([A-Z]{2})\|/i)?.[1]?.toUpperCase()).filter(Boolean))];
+  const countryTitle=countries.map(cc=>String.fromCodePoint(...[...cc].map(c=>0x1f1e6+c.charCodeAt(0)-65))+' '+cc).join(' / ');
+  const titleB64 = utf8ToBase64(`${PANEL_BRAND} · ${userView.name}${countryTitle?' · '+countryTitle:''}`);
   const announceB64 = utf8ToBase64(FREE_NOTICE_FULL);
   const expSec = userView.effectiveExpiresAt > 0 ? Math.floor(userView.effectiveExpiresAt / 1000) : 0;
   return {
@@ -779,6 +781,7 @@ export function detectSubscriptionFormat(request) {
   const url = new URL(request.url);
   const explicit = (url.searchParams.get('format') || url.searchParams.get('target') || '').toLowerCase();
   if (explicit) {
+    if(explicit==='html')return 'html';
     if (['xray', 'fragment', 'frag'].includes(explicit)) return 'xray';
     if (['singbox', 'sing-box', 'sfa', 'hiddify'].includes(explicit)) return 'singbox';
     if (['clash', 'mihomo', 'yaml'].includes(explicit)) return 'clash';
@@ -1090,6 +1093,8 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
         </tbody>
       </table>
       <div class="meter" style="margin-top:12px"><i style="width:${pct}%"></i></div>
+
+      ${(settings.managedWarpReady||[]).some(a=>a.ready)?`<p class="kicker"><span class="fa">حساب‌های آمادهٔ WARP شما</span><span class="en">YOUR MANAGED WARP ACCOUNTS</span></p><p class="hint"><span class="fa">این خروجی‌ها مستقیم به WARP متصل می‌شوند؛ محدودیت مصرف و انقضای Worker روی فایل دانلودشده اجرا نمی‌شود. فایل محرمانه است.</span><span class="en">These configs connect directly to WARP. Worker traffic/expiry limits do not apply to exported files. Keep credentials private.</span></p><div class="sub-grid">${settings.managedWarpReady.filter(a=>a.ready).map(a=>a.kind==='masque'?`<a class="btn sm-btn" href="${esc(baseSub+'?format=warp-masque&transport=h2')}">MASQUE · H2 / TCP</a><a class="btn ghost sm-btn" href="${esc(baseSub+'?format=warp-masque&transport=h3')}">MASQUE · H3 / QUIC</a>`:`<a class="btn sm-btn" href="${esc(baseSub+'?format=warp-wireguard')}">WireGuard · Xray</a><a class="btn ghost sm-btn" href="${esc(baseSub+'?format=warp-conf')}">WireGuard · .conf</a>`).join('')}</div>`:''}
 
       <p class="kicker" style="margin-top:22px"><span class="fa">لینک‌های اشتراکِ هوشمند</span><span class="en">SUBSCRIPTION LINKS</span></p>
       <div class="sub-grid">

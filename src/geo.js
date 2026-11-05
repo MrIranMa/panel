@@ -12,11 +12,21 @@ export async function lookupCountry(value,fetcher=fetch){
  const ip=canonicalPublicIP(value);if(!ip)return {ip:String(value),countryCode:null,confidence:'unavailable',reason:'non-public-ip'};
  const cached=cache.get(ip);if(cached&&Date.now()-cached.at<cached.ttl)return {...cached.result,cached:true};
  const providers=[{name:'ipwho.is',url:'https://ipwho.is/'+encodeURIComponent(ip),read:d=>d.success===true?d.country_code:null},{name:'ipapi.co',url:'https://ipapi.co/'+encodeURIComponent(ip)+'/json/',read:d=>!d.error?d.country_code:null}];
- const results=await Promise.all(providers.map(async p=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);try{const response=await fetcher(p.url,{signal:controller.signal,redirect:'error',headers:{accept:'application/json'}});if(!response.ok)return null;const d=await response.json(),code=p.read(d);if(canonicalPublicIP(d.ip)!==ip||!validCC(code))return null;return {source:p.name,code};}catch{return null;}finally{clearTimeout(timer);}}));
+ const results=await Promise.all(providers.map(async p=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);try{const response=await fetcher(p.url,{signal:controller.signal,redirect:'manual',headers:{accept:'application/json'}});if(!response.ok)return null;const d=await response.json(),code=p.read(d);if(canonicalPublicIP(d.ip)!==ip||!validCC(code))return null;return {source:p.name,code};}catch{return null;}finally{clearTimeout(timer);}}));
  const good=results.filter(Boolean),conflict=good.length===2&&good[0].code!==good[1].code;
  const result={ip,countryCode:conflict?null:good[0]?.code||null,confidence:conflict?'conflict':good.length===2?'two-sources':good.length===1?'single-source':'unavailable',sources:good.map(g=>g.source),checkedAt:Date.now(),anycastNotice:true};
- cache.set(ip,{at:Date.now(),ttl:good.length?6*3600000:60000,result});if(cache.size>2048)cache.delete(cache.keys().next().value);return result;
+ cache.set(ip,{at:Date.now(),ttl:good.length?3600000:60000,result});if(cache.size>2048)cache.delete(cache.keys().next().value);return result;
 }
 export async function lookupCountries(ips,fetcher){
  const result=new Array(ips.length);let next=0;await Promise.all(Array.from({length:Math.min(3,ips.length)},async()=>{while(next<ips.length){const i=next++;result[i]=await lookupCountry(ips[i],fetcher);}}));return result;
+}
+
+// Refresh bounded subscription metadata on each import; cached provider data avoids repeated queries.
+export async function refreshCountryLabels(settings,fetcher=fetch){
+ const entries=Array.isArray(settings.cleanIPs)?settings.cleanIPs:[],selected=[];
+ for(const raw of entries){if(selected.length>=16)break;const address=String(raw).split('#')[0];let host;try{host=new URL('http://'+address).hostname.replace(/^\[|\]$/g,'');}catch{continue;}if(canonicalPublicIP(host)&&!selected.includes(host))selected.push(host);}
+ if(!selected.length)return settings;
+ const results=await lookupCountries(selected,fetcher);const map=new Map(results.map(r=>[r.ip,r]));
+ const cleanIPs=entries.map(raw=>{const [address,...suffix]=String(raw).split('#');let host;try{host=new URL('http://'+address).hostname.replace(/^\[|\]$/g,'');}catch{return raw;}const result=map.get(host);if(!result)return raw;const old=suffix.join('#');if(old.startsWith('manual:'))return address+'#'+old.slice(7);const note=old.replace(/^[A-Z]{2}\|/i,'')||'GeoIP';if(result.countryCode)return address+'#'+result.countryCode+'|'+note;if(result.confidence==='conflict')return address+'#'+note;return raw;});
+ return {...settings,cleanIPs,countryCheckedAt:Date.now()};
 }
