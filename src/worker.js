@@ -843,7 +843,7 @@ async function handleApi(request, url, env, runtime) {
         {
           ok: true,
           version: 2,
-          arenaPanelBackupVersion: 2,
+          nightlineBackupVersion: 2,
           exportedAt: new Date().toISOString(),
           settings: state.settings,
           users: state.users,
