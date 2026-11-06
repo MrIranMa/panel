@@ -1,5 +1,5 @@
-/* Fetch only from the official NIGHTLINE repository. Cloudflare credentials are never sent here. */
-export const OFFICIAL_REPO='youdidking/NightLine';
+/* Fetch only from the official ArenaPanel repository. Cloudflare credentials are never sent here. */
+export const OFFICIAL_REPO='MrIranMa/panel';
 const MAX_SOURCE=8*1024*1024;
 const RAW='https://raw.githubusercontent.com';
 export async function sha256(bytes){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');}
@@ -13,7 +13,7 @@ async function limited(response,max){
 function validateModule(bytes){
   const text=new TextDecoder().decode(bytes);
   if(bytes.length<1000||/^\s*(?:<!doctype|<html)/i.test(text)||!(/\bexport\s*(?:default\b|\{[^}]{0,1000}\bdefault\b[^}]*\})/.test(text.slice(-5000))))throw Error('فایل دریافتی ساختار اولیهٔ پنل را ندارد؛ نصب متوقف شد.');
-  const header=text.slice(0,250).match(/^\/\/ NIGHTLINE v(\d+\.\d+\.\d+(?:-[\w.-]+)?) — Cloudflare Workers Standalone Edition(?:\r?\n|$)/);
+  const header=text.slice(0,250).match(/^\/\/ ArenaPanel v(\d+\.\d+\.\d+(?:-[\w.-]+)?) — Cloudflare Workers Standalone Edition(?:\r?\n|$)/);
   if(!header)throw Error('هدر و نسخهٔ فایل رسمی معتبر نیست؛ نصب متوقف شد.');
   return header[1];
 }
@@ -25,7 +25,7 @@ export async function fetchLatestBundle(notify=()=>{},options={}){
   notify('دریافت مستقیم آخرین فایل پنل از شاخهٔ main مخزن رسمی…');
   const url=(raw===RAW?sourceURL:raw+'/'+OFFICIAL_REPO+'/main/worker-single-file.js')+'?nl_install='+crypto.randomUUID();
   let response;
-  try{response=await fetch(url,{headers:{accept:'application/javascript','user-agent':'NIGHTLINE-Official-Installer'},credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(25000)});}
+  try{response=await fetch(url,{headers:{accept:'application/javascript','user-agent':'ArenaPanel-Official-Installer'},credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(25000)});}
   catch{throw Error('دانلود مستقیم فایل رسمی برقرار نشد؛ ارتباط نصب‌کننده با raw.githubusercontent.com را بررسی و کمی بعد تلاش کنید.');}
   if(!response.ok)throw Error('دانلود مستقیم از مخزن رسمی ناموفق بود: HTTP '+response.status+'؛ این پاسخ از مبدأ دانلود است، نه بررسی توکن Cloudflare.');
   if(/text\/html/i.test(response.headers.get('content-type')||''))throw Error('مبدأ دانلود به‌جای کد پنل، صفحهٔ HTML فرستاد؛ نصب متوقف شد.');
