@@ -561,7 +561,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     routeRules.push({ domain_suffix: settings.customBlockDomains, outbound: 'block' });
   }
   if (settings.sanctionBypass && settings.customProxyDomains?.length) {
-    routeRules.push({ domain_suffix: settings.customProxyDomains, outbound: 'NIGHTLINE' });
+    routeRules.push({ domain_suffix: settings.customProxyDomains, outbound: 'ArenaPanel' });
   }
   if (directSuffixes.length) {
     routeRules.push({ domain_suffix: directSuffixes, outbound: 'direct' });
@@ -575,7 +575,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
           tag: 'dns-remote',
           address: remoteDoH,
           address_resolver: 'dns-direct',
-          detour: 'NIGHTLINE',
+          detour: 'ArenaPanel',
         },
         {
           tag: 'dns-direct',
@@ -601,7 +601,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     outbounds: [
       {
         type: 'selector',
-        tag: 'NIGHTLINE',
+        tag: 'ArenaPanel',
         outbounds: ['Auto Best', ...nodeTags, 'direct'],
         default: 'Auto Best',
       },
@@ -621,7 +621,7 @@ export function buildSingboxConfig(userView, settings, requestHost) {
     route: {
       auto_detect_interface: true,
       rules: routeRules,
-      final: 'NIGHTLINE',
+      final: 'ArenaPanel',
     },
   };
 }
@@ -698,7 +698,7 @@ export function buildClashYaml(userView, settings, requestHost) {
   }
   if (settings.sanctionBypass) {
     for (const d of settings.customProxyDomains || []) {
-      rules.push(`  - DOMAIN-SUFFIX,${d.replace(/^\./, '')},NIGHTLINE`);
+      rules.push(`  - DOMAIN-SUFFIX,${d.replace(/^\./, '')},ArenaPanel`);
     }
   }
   for (const d of settings.customDirectDomains || []) {
@@ -710,7 +710,7 @@ export function buildClashYaml(userView, settings, requestHost) {
   }
   if (settings.bypassChina) rules.push('  - GEOIP,CN,DIRECT,no-resolve');
   if (settings.bypassRussia) rules.push('  - GEOIP,RU,DIRECT,no-resolve');
-  rules.push('  - MATCH,NIGHTLINE');
+  rules.push('  - MATCH,ArenaPanel');
 
   return [
     'mixed-port: 7890',
@@ -735,7 +735,7 @@ export function buildClashYaml(userView, settings, requestHost) {
     'proxies:',
     ...proxyLines,
     'proxy-groups:',
-    '  - name: "NIGHTLINE"',
+    '  - name: "ArenaPanel"',
     '    type: select',
     '    proxies:',
     '      - "Auto Best"',
@@ -841,7 +841,7 @@ export function buildAutomaticXray(user,settings,requestHost){
   });
   if(!base)return [];
   const config=JSON.parse(JSON.stringify(base));
-  config.remarks='NIGHTLINE · Auto IP / Fragment · measured in Xray client';
+  config.remarks='ArenaPanel · Auto IP / Fragment · measured in Xray client';
   config.outbounds=proxies.concat(fragments,base.outbounds.filter(o=>['direct','block'].includes(o.tag)));
   config.dns={servers:['localhost'],queryStrategy:'UseIP'};
   config.routing.domainStrategy='AsIs';
@@ -1090,10 +1090,10 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
       <div class="actions" style="margin-top:8px">
         <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(namedSub())}">v2rayNG</a>
         <a class="btn ghost sm-btn" href="v2rayng://install-config?url=${encodeURIComponent(namedSub('xray'))}">v2rayNG (Frag)</a>
-        <a class="btn ghost sm-btn" href="hiddify://import/${encodeURIComponent(namedSub('singbox'))}#NIGHTLINE">Hiddify</a>
-        <a class="btn ghost sm-btn" href="sing-box://import-remote-profile?url=${encodeURIComponent(namedSub('singbox'))}#NIGHTLINE">Sing-box</a>
+        <a class="btn ghost sm-btn" href="hiddify://import/${encodeURIComponent(namedSub('singbox'))}#ArenaPanel">Hiddify</a>
+        <a class="btn ghost sm-btn" href="sing-box://import-remote-profile?url=${encodeURIComponent(namedSub('singbox'))}#ArenaPanel">Sing-box</a>
         <a class="btn ghost sm-btn" href="streisand://import/${encodeURIComponent(namedSub())}">Streisand</a>
-        <a class="btn ghost sm-btn" href="clash://install-config?url=${encodeURIComponent(namedSub('clash'))}&name=NIGHTLINE">Clash</a>
+        <a class="btn ghost sm-btn" href="clash://install-config?url=${encodeURIComponent(namedSub('clash'))}&name=ArenaPanel">Clash</a>
       </div>
     </section>
 
@@ -1117,7 +1117,7 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
 
   <footer>
     <div class="doblerule"><i></i><i></i></div>
-    <p class="colophon mono sm">NIGHTLINE V${PANEL_VERSION} · FREE &amp; OPEN-SOURCE · NOT FOR SALE</p>
+    <p class="colophon mono sm">ArenaPanel V${PANEL_VERSION} · CONNECTION MANAGEMENT</p>
   </footer>
 </div>
 <script>window.SUB_DATA=${payload};</script>
