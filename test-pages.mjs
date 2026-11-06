@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import installer,{runInstallation,PAGES_TOKEN_TEMPLATE} from './src/installer.js';
 const original=globalThis.fetch,source=fs.readFileSync('worker-single-file.js');
 const token='cloudflare_pages_token_01234567890123456789',account='a'.repeat(32),namespace='b'.repeat(32);
-const release={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',size:source.length,digest:'sha256:'+createHash('sha256').update(source).digest('hex'),browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.3/worker-single-file.js'}]};
+const release={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',size:source.length,digest:'sha256:'+createHash('sha256').update(source).digest('hex'),browser_download_url:'https://github.com/MrIranMa/panel/releases/download/2.5.3/worker-single-file.js'}]};
 let calls=[],mode='success',projectName,seeded=false,events=[];
 globalThis.fetch=async(url,options={})=>{
  const u=new URL(url),method=options.method||'GET';calls.push([method,u.pathname]);
@@ -17,7 +17,7 @@ globalThis.fetch=async(url,options={})=>{
  else if(u.pathname.includes('/values/')){assert(!options.body.includes(token));seeded=true;}
  else if(u.pathname.endsWith('/pages/projects')&&method==='POST'){
   assert(seeded,'Admin must exist before Pages is public');const config=JSON.parse(options.body);projectName=config.name;
-  assert.match(projectName,/^nightline-free-[a-f0-9]{12}$/);assert.equal(config.production_branch,'main');
+  assert.match(projectName,/^arenapanel-[a-f0-9]{12}$/);assert.equal(config.production_branch,'main');
   for(const env of ['production','preview']){assert.equal(config.deployment_configs[env].kv_namespaces.KV.namespace_id,namespace);assert.equal(config.deployment_configs[env].env_vars.SETUP_LOCKED.value,'true');}
   if(mode==='create-failure')return Response.json({success:false},{status:403});
   result={name:projectName};
