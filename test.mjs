@@ -350,7 +350,7 @@ async function main() {
     assert.equal(officialRanges.ipv4[0], '173.245.48.0/20');
     const user = boot.users[0];
 
-    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Zero-Emoji Free Notice in Subscriptions ──
+    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Subscription metadata without promotional notices ──
     const rawSubRes = await fetch(`${BASE}/sub/${user.subToken}?format=raw`);
     assert.equal(rawSubRes.status, 200);
     const announceHdr = rawSubRes.headers.get('announce') || '';
