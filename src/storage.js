@@ -1,5 +1,5 @@
 /**
- * NIGHTLINE — State & KV Storage Layer (CPU-optimized, locked NIGHTLINE identity).
+ * ArenaPanel — State & KV Storage Layer (legacy-compatible storage keys).
  */
 
 import {
@@ -13,10 +13,10 @@ import {
   sha224Hex,
 } from './crypto.js';
 
-export const PANEL_BRAND = 'NIGHTLINE';
+export const PANEL_BRAND = 'ArenaPanel';
 export const PANEL_VERSION = '2.5.8';
-export const GITHUB_REPO = 'youdidking/NightLine';
-export const GITHUB_REPO_URL = 'https://github.com/youdidking/NightLine';
+export const GITHUB_REPO = 'MrIranMa/panel';
+export const GITHUB_REPO_URL = 'https://github.com/MrIranMa/panel';
 export const STATE_KEY = 'nl:state:v2';
 const CACHE_TTL_MS = 15_000;
 const USAGE_FLUSH_INTERVAL_MS = 45_000;
@@ -612,7 +612,7 @@ export async function initializePanelState(env, { password, firstUserName, prefe
     },
     settings: initialSettings,
     users: [firstUser],
-    logs: [{ ts: Date.now(), event: 'setup', detail: 'راه‌اندازی اولیه پنل NIGHTLINE انجام شد' }],
+    logs: [{ ts: Date.now(), event: 'setup', detail: 'راه‌اندازی اولیه پنل ArenaPanel انجام شد' }],
   });
 }
 
