@@ -1,4 +1,4 @@
-name = "nightline"
+name = "arenapanel"
 main = "worker-single-file.js"
 compatibility_date = "2026-04-01"
 
