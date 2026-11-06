@@ -5,8 +5,8 @@ import { INSTALLER_HTML } from './generated/installer-ui.js';
 
 const API='https://api.cloudflare.com/client/v4';
 const permissions=[['account_analytics','read'],['account_settings','read'],['workers_scripts','edit'],['workers_kv_storage','edit']].map(([key,type])=>({key,type}));
-export const TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions))+'&accountId=*&name=ArenaPanel%20Free%20Installer';
-export const PAGES_TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions.map(p=>p.key==='workers_scripts'?{key:'page',type:'edit'}:p)))+'&accountId=*&name=ArenaPanel%20Free%20Pages%20Installer';
+export const TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions))+'&accountId=*&name=ArenaPanel%20Installer';
+export const PAGES_TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions.map(p=>p.key==='workers_scripts'?{key:'page',type:'edit'}:p)))+'&accountId=*&name=ArenaPanel%20Pages%20Installer';
 const locks=new Set();
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
