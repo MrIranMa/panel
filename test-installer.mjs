@@ -5,7 +5,7 @@ import {chromium} from 'playwright';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const officialWorker=fs.readFileSync('worker-single-file.js');
-const officialRelease={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.3/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
+const officialRelease={tag_name:'2.5.3',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/MrIranMa/panel/releases/download/2.5.3/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
 const PORT=20100+Math.floor(Math.random()*300),MOCK=20500+Math.floor(Math.random()*300);
 const BASE='http://127.0.0.1:'+PORT,TOKEN='cloudflare_valid_token_01234567890123456789';
 let uploads=0,stateDoc=null,metadata='',requests=[],pagesUploads=0;
@@ -42,7 +42,7 @@ try{
  assert(ready,'Installer workerd did not start: '+logs);
  browser=await chromium.launch();const context=await browser.newContext({viewport:{width:1280,height:980}});const page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto(BASE);
- assert.equal(await page.locator('h1').innerText(),'NIGHTLINE');assert.equal(await page.locator('.side-column').count(),0);assert.equal(await page.locator('#go').isEnabled(),true);
+ assert.equal(await page.locator('h1').innerText(),'ArenaPanel');assert.equal(await page.locator('.side-column').count(),0);assert.equal(await page.locator('#go').isEnabled(),true);
  await page.fill('#token','ghp_012345678901234567890123456789012345');await page.click('#go');assert((await page.locator('#form-status').innerText()).includes('GitHub'));
  assert.equal(uploads,0);
  await page.fill('#token',TOKEN);await page.click('#go');
@@ -53,7 +53,7 @@ try{
  assert.equal(new URL(page.url()).origin,BASE,'All installation stages stay on installer origin');
  assert.equal(await page.locator('.steps [data-state="done"]').count(),7);
  assert.equal(await page.locator('#progress').getAttribute('aria-valuenow'),'100');
- assert.match(await page.locator('#panel-url').innerText(),/^https:\/\/nightline-free-[a-f0-9]{12}\.community-account\.workers.dev\/panel$/);
+ assert.match(await page.locator('#panel-url').innerText(),/^https:\/\/arenapanel-[a-f0-9]{12}\.community-account\.workers.dev\/panel$/);
  assert.equal((await page.locator('#password').inputValue()).length,48);
  assert.equal(await page.locator('#result-version').innerText(),'2.5.3');
  assert.equal(uploads,1);assert(metadata.includes('SETUP_LOCKED'));assert(!JSON.stringify(stateDoc).includes(TOKEN));
@@ -67,7 +67,7 @@ try{
  const pagesPerms=JSON.parse(new URL(await pages.locator('#token-template').getAttribute('href')).searchParams.get('permissionGroupKeys'));
  assert(pagesPerms.some(p=>p.key==='page'&&p.type==='edit'));assert(!pagesPerms.some(p=>p.key==='workers_scripts'));assert((await pages.locator('#deploy-permission').textContent()).includes('Pages'));
  await pages.fill('#token',TOKEN);await pages.click('#go');await pages.waitForSelector('#result:not([hidden])',{timeout:30000});
- assert.match(await pages.locator('#panel-url').innerText(),/^https:\/\/nightline-free-[a-f0-9]{12}\.pages\.dev\/panel$/);assert.equal(pagesUploads,1);assert.equal(await pages.locator('.steps [data-state="done"]').count(),7);assert.equal(await pages.locator('#install-target').isDisabled(),true);
+ assert.match(await pages.locator('#panel-url').innerText(),/^https:\/\/arenapanel-[a-f0-9]{12}\.pages\.dev\/panel$/);assert.equal(pagesUploads,1);assert.equal(await pages.locator('.steps [data-state="done"]').count(),7);assert.equal(await pages.locator('#install-target').isDisabled(),true);
  await pages.setViewportSize({width:390,height:844});assert(await pages.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  fs.mkdirSync('docs/screenshots',{recursive:true});await pages.screenshot({path:'docs/screenshots/installer-pages.jpg',quality:90,fullPage:true});
  const fail=await context.newPage();await fail.goto(BASE);await fail.fill('#token','cloudflare_wrong_token_01234567890123456789');await fail.click('#go');
