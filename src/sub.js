@@ -1,6 +1,6 @@
 import {countryForEntry,countryNodeLabel,parseCountryEntry,countryFlag} from './geo.js';
 /**
- * NIGHTLINE — Multi-core Subscription & Press Pass Generator.
+ * ArenaPanel — Multi-core Subscription & Press Pass Generator.
  *
  * Supports:
  *   - Standard Base64 & Raw URI subscriptions (VLESS + Trojan × Clean IPs × Ports)
@@ -15,10 +15,6 @@ import { utf8ToBase64 } from './crypto.js';
 import { enrichUserView, PANEL_BRAND, PANEL_VERSION } from './storage.js';
 import { parseEndpoint } from './protocols.js';
 import { buildTgProxyLinks } from './tgproxy.js';
-
-export const FREE_NOTICE_FA = '[رایگان] این سرویس کاملاً رایگان و غیرقابل فروش است';
-export const FREE_NOTICE_FULL =
-  '[FREE] این سرویس کاملاً رایگان و متن‌باز است — هرگونه خرید و فروش آن ممنوع است.\nThis service is 100% free & open-source — strictly not for sale.';
 
 export function formatBytes(bytes) {
   const n = Number(bytes) || 0;
@@ -302,11 +298,6 @@ function makeTrojanUri(password, target, port, wsPath, settings, name) {
 
 export function buildUriLines(userView, settings, requestHost) {
   const lines = [];
-
-  // Always declare non-commercial free open-source status inside subscription lists
-  lines.push(
-    `vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?encryption=none&type=tcp#${encodeURIComponent('[اطلاعیه؛ نود اتصال نیست] '+FREE_NOTICE_FA)}`
-  );
 
   { // Mandatory subscription usage/expiry notices; never user-configurable.
     const used = formatBytes(userView.usedBytes);
@@ -775,7 +766,7 @@ export function buildSubscriptionLinks(origin,userView,settings,requestHost=new 
 }
 export function buildSubscriptionHeaders(userView, settings, requestHost) {
   const titleB64 = utf8ToBase64(buildSubscriptionTitle(userView,settings,requestHost));
-  const announceB64 = utf8ToBase64(FREE_NOTICE_FULL);
+  const announceB64 = utf8ToBase64('ArenaPanel subscription details are available in your dashboard.');
   const expSec = userView.effectiveExpiresAt > 0 ? Math.floor(userView.effectiveExpiresAt / 1000) : 0;
   return {
     'cache-control': 'no-store, no-cache, must-revalidate',
@@ -1044,28 +1035,11 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
 </head>
 <body>
 <div class="grain" aria-hidden="true"></div>
-<div class="modal-backdrop" id="sub-free-modal" hidden>
-  <div class="modal-box" role="dialog" aria-modal="true">
-    <p class="kicker">${svgShield} <span class="fa">اطلاعیهٔ رسمی و دائمی</span><span class="en">OFFICIAL NON-COMMERCIAL NOTICE</span></p>
-    <h3 class="card-h" style="margin-top:4px">
-      <span class="fa">این سرویس کاملاً رایگان و غیرقابل فروش است</span>
-      <span class="en">100% Free &amp; Open-Source — Strictly Not For Sale</span>
-    </h3>
-    <p class="hint" style="margin-top:10px;font-size:13.5px;line-height:1.9">
-      <span class="fa">پنل و اشتراکِ <b>NIGHTLINE</b> یک ابزار آزاد، رایگان و متن‌باز است. هرگونه خرید و فروش این سرویس ممنوع بوده و اگر مبلغی بابت آن پرداخت کرده‌اید، فروشنده از یک ابزار رایگان سوءاستفاده کرده است.</span>
-      <span class="en"><b>NIGHTLINE</b> is a completely free, open-source project. Selling subscriptions or access to this software is strictly prohibited.</span>
-    </p>
-    <div class="actions" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn primary" id="sub-free-ok" type="button"><span class="fa">متوجه شدم — مشاهدهٔ اشتراک</span><span class="en">I UNDERSTAND — CONTINUE</span></button>
-    </div>
-  </div>
-</div>
 <div class="wrap">
   <header class="masthead">
     <div class="topline">
       <span class="tick mono">PRESS PASS · V${PANEL_VERSION}</span>
       <span class="bar"></span>
-      <button class="sw" id="s-free-btn" type="button">${svgShield}<span class="fa">رایگان و غیرقابل فروش</span><span class="en">FREE · NOT FOR SALE</span></button>
       <button class="sw" id="s-lang" type="button">EN</button>
       <div class="theme-grp">
         <button class="sw st-pick" data-th="light" type="button" title="روشن">${svgSun}</button>
@@ -1080,12 +1054,6 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
     </div>
     <div class="doblerule"><i></i><i></i></div>
   </header>
-
-  <div class="free-ribbon">
-    ${svgShield}
-    <span class="fa"><b>این سرویس کاملاً رایگان و غیرقابل فروش است</b> — پروژهٔ آزاد و متن‌باز NIGHTLINE</span>
-    <span class="en"><b>100% FREE &amp; STRICTLY NOT FOR SALE</b> — Open-Source NIGHTLINE Project</span>
-  </div>
 
   <div class="cols">
     <section class="card">
@@ -1241,18 +1209,6 @@ export function renderSubscriberPressPass(userView, settings, requestHost, asset
       list.appendChild(row);
     });
   }
-  var subModal=document.getElementById('sub-free-modal');
-  var subFreeBtn=document.getElementById('s-free-btn');
-  var subFreeOk=document.getElementById('sub-free-ok');
-  function closeSubModal(){
-    if(subModal) subModal.hidden=true;
-    try{ sessionStorage.setItem('nl.free.seen','1'); }catch(e){}
-  }
-  if(subFreeBtn&&subModal) subFreeBtn.onclick=function(){ subModal.hidden=false; };
-  if(subFreeOk) subFreeOk.onclick=closeSubModal;
-  try{
-    if(subModal && !sessionStorage.getItem('nl.free.seen')) subModal.hidden=false;
-  }catch(e){}
   sync();
 })();
 </script>
