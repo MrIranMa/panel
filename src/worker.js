@@ -2,7 +2,7 @@ import { refreshCountryLabels } from './geo.js';
 import { lookupCountries } from './geo.js';
 import { parseChainProxy } from './chain.js';
 /**
- * NIGHTLINE — Cloudflare Worker & Pages Entrypoint (Free-Tier 10ms CPU optimized).
+ * ArenaPanel — Cloudflare Worker & Pages Entrypoint (Free-Tier 10ms CPU optimized).
  */
 
 import {
@@ -843,7 +843,7 @@ async function handleApi(request, url, env, runtime) {
         {
           ok: true,
           version: 2,
-          nightlineBackupVersion: 2,
+          arenaPanelBackupVersion: 2,
           exportedAt: new Date().toISOString(),
           settings: state.settings,
           users: state.users,
@@ -855,7 +855,7 @@ async function handleApi(request, url, env, runtime) {
         status: 200,
         headers: {
           'content-type': 'application/json; charset=utf-8',
-          'content-disposition': `attachment; filename="nightline-backup-${new Date().toISOString().slice(0, 10)}.json"`,
+          'content-disposition': `attachment; filename="arenapanel-backup-${new Date().toISOString().slice(0, 10)}.json"`,
         },
       }
     );
@@ -1041,13 +1041,13 @@ async function handleApi(request, url, env, runtime) {
     });
   }
 
-  // ---- GET /api/update/check (Hardcoded GitHub: youdidking/NightLine) ----
+  // ---- GET /api/update/check (Hardcoded GitHub: MrIranMa/panel) ----
   if (path === '/api/update/check' && method === 'GET') {
     const info = await checkOfficialGitHubUpdate(state.cfApi, url.host, env);
     return json(info, info.ok ? 200 : 502);
   }
 
-  // ---- POST /api/update/apply (In-Panel Self-Update from youdidking/NightLine) ----
+  // ---- POST /api/update/apply (In-Panel Self-Update from MrIranMa/panel) ----
   if (path === '/api/update/apply' && method === 'POST') {
     const body = await readJsonBody(request);
     if (body.__parseError) return json({ ok: false, error: body.__parseError }, 400);
@@ -1316,7 +1316,7 @@ async function servePanelShell(request, env) {
       },
     });
   }
-  return new Response('NIGHTLINE UI bundle missing — run `npm run build`.', { status: 500 });
+  return new Response('ArenaPanel UI bundle missing — run `npm run build`.', { status: 500 });
 }
 
 /* ---------------- Cloudflare Daily Quota & Hardcoded GitHub Self-Updater ---------------- */
@@ -1639,7 +1639,7 @@ async function checkOfficialGitHubUpdate(cfApi, host, env) {
   const ghRawBase = String(env?.NL_GH_RAW_BASE || 'https://raw.githubusercontent.com').replace(/\/+$/, '');
   const ghHeaders = {
     accept: 'application/vnd.github+json',
-    'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}`,
+    'user-agent': `ArenaPanel-Updater/${PANEL_VERSION}`,
   };
 
   let latestVersion = '';
@@ -1674,7 +1674,7 @@ async function checkOfficialGitHubUpdate(cfApi, host, env) {
   // Also check main branch package.json if no release exists yet or main has newer version
   const pkgRes = await fetchJsonWithTimeout(
     `${ghRawBase}/${GITHUB_REPO}/main/package.json`,
-    { headers: { 'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}` } },
+    { headers: { 'user-agent': `ArenaPanel-Updater/${PANEL_VERSION}` } },
     8000
   );
   if (pkgRes.ok && pkgRes.data && pkgRes.data.version) {
@@ -1767,7 +1767,7 @@ async function applyOfficialGitHubSelfUpdate({ token, accountId, scriptName, env
     };
   }
 
-  // 3. Check official GitHub release / main bundle from youdidking/NightLine
+  // 3. Check official GitHub release / main bundle from MrIranMa/panel
   const updateInfo = await checkOfficialGitHubUpdate({ token, scriptName: targetScript }, '', env);
   if (!updateInfo.ok) {
     return { ok: false, error: updateInfo.error || 'خطا در دریافت اطلاعات مخزن گیت‌هاب.' };
@@ -1782,7 +1782,7 @@ async function applyOfficialGitHubSelfUpdate({ token, accountId, scriptName, env
   for (const dlUrl of candidateUrls) {
     const dlRes = await fetchJsonWithTimeout(
       dlUrl,
-      { headers: { 'user-agent': `NIGHTLINE-Updater/${PANEL_VERSION}` } },
+      { headers: { 'user-agent': `ArenaPanel-Updater/${PANEL_VERSION}` } },
       15000
     );
     if (dlRes.ok && typeof dlRes.text === 'string' && dlRes.text.length > 15000 && dlRes.text.includes('export')) {
