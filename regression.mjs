@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const officialWorker=fs.readFileSync('worker-single-file.js');
-const officialRelease={tag_name:'2.5.8',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/youdidking/NightLine/releases/download/2.5.8/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
+const officialRelease={tag_name:'2.5.8',assets:[{name:'worker-single-file.js',browser_download_url:'https://github.com/MrIranMa/panel/releases/download/2.5.8/worker-single-file.js',size:officialWorker.length,digest:'sha256:'+createHash('sha256').update(officialWorker).digest('hex')}]};
 import { build } from 'esbuild';
 import { sanitizeSettings, DEFAULT_SETTINGS } from './src/storage.js';
 import installer, { TOKEN_TEMPLATE } from './src/installer.js';
@@ -12,16 +12,16 @@ assert.equal(sanitizeSettings({showSubInfoNodes:false},{...DEFAULT_SETTINGS,show
 for (const v of ['0','300-100','999999','-1','10-0']) assert.equal(sanitizeSettings({fragmentLength:v}).fragmentLength,DEFAULT_SETTINGS.fragmentLength);
 assert.equal(sanitizeSettings({fragmentLength:'100-200',fragmentInterval:'1-3'}).fragmentLength,'100-200');
 assert.equal(sanitizeSettings({fragmentPackets:'20-1'}).fragmentPackets,'tlshello');
-console.log('PASS mandatory notices and bounded fragment ranges');
+console.log('PASS removed promotional notices and bounded fragment ranges');
 fs.mkdirSync('.arena',{recursive:true});
 await build({entryPoints:['src/sub.js'],outfile:'.arena/sub.mjs',bundle:true,platform:'node',format:'esm',plugins:[{name:'sockets-test-stub',setup(b){b.onResolve({filter:/^cloudflare:sockets$/},()=>({path:'sockets',namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},()=>({contents:'export function connect(){throw Error("No sockets in unit tests")}' }));}}]});
 const sub = await import('./.arena/sub.mjs');
 const user={id:'test',name:'کاربر',uuid:'b9ac52fc-ec0f-4f3b-9ee6-c967ed402153',trojanPassword:'secret',subToken:'testtoken',usedBytes:1234,usedUpBytes:0,usedDownBytes:1234,limitBytes:0,effectiveExpiresAt:0};
 const settings={...DEFAULT_SETTINGS,showSubInfoNodes:false,cleanIPs:['104.16.1.1'],tlsPorts:[443],earlyData:0,alpn:'http/1.1'};
 const lines=sub.buildUriLines(user,settings,'panel.example.com');
-assert(decodeURIComponent(lines[0]).includes('رایگان'));
-assert(decodeURIComponent(lines[1]).includes('مصرف'));
-assert(decodeURIComponent(lines[2]).includes('اعتبار'));
+assert(!lines.some(line=>/رایگان|غیرقابل فروش|not for sale|100% free/i.test(decodeURIComponent(line))));
+assert(lines.some(line=>decodeURIComponent(line).includes('مصرف')));
+assert(lines.some(line=>decodeURIComponent(line).includes('اعتبار')));
 const configs=sub.buildXrayConfigs(user,settings,'panel.example.com');
 assert(configs.length>0);
 for(const config of configs){
@@ -35,7 +35,7 @@ const sing=sub.buildSingboxConfig(user,settings,'panel.example.com');
 assert(sing.outbounds.filter(o=>o.type==='vless'||o.type==='trojan').every(o=>!o.transport.max_early_data));
 const yaml=sub.buildClashYaml(user,settings,'panel.example.com');assert(!yaml.includes('max-early-data: 2048'));
 assert(sub.buildSubscriptionHeaders(user,settings,'panel.example.com')['subscription-userinfo']);
-console.log('PASS URI notices, Xray fragment chain, TLS checks and shared Early Data across formats');
+console.log('PASS subscription metadata, Xray fragment chain, TLS checks and shared Early Data across formats');
 
 const page=await installer.fetch(new Request('https://installer.example/'));
 assert.equal(page.status,200);assert(page.headers.get('content-security-policy').includes("frame-ancestors 'none'"));
@@ -66,7 +66,7 @@ const installRequest=()=>new Request('https://installer.example/install',{method
 try{
  const result=await (await installer.fetch(installRequest())).json();
  assert.equal(result.ok,true,result.error);assert.equal(result.version,'2.5.8');assert.equal(result.verified,true);
- assert.match(result.url,/^https:\/\/nightline-free-[a-f0-9]{12}\.existing-account\.workers.dev\/panel$/);
+ assert.match(result.url,/^https:\/\/arenapanel-[a-f0-9]{12}\.existing-account\.workers.dev\/panel$/);
  assert.equal(result.password.length,48);
  assert(!JSON.stringify(persisted).includes(token));assert(persisted.auth.hash||persisted.auth.passwordHash);
  assert(metadata.bindings.some(b=>b.name==='KV'));
