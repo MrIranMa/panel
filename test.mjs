@@ -361,9 +361,8 @@ async function main() {
     assert(!/\p{Extended_Pictographic}/u.test(decodedAnnounce), 'Announce header must have 0 emojis');
 
     const rawLines = (await rawSubRes.text()).trim().split('\n');
-    const firstDecodedHash = decodeURIComponent(rawLines[0].split('#')[1] || '');
-    assert(firstDecodedHash.includes('رایگان و غیرقابل فروش'), 'Top URI line must state free & not for sale');
-    assert(!/\p{Extended_Pictographic}/u.test(firstDecodedHash), 'Top URI line must have 0 emojis');
+    assert(rawLines.length > 0, 'Subscription must contain connection data');
+    assert(!/رایگان|غیرقابل فروش|not for sale|100% free/i.test(rawLines.join('\n')), 'Subscription must not contain removed promotional notices');
 
     for (const p of [443, 8443, 2053, 2083, 2087, 2096]) {
       assert(rawLines.some((l) => l.includes(`:${p}?`)), `Expected TLS port ${p} in subscription`);
