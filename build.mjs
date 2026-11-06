@@ -624,7 +624,19 @@ console.log(`· signature audit    0 matches across all ${AUDIT_KEYWORDS.length}
 if (BUILD_PAGES) {
 const zipPath = P('dist/nightline-pages.zip');
 if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-execFileSync('zip', ['-q', '-r', zipPath, '_worker.js'], { cwd: P('dist') });
+if (process.platform === 'win32') {
+  // Windows does not ship with the Unix `zip` executable. Use the
+  // built-in PowerShell archive command instead.
+  const escapedZipPath = zipPath.replace(/'/g, "''");
+  execFileSync('powershell.exe', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    "Compress-Archive -LiteralPath '_worker.js' -DestinationPath '" + escapedZipPath + "' -Force"
+  ], { cwd: P('dist'), stdio: 'inherit' });
+} else {
+  execFileSync('zip', ['-q', '-r', zipPath, '_worker.js'], { cwd: P('dist') });
+}
 console.log(`· nightline-pages.zip ${(fs.statSync(zipPath).size / 1024).toFixed(1)} KB`);
 }
 console.log('· build complete');
