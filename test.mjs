@@ -246,10 +246,12 @@ async function main() {
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
 
+  // Invoke the locally installed Wrangler CLI through the current Node
+  // executable. This works on Windows too, where the npx shim is npx.cmd.
   const proc = spawn(
-    'npx',
+    process.execPath,
     [
-      'wrangler',
+      'node_modules/wrangler/bin/wrangler.js',
       'dev',
       '--local',
       '--port',
