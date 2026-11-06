@@ -2,7 +2,7 @@ import { refreshCountryLabels } from './geo.js';
 import { lookupCountries } from './geo.js';
 import { parseChainProxy } from './chain.js';
 /**
- * ArenaPanel — Cloudflare Worker & Pages Entrypoint (Free-Tier 10ms CPU optimized).
+ * ArenaPanel — Cloudflare Worker & Pages Entrypoint (10ms CPU budget optimized).
  */
 
 import {
@@ -520,7 +520,7 @@ async function handleApi(request, url, env, runtime) {
     clearLoginFailures(clientIp);
     let fresh = await loadRuntimeState(env, true);
 
-    // Auto-migrate legacy high-iteration PBKDF2 records down to Free-Tier-safe 10,000 iterations
+    // Auto-migrate legacy high-iteration PBKDF2 records down to Cloudflare CPU-budget-safe 10,000 iterations
     if ((fresh.auth?.iter || 0) > PBKDF2_DEFAULT_ITER) {
       const upgraded = await hashPassword(rawPw, null, PBKDF2_DEFAULT_ITER);
       fresh.auth = { ...fresh.auth, ...upgraded };
