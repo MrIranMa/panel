@@ -469,17 +469,17 @@
         در داشبورد جدید کلادفلر، اگر در بخش Workers گزینهٔ <strong>Upload assets</strong> را بزنی، کلادفلر یک ورکرِ «فقط فایل ثابت» می‌سازد و پیغام می‌دهد <em>Variables/Bindings cannot be added to a Worker that only has static assets</em>. برای فعال‌سازیِ پنل کاملِ ArenaPanel (چندکاربره و بدون نیاز به متغیر محیطی):
       </p>
       <ol class="fa">
-        <li>در منوی چپ کلادفلر به <strong>Storage &amp; Databases → KV</strong> برو، دکمهٔ <strong>Create</strong> را بزن و یک فضا به نام <code>nightline</code> بساز.</li>
+        <li>در منوی چپ کلادفلر به <strong>Storage &amp; Databases → KV</strong> برو، دکمهٔ <strong>Create</strong> را بزن و یک فضا به نام <code>arenapanel</code> بساز.</li>
         <li>به <strong>Workers &amp; Pages → Create</strong> برو، گزینهٔ <strong>Start with Hello World!</strong> را بزن و <strong>Deploy</strong> کن.</li>
         <li>روی دکمهٔ <strong>Edit code</strong> (بالا راست) کلیک کن، کل کد فایل <code>worker-single-file.js</code> را جایگزین کد قبلی کن و <strong>Deploy</strong> بزن.</li>
-        <li>در صفحهٔ ورکر به <strong>Settings → Bindings → Add binding → KV namespace</strong> برو، در کادر Variable name دقیقاً بنویس <code>KV</code>، فضای <code>nightline</code> را انتخاب کن و <strong>Save</strong> بزن.</li>
+        <li>در صفحهٔ ورکر به <strong>Settings → Bindings → Add binding → KV namespace</strong> برو، در کادر Variable name دقیقاً بنویس <code>KV</code>، فضای <code>arenapanel</code> را انتخاب کن و <strong>Save</strong> بزن.</li>
         <li>همین صفحه را رفرش کن — فرم انتخاب رمز مدیر باز می‌شود و دیگر هیچ متغیری لازم نداری!</li>
       </ol>
       <ol class="en">
-        <li>In Cloudflare Dashboard, open <strong>Storage &amp; Databases → KV → Create</strong> and name it <code>nightline</code>.</li>
+        <li>In Cloudflare Dashboard, open <strong>Storage &amp; Databases → KV → Create</strong> and name it <code>arenapanel</code>.</li>
         <li>Open <strong>Workers &amp; Pages → Create → Start with Hello World! → Deploy</strong> (do <em>not</em> use Workers "Upload assets", which creates a static-only Worker).</li>
         <li>Click <strong>Edit code</strong>, paste the entire contents of <code>worker-single-file.js</code>, and click <strong>Deploy</strong>.</li>
-        <li>Go to <strong>Settings → Bindings → Add binding → KV namespace</strong>, set Variable name to <code>KV</code>, select <code>nightline</code>, and save. Refresh this page!</li>
+        <li>Go to <strong>Settings → Bindings → Add binding → KV namespace</strong>, set Variable name to <code>KV</code>, select <code>arenapanel</code>, and save. Refresh this page!</li>
       </ol>
     </aside>
 
@@ -1336,8 +1336,7 @@
       <span>·</span>
       <a class="inline-link" href="https://github.com/MrIranMa/panel" target="_blank" rel="noopener">github.com/MrIranMa/panel</a>
       <span>·</span>
-      <span class="fa">کاملاً رایگان و متن‌باز · غیرقابل فروش</span>
-      <span class="en">100% FREE &amp; OPEN-SOURCE · STRICTLY NOT FOR SALE</span>
+      <span class="fa">پنل مدیریت اتصال روی Cloudflare</span><span class="en">CLOUDFLARE CONNECTION MANAGEMENT</span>
     </p>
   </footer>
 </div>
