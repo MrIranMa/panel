@@ -1,9 +1,9 @@
-/* NIGHTLINE v2.5.8 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* ArenaPanel v2.5.8 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
-  var OFFICIAL_GITHUB_REPO = 'youdidking/NightLine';
-  var OFFICIAL_GITHUB_URL = 'https://github.com/youdidking/NightLine';
+  var OFFICIAL_GITHUB_REPO = 'MrIranMa/panel';
+  var OFFICIAL_GITHUB_URL = 'https://github.com/MrIranMa/panel';
 
   var $ = function (id) { return document.getElementById(id); };
   var html = document.documentElement;
@@ -56,7 +56,7 @@
   var STATE = {
     mode: 'loading',
     isDemo: false,
-    host: location.host || 'nightline.workers.dev',
+    host: location.host || 'arenapanel.workers.dev',
     edge: '—',
     cf: {
       clientIp: '—',
@@ -961,66 +961,7 @@
     });
   }
 
-  /* -------------------------------------------- Appearance & Free Modal */
-
-  function applyAppearance() {
-    html.setAttribute('data-lang', lang);
-    document.querySelectorAll('option[data-en]').forEach(function(o){o.textContent=o.getAttribute('data-'+lang);});
-    html.setAttribute('lang', lang === 'fa' ? 'fa' : 'en');
-    html.setAttribute('dir', lang === 'fa' ? 'rtl' : 'ltr');
-    html.setAttribute('data-theme', theme);
-    $('lang').textContent = lang === 'fa' ? 'EN' : 'FA';
-    document.querySelectorAll('.t-pick').forEach(function (b) {
-      b.classList.toggle('on', b.getAttribute('data-th') === theme);
-    });
-    renderVisitorStrip();
-    if (STATE.currentQrText) drawQrInto('main-qr', STATE.currentQrText);
-    renderStatelessTicket();
-    if (STATE.mode === 'admin') {
-      renderAdminHeader();
-      renderActiveUserPass();
-      renderUsersLedger();
-      syncCfQuotaUI();
-    }
-  }
-
-  $('lang').addEventListener('click', function () {
-    lang = lang === 'fa' ? 'en' : 'fa';
-    LS.set('lang', lang);
-    applyAppearance();
-  });
-
-  document.querySelectorAll('.t-pick').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      theme = btn.getAttribute('data-th') === 'dark' ? 'dark' : 'light';
-      LS.set('theme', theme);
-      applyAppearance();
-    });
-  });
-
-  var freeModal = $('free-notice-modal');
-  var freeInfoBtn = $('btn-free-info');
-  var freeCloseBtn = $('btn-free-close');
-  function closeFreeModal() {
-    if (freeModal) freeModal.hidden = true;
-    try { sessionStorage.setItem('nl.free.seen', '1'); } catch (e) {}
-  }
-  if (freeInfoBtn && freeModal) {
-    freeInfoBtn.addEventListener('click', function () { freeModal.hidden = false; });
-  }
-  if (freeCloseBtn) {
-    freeCloseBtn.addEventListener('click', closeFreeModal);
-  }
-  if (freeModal) {
-    freeModal.addEventListener('click', function (ev) {
-      if (ev.target === freeModal) closeFreeModal();
-    });
-    try {
-      if (!sessionStorage.getItem('nl.free.seen') && location.search.indexOf('nopopup=1') === -1) {
-        freeModal.hidden = false;
-      }
-    } catch (e) {}
-  }
+  /* -------------------------------------------- Appearance */
 
   /* ----------------------------- Offline Sandbox Preview Shim (file:/null) */
 
@@ -1046,13 +987,13 @@
     demoStore = {
       version: '2.5.8',
       mode: 'admin', kvBound: true, kvName: 'PREVIEW_KV', initialized: true, authenticated: true,
-      edge: 'FRA', host: 'nightline.example.workers.dev',
+      edge: 'FRA', host: 'arenapanel.example.workers.dev',
       cfIntegration: {
         hasToken: true,
         maskedToken: '••••••••9f2a',
         accountId: 'demo_acc_01',
         accountName: 'Cloudflare Edge Account',
-        scriptName: 'nightline',
+        scriptName: 'arenapanel',
         dailyLimit: 100000,
         canEditWorkers: true,
         tokensDashboardUrl: 'https://dash.cloudflare.com/profile/api-tokens'
@@ -1170,7 +1111,7 @@
         }
         ds.cfIntegration.hasToken = true;
         ds.cfIntegration.maskedToken = '••••••••' + String(body.token || '9f2a').slice(-4);
-        ds.cfIntegration.scriptName = body.scriptName || 'nightline';
+        ds.cfIntegration.scriptName = body.scriptName || 'arenapanel';
         ds.cfIntegration.dailyLimit = Number(body.dailyLimit) || 100000;
         return {
           ok: true,
@@ -1193,10 +1134,10 @@
           latestVersion: '2.5.8',
           updateAvailable: false,
           releaseUrl: OFFICIAL_GITHUB_URL + '/releases',
-          releaseNotes: 'NIGHTLINE v2.5.8 — Latest release installed.',
+          releaseNotes: 'ArenaPanel v2.5.8 — Latest release installed.',
           cfConfigured: ds.cfIntegration.hasToken,
           canEditWorkers: true,
-          scriptName: ds.cfIntegration.scriptName || 'nightline'
+          scriptName: ds.cfIntegration.scriptName || 'arenapanel'
         };
       }
       if (path === '/api/update/apply') {
@@ -1205,7 +1146,7 @@
           updated: true,
           previousVersion: '2.5.8',
           targetVersion: '2.5.8',
-          scriptName: (body && body.scriptName) || 'nightline',
+          scriptName: (body && body.scriptName) || 'arenapanel',
           reloadAfterMs: 1200
         };
       }
@@ -1311,14 +1252,14 @@
     var resolvedMode = data.mode || stateToMode[data.state] || 'stateless';
     STATE.mode = resolvedMode;
     STATE.isDemo = isSandboxPreview;
-    STATE.host = data.host || (data.cf && data.cf.host) || location.host || 'nightline.workers.dev';
+    STATE.host = data.host || (data.cf && data.cf.host) || location.host || 'arenapanel.workers.dev';
     if (data.edge && data.edge !== 'CF-GLOBAL') STATE.edge = data.edge;
     else if (STATE.edge === '—' && data.edge) STATE.edge = data.edge;
 
     if (data.cf) mergeVisitorCf(data.cf);
     else renderVisitorStrip();
 
-    $('mast-title').textContent = 'NIGHTLINE';
+    $('mast-title').textContent = 'ArenaPanel';
 
     $('v-setup').hidden = resolvedMode !== 'setup';
     $('v-login').hidden = resolvedMode !== 'login';
@@ -1445,7 +1386,7 @@
     }
     $('sl-box').hidden = false;
     var h = STATE.host;
-    slUri = 'vless://' + id + '@' + h + ':443?encryption=none&security=tls&sni=' + h + '&fp=chrome&type=ws&host=' + h + '&path=%2F%3Fed%3D2048#NIGHTLINE';
+    slUri = 'vless://' + id + '@' + h + ':443?encryption=none&security=tls&sni=' + h + '&fp=chrome&type=ws&host=' + h + '&path=%2F%3Fed%3D2048#ArenaPanel';
     $('sl-sub').href = '/sub/' + id;
     drawQrInto('sl-qr', slUri);
   }
@@ -1663,7 +1604,7 @@
     });
   }
 
-  function currentSubscriptionUrl(user,format){var m=STATE.subscriptionMeta;if(m&&m.userId===user.id&&m.links[format])return m.links[format];var q=new URL(subBaseUrl(user));q.searchParams.set('format',format);q.hash='NIGHTLINE · '+user.name+' · CC ?';return q.toString();}
+  function currentSubscriptionUrl(user,format){var m=STATE.subscriptionMeta;if(m&&m.userId===user.id&&m.links[format])return m.links[format];var q=new URL(subBaseUrl(user));q.searchParams.set('format',format);q.hash='ArenaPanel · '+user.name+' · CC ?';return q.toString();}
   async function refreshedSubscriptionUrl(user,format){var fresh=await loadUserNodes(user.id);if(!fresh)throw Error(tr('دریافت اطلاعات تازهٔ اشتراک ناموفق بود؛ دوباره تلاش کنید.','Fresh subscription metadata could not be loaded; please retry.'));if(!getSelectedUser()||getSelectedUser().id!==user.id)throw Error(tr('کاربر تغییر کرد؛ دوباره تلاش کنید.','Selected user changed; try again.'));return currentSubscriptionUrl(user,format);}
   [['cp-b64','b64'],['cp-xray','xray'],['cp-sb','singbox'],['cp-clash','clash']].forEach(function(pair){$(pair[0]).onclick=async function(){var u=getSelectedUser();if(!u)return;this.disabled=true;try{var pending=refreshedSubscriptionUrl(u,pair[1]);if(navigator.clipboard&&navigator.clipboard.write&&globalThis.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'text/plain':pending.then(function(link){return new Blob([link],{type:'text/plain'});})})]);showToast('لینک اشتراک با برچسب کشور رونوشت شد','Country-labelled subscription URL copied');}catch(e){copyText(await pending,'لینک اشتراک با برچسب کشور','Subscription URL with country label');}}else copyText(await pending,'لینک اشتراک با برچسب کشور','Subscription URL with country label');}catch(e){showToast(e.message,e.message);}finally{this.disabled=false;}};});
   $('cp-doh').onclick=function(){var u=getSelectedUser();if(u)copyText(dohFullUrl(u),'آدرس DoH اختصاصی','Private DoH URL');};
@@ -2179,7 +2120,7 @@
       var objUrl = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = objUrl;
-      a.download = 'nightline-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.download = 'arenapanel-backup-' + new Date().toISOString().slice(0, 10) + '.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2470,7 +2411,7 @@
     }
   }, 180000);
 
-  /* -------- Hardcoded GitHub Updater (https://github.com/youdidking/NightLine) -------- */
+  /* -------- ArenaPanel GitHub Updater (https://github.com/MrIranMa/panel) -------- */
 
   var ghAutoStarted=false,ghLastCheck=0;
   setInterval(function(){if(STATE.mode==='admin'&&!document.hidden)checkGitHubUpdates(true);},900000);
@@ -2611,8 +2552,8 @@
       btn.disabled = true;
       showGhMessage(
         tr(
-          'در حال دریافت بستهٔ رسمی از github.com/youdidking/NightLine و استقرار روی ورکر کلادفلر (حفظ کامل KV و مشترکین)…',
-          'Downloading official bundle from github.com/youdidking/NightLine & deploying to Cloudflare Worker…'
+          'در حال دریافت بستهٔ ArenaPanel از github.com/MrIranMa/panel و استقرار روی ورکر کلادفلر (حفظ کامل KV و مشترکین)…',
+          'Downloading ArenaPanel bundle from github.com/MrIranMa/panel & deploying to Cloudflare Worker…'
         ),
         true
       );

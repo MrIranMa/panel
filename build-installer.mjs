@@ -8,4 +8,4 @@ const js=(await transform(fs.readFileSync('src/installer-ui.js','utf8'),{loader:
 const html=fs.readFileSync('src/installer-ui.html','utf8').replace('{{STYLE}}',()=>css).replace('{{SCRIPT}}',()=>js).replace(/>\s+</g,'><');
 fs.writeFileSync('src/generated/installer-ui.js','export const INSTALLER_HTML='+JSON.stringify(html)+';');
 await build({entryPoints:['src/installer-entry.js'],outfile:'nightline-installer.js',bundle:true,format:'esm',target:'es2022',minify:true});
-console.log('Official auto-installer built; downloads NIGHTLINE directly from official main; no GitHub REST API required.');
+console.log('ArenaPanel installer bundle built from the current repository source.');

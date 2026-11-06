@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.2 — Total-AST Polymorphic + Gzip-XOR Stealth Build Pipeline
+ * ArenaPanel v2.2 — Total-AST Polymorphic + Gzip-XOR Build Pipeline
  *
  * Combines & upgrades the proven Cloudflare Worker stealth architectures from production panels:
  *   1. Subsets JetBrains Mono & Vazirmatn into compact single-copy WOFF2 data URIs.
@@ -242,7 +242,7 @@ const pagesIndexHtml = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<title>NIGHTLINE</title>
+<title>ArenaPanel</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23141210'/%3E%3Cpath d='M8 23V9h3l6 8.4V9h3v14h-3l-6-8.4V23z' fill='%23e9e5da'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -602,7 +602,7 @@ export async function getPanelHtml() {
 
 const standaloneCode = await compileStealthWorker(
   true,
-  `// NIGHTLINE v${VERSION} — Cloudflare Workers Standalone Edition`
+  `// ArenaPanel v${VERSION} — Cloudflare Workers Standalone Edition`
 );
 fs.writeFileSync(P('worker-single-file.js'), standaloneCode);
 if(BUILD_PAGES){fs.writeFileSync(P('dist/_worker.js'),standaloneCode);console.log('· Pages uses the verified standalone module; no static-shell binding required.');}

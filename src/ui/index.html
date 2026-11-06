@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<title>NIGHTLINE — پنل مدیریت اشتراک و تونل کلادفلر</title>
+<title>ArenaPanel — پنل مدیریت اتصال و تونل کلادفلر</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23141210'/%3E%3Cpath d='M8 23V9h3l6 8.4V9h3v14h-3l-6-8.4V23z' fill='%23e9e5da'/%3E%3C/svg%3E">
 <style>{{STYLE}}</style>
 </head>
@@ -51,31 +51,6 @@
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.8h.01"/></symbol>
 </svg>
 
-<!-- ─────────── OFFICIAL FREE & NON-COMMERCIAL POPUP NOTICE ─────────── -->
-<div class="modal-backdrop" id="free-notice-modal" hidden>
-  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="fn-title">
-    <p class="kicker">
-      <svg class="ic"><use href="#i-shield"/></svg>
-      <span class="fa">اطلاعیهٔ رسمی و دائمی — NIGHTLINE V{{VERSION}}</span>
-      <span class="en">OFFICIAL NOTICE — NIGHTLINE V{{VERSION}}</span>
-    </p>
-    <h2 class="head" id="fn-title" style="font-size:21px;margin-top:4px">
-      <span class="fa">این سرویس کاملاً رایگان و غیرقابل فروش است</span>
-      <span class="en">100% Free &amp; Open-Source — Strictly Not For Sale</span>
-    </h2>
-    <p class="labor" style="margin-top:10px">
-      <span class="fa">پروژهٔ <strong>NIGHTLINE</strong> یک نرم‌افزار آزاد، رایگان و متن‌باز (Open-Source) است. هرگونه خرید و فروش سورس، پنل یا لینک‌های اشتراک این سرویس اکیداً ممنوع بوده و اگر هزینه‌ای بابت آن پرداخت کرده‌اید، فروشنده از یک ابزار رایگان سوءاستفاده کرده است.</span>
-      <span class="en"><strong>NIGHTLINE</strong> is a 100% free and open-source project. Selling access, panels, or subscriptions built with this software is strictly prohibited.</span>
-    </p>
-    <div class="actions" style="justify-content:flex-end;margin-top:16px">
-      <button class="btn primary" id="btn-free-close" type="button">
-        <svg class="ic"><use href="#i-check"/></svg>
-        <span class="fa">متوجه شدم — ورود به پنل</span><span class="en">I UNDERSTAND — CONTINUE</span>
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- ─────────── COMPACT CLOUDFLARE DAILY REQUEST QUOTA & TOKEN MODAL ─────────── -->
 <div class="modal-backdrop" id="cf-modal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="cf-modal-title" style="max-width:520px;position:relative">
@@ -117,7 +92,7 @@
           <span class="en">CLOUDFLARE API TOKEN</span>
         </label>
         <div class="cf-help-links">
-          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer" id="cf-template-quick">
+          <a class="inline-link" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=ArenaPanel%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer" id="cf-template-quick">
             <span class="fa">تمپلیت آمادهٔ توکن آماری</span><span class="en">PRE-FILLED COMPLETE TOKEN</span>
             <svg class="ic ic-sm"><use href="#i-external"/></svg>
           </a>
@@ -142,8 +117,8 @@
         </div>
         <p class="hint" style="margin:0 0 8px"><span class="fa">روی یکی از تمپلیت‌های رسمی Cloudflare بزنید. دسترسی‌ها از قبل پر شده‌اند؛ حساب مورد نظر را در داشبورد انتخاب کنید، مجوزها را مرور و تأیید کنید و توکنِ نمایش‌داده‌شده را فقط خودتان در کادر زیر وارد کنید. هیچ توکنی از داشبورد به‌صورت خودکار به پنل منتقل نمی‌شود.</span><span class="en">Open an official pre-filled Cloudflare template. Select your account, review permissions and confirm in your own dashboard; copy the displayed token here yourself. No token is silently sent back to this panel.</span></p>
         <div class="token-templates">
-          <a class="btn ghost sm-btn" id="cf-template-read" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-key"/></svg><span class="fa">تمپلیت کامل: آمار، تنظیمات و ویرایش Worker</span><span class="en">COMPLETE TOKEN TEMPLATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
-          <a class="btn ghost sm-btn" id="cf-template-update" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=NIGHTLINE%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-cloud-up"/></svg><span class="fa">تمپلیت کامل با مجوز آپدیت Worker</span><span class="en">COMPLETE TEMPLATE + WORKER UPDATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+          <a class="btn ghost sm-btn" id="cf-template-read" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=ArenaPanel%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-key"/></svg><span class="fa">تمپلیت کامل: آمار، تنظیمات و ویرایش Worker</span><span class="en">COMPLETE TOKEN TEMPLATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
+          <a class="btn ghost sm-btn" id="cf-template-update" href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%5D&amp;accountId=*&amp;zoneId=all&amp;name=ArenaPanel%20Analytics%20and%20Self-Update" target="_blank" rel="noopener noreferrer"><svg class="ic ic-sm"><use href="#i-cloud-up"/></svg><span class="fa">تمپلیت کامل با مجوز آپدیت Worker</span><span class="en">COMPLETE TEMPLATE + WORKER UPDATE</span><svg class="ic ic-sm"><use href="#i-external"/></svg></a>
         </div>
         <p class="hint" style="margin:9px 0 6px"><span class="fa">مجوزهای داخل تمپلیت:</span><span class="en">Permissions preselected by the template:</span></p>
         <ul class="perm-list">
@@ -218,8 +193,8 @@
         <tr>
           <th><span class="fa">مخزن رسمی</span><span class="en">REPOSITORY</span></th>
           <td>
-            <a class="inline-link mono" href="https://github.com/youdidking/NightLine" target="_blank" rel="noopener">
-              github.com/youdidking/NightLine
+            <a class="inline-link mono" href="https://github.com/MrIranMa/panel" target="_blank" rel="noopener">
+              github.com/MrIranMa/panel
               <svg class="ic ic-sm"><use href="#i-external"/></svg>
             </a>
           </td>
@@ -253,7 +228,7 @@
           <span id="gh-token-hint"><span class="fa">تنظیم توکن کلادفلر</span><span class="en">Configure CF Token</span></span>
         </button>
       </div>
-      <input id="gh-inp-script" type="text" dir="ltr" autocomplete="off" placeholder="nightline-worker">
+      <input id="gh-inp-script" type="text" dir="ltr" autocomplete="off" placeholder="arenapanel-worker">
     </div>
 
     <div id="gh-msg" hidden></div>
@@ -269,7 +244,7 @@
           <span class="fa">بروزرسانی مستقیم پنل</span><span class="en">SELF-UPDATE NOW</span>
         </button>
       </div>
-      <a class="btn ghost sm-btn" id="gh-dl-link" href="https://github.com/youdidking/NightLine/releases" target="_blank" rel="noopener">
+      <a class="btn ghost sm-btn" id="gh-dl-link" href="https://github.com/MrIranMa/panel/releases" target="_blank" rel="noopener">
         <svg class="ic ic-sm"><use href="#i-external"/></svg>
         <span class="fa">صفحهٔ انتشار</span><span class="en">RELEASES</span>
       </a>
@@ -287,10 +262,6 @@
       <span class="tick" id="top-edge">COLO · —</span>
       <span class="mid-tick">/</span>
       <span class="bar"></span>
-      <button class="sw" id="btn-free-info" type="button" title="اطلاعیه رایگان بودن">
-        <svg class="ic ic-sm"><use href="#i-shield"/></svg>
-        <span class="fa">رایگان و غیرقابل فروش</span><span class="en">FREE · NOT FOR SALE</span>
-      </button>
       <button class="sw" id="lang" type="button" title="Language">EN</button>
       <div class="theme-grp" role="group" aria-label="Theme">
         <button class="sw t-pick" data-th="light" type="button" title="تم روشن"><svg class="ic ic-sm"><use href="#i-sun"/></svg></button>
@@ -298,27 +269,21 @@
       </div>
     </div>
 
-    <h1 class="mast-title" id="mast-title">NIGHTLINE</h1>
+    <h1 class="mast-title" id="mast-title">ArenaPanel</h1>
 
     <div class="subline">
       <span class="fa">پنلِ اشتراک، مسیریابی و ضدّ فیلترِ VLESS و Trojan روی شبکهٔ ابری کلادفلر</span>
       <span class="en">Serverless VLESS, Trojan &amp; Telegram Proxy Desk on Cloudflare Network</span>
-      <span class="mono sm" id="mode-pill">FREE &amp; OPEN · V{{VERSION}}</span>
+      <span class="mono sm" id="mode-pill">ARENA PANEL · V{{VERSION}}</span>
     </div>
 
     <div class="ticker" aria-hidden="true">
       <div class="ticker-track">
-        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
-        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span><span>100% FREE · NOT FOR SALE</span>
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span>
+        <span>VLESS + TROJAN WS</span><span>TELEGRAM WEB PROXY</span><span>FRAGMENT 1-1 &amp; TLSHELLO</span><span>PRIVATE DoH</span><span>MULTI-USER KV</span><span>CLEAN IP SCANNER</span><span>NETWORK &amp; TUNNEL ADVISOR</span>
       </div>
     </div>
   </header>
-
-  <div class="free-ribbon" style="margin-top:12px">
-    <svg class="ic"><use href="#i-shield"/></svg>
-    <span class="fa"><strong>این سرویس کاملاً رایگان و غیرقابل فروش است</strong> — پروژهٔ آزاد و متن‌باز NIGHTLINE (نسخهٔ V{{VERSION}})</span>
-    <span class="en"><strong>100% FREE &amp; STRICTLY NOT FOR SALE</strong> — Open-Source NIGHTLINE Project (V{{VERSION}})</span>
-  </div>
 
   <!-- ───────── VISITOR CONNECTION IDENTITY & IP BLUR STRIP ───────── -->
   <section class="conn-strip" id="visitor-strip" aria-label="Visitor Connection Identity">
@@ -442,7 +407,7 @@
       <div class="card">
         <p class="kicker"><svg class="ic"><use href="#i-lock"/></svg><span class="fa">ورودِ سردبیر</span><span class="en">EDITOR'S CREDENTIALS</span></p>
         <h2 class="head" style="font-size:26px">
-          <span class="fa">اتاقِ فرمانِ NIGHTLINE</span>
+          <span class="fa">اتاق فرمان ArenaPanel</span>
           <span class="en">Enter the Night Desk</span>
         </h2>
         <p class="labor">
@@ -501,20 +466,20 @@
         <span class="en">STORAGE NOT BOUND YET — 60-SECOND CLOUDFLARE KV SETUP</span>
       </p>
       <p class="fa">
-        در داشبورد جدید کلادفلر، اگر در بخش Workers گزینهٔ <strong>Upload assets</strong> را بزنی، کلادفلر یک ورکرِ «فقط فایل ثابت» می‌سازد و پیغام می‌دهد <em>Variables/Bindings cannot be added to a Worker that only has static assets</em>. برای فعال‌سازیِ پنل کاملِ NIGHTLINE (چندکاربره و بدون نیاز به متغیر محیطی):
+        در داشبورد جدید کلادفلر، اگر در بخش Workers گزینهٔ <strong>Upload assets</strong> را بزنی، کلادفلر یک ورکرِ «فقط فایل ثابت» می‌سازد و پیغام می‌دهد <em>Variables/Bindings cannot be added to a Worker that only has static assets</em>. برای فعال‌سازیِ پنل کاملِ ArenaPanel (چندکاربره و بدون نیاز به متغیر محیطی):
       </p>
       <ol class="fa">
-        <li>در منوی چپ کلادفلر به <strong>Storage &amp; Databases → KV</strong> برو، دکمهٔ <strong>Create</strong> را بزن و یک فضا به نام <code>nightline</code> بساز.</li>
+        <li>در منوی چپ کلادفلر به <strong>Storage &amp; Databases → KV</strong> برو، دکمهٔ <strong>Create</strong> را بزن و یک فضا به نام <code>arenapanel</code> بساز.</li>
         <li>به <strong>Workers &amp; Pages → Create</strong> برو، گزینهٔ <strong>Start with Hello World!</strong> را بزن و <strong>Deploy</strong> کن.</li>
         <li>روی دکمهٔ <strong>Edit code</strong> (بالا راست) کلیک کن، کل کد فایل <code>worker-single-file.js</code> را جایگزین کد قبلی کن و <strong>Deploy</strong> بزن.</li>
-        <li>در صفحهٔ ورکر به <strong>Settings → Bindings → Add binding → KV namespace</strong> برو، در کادر Variable name دقیقاً بنویس <code>KV</code>، فضای <code>nightline</code> را انتخاب کن و <strong>Save</strong> بزن.</li>
+        <li>در صفحهٔ ورکر به <strong>Settings → Bindings → Add binding → KV namespace</strong> برو، در کادر Variable name دقیقاً بنویس <code>KV</code>، فضای <code>arenapanel</code> را انتخاب کن و <strong>Save</strong> بزن.</li>
         <li>همین صفحه را رفرش کن — فرم انتخاب رمز مدیر باز می‌شود و دیگر هیچ متغیری لازم نداری!</li>
       </ol>
       <ol class="en">
-        <li>In Cloudflare Dashboard, open <strong>Storage &amp; Databases → KV → Create</strong> and name it <code>nightline</code>.</li>
+        <li>In Cloudflare Dashboard, open <strong>Storage &amp; Databases → KV → Create</strong> and name it <code>arenapanel</code>.</li>
         <li>Open <strong>Workers &amp; Pages → Create → Start with Hello World! → Deploy</strong> (do <em>not</em> use Workers "Upload assets", which creates a static-only Worker).</li>
         <li>Click <strong>Edit code</strong>, paste the entire contents of <code>worker-single-file.js</code>, and click <strong>Deploy</strong>.</li>
-        <li>Go to <strong>Settings → Bindings → Add binding → KV namespace</strong>, set Variable name to <code>KV</code>, select <code>nightline</code>, and save. Refresh this page!</li>
+        <li>Go to <strong>Settings → Bindings → Add binding → KV namespace</strong>, set Variable name to <code>KV</code>, select <code>arenapanel</code>, and save. Refresh this page!</li>
       </ol>
     </aside>
 
@@ -582,7 +547,7 @@
         </button>
 
         <!-- Compact Hardcoded GitHub Updater Pill -->
-        <button class="quota-pill" id="btn-gh-updater" type="button" title="github.com/youdidking/NightLine">
+        <button class="quota-pill" id="btn-gh-updater" type="button" title="github.com/MrIranMa/panel">
           <svg class="ic ic-sm"><use href="#i-cloud-up"/></svg>
           <span class="quota-lbl"><span class="fa">بروزرسانی</span><span class="en">UPDATE</span></span>
           <b class="mono" id="gh-mini-ver">V{{VERSION}}</b>
@@ -1296,7 +1261,7 @@
             <div style="margin-top:10px">
               <label class="chk">
                 <input type="checkbox" id="s-infonodes" checked disabled aria-disabled="true">
-                <span><span class="fa">نمایش اجباری مصرف، انقضا و رایگان‌بودن سرویس در بالای اشتراک</span><span class="en">Show bandwidth &amp; expiry info rows in URI subscriptions</span></span>
+                <span><span class="fa">نمایش مصرف، انقضا و وضعیت سرویس در بالای اشتراک</span><span class="en">Show bandwidth, expiry &amp; service status in URI subscriptions</span></span>
               </label>
             </div>
             <div class="actions mt-auto">
@@ -1367,12 +1332,11 @@
   <footer>
     <div class="doblerule"><i></i><i></i></div>
     <p class="colophon mono sm">
-      <span>NIGHTLINE V{{VERSION}} · <span id="year">2026</span></span>
+      <span>ArenaPanel V{{VERSION}} · <span id="year">2026</span></span>
       <span>·</span>
-      <a class="inline-link" href="https://github.com/youdidking/NightLine" target="_blank" rel="noopener">github.com/youdidking/NightLine</a>
+      <a class="inline-link" href="https://github.com/MrIranMa/panel" target="_blank" rel="noopener">github.com/MrIranMa/panel</a>
       <span>·</span>
-      <span class="fa">کاملاً رایگان و متن‌باز · غیرقابل فروش</span>
-      <span class="en">100% FREE &amp; OPEN-SOURCE · STRICTLY NOT FOR SALE</span>
+      <span class="fa">پنل مدیریت اتصال روی Cloudflare</span><span class="en">CLOUDFLARE CONNECTION MANAGEMENT</span>
     </p>
   </footer>
 </div>

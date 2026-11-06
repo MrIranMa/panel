@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * NIGHTLINE v2.5.8 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
+ * ArenaPanel v2.5.8 — Comprehensive Live `workerd` + Playwright + TLS-over-VLESS E2E Suite (15/15 Suites)
  */
 
 import assert from 'node:assert/strict';
@@ -154,17 +154,17 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         success: true,
-        result: [{ id: 'acc_nl_998877', name: 'NightLine Edge Account' }],
+        result: [{ id: 'acc_nl_998877', name: 'ArenaPanel Edge Account' }],
       }));
     }
     if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         success: true,
-        result: [{ id: 'nightline-worker' }],
+        result: [{ id: 'arenapanel-worker' }],
       }));
     }
-    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/nightline-worker/settings') {
+    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/arenapanel-worker/settings') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         success: true,
@@ -178,14 +178,14 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
         },
       }));
     }
-    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/nightline-worker' && req.method === 'PUT') {
+    if (u.pathname === '/cf/accounts/acc_nl_998877/workers/scripts/arenapanel-worker' && req.method === 'PUT') {
       stateRecorder.workerUploads.push({
         contentType: req.headers['content-type'] || '',
         bodyText: bodyBuf.toString('utf8'),
         byteLength: bodyBuf.length,
       });
       res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ success: true, result: { id: 'nightline-worker' } }));
+      return res.end(JSON.stringify({ success: true, result: { id: 'arenapanel-worker' } }));
     }
     if (u.pathname === '/cf/graphql' && req.method === 'POST') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -196,7 +196,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
               {
                 workersInvocationsAdaptive: [
                   {
-                    dimensions: { scriptName: 'nightline-worker' },
+                    dimensions: { scriptName: 'arenapanel-worker' },
                     sum: { requests: 27450, subrequests: 8200, errors: 3 },
                   },
                 ],
@@ -207,25 +207,25 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
       }));
     }
 
-    // Hardcoded GitHub `youdidking/NightLine` Mock
-    if (u.pathname === '/gh/repos/youdidking/NightLine/releases/latest') {
+    // Hardcoded GitHub `MrIranMa/panel` Mock
+    if (u.pathname === '/gh/repos/MrIranMa/panel/releases/latest') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         tag_name: 'v2.6.0',
-        html_url: 'https://github.com/youdidking/NightLine/releases/tag/v2.6.0',
-        body: '- Official test release from youdidking/NightLine',
+        html_url: 'https://github.com/MrIranMa/panel/releases/tag/v2.6.0',
+        body: '- Official test release from MrIranMa/panel',
         published_at: '2026-10-31T12:00:00Z',
         assets: [
           {
             name: 'worker-single-file.js',
-            browser_download_url: `${MOCK_BASE}/ghraw/youdidking/NightLine/v2.6.0/worker-single-file.js`,
+            browser_download_url: `${MOCK_BASE}/ghraw/MrIranMa/panel/v2.6.0/worker-single-file.js`,
           },
         ],
       }));
     }
-    if (u.pathname === '/ghraw/youdidking/NightLine/main/package.json') {
+    if (u.pathname === '/ghraw/MrIranMa/panel/main/package.json') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ name: 'nightline', version: '2.6.0' }));
+      return res.end(JSON.stringify({ name: 'arenapanel', version: '2.6.0' }));
     }
     if (u.pathname.endsWith('/worker-single-file.js')) {
       res.writeHead(200, { 'content-type': 'application/javascript' });
@@ -241,7 +241,7 @@ async function startMockCloudflareAndGitHubServer(stateRecorder) {
 }
 
 async function main() {
-  console.log('═══ NIGHTLINE v2.5.8 Full Live Verification Suite (15/15) ═══');
+  console.log('═══ ArenaPanel v2.5.8 Full Live Verification Suite (15/15) ═══');
 
   const mockRecorder = { workerUploads: [] };
   const mockSrv = await startMockCloudflareAndGitHubServer(mockRecorder);
@@ -330,8 +330,8 @@ async function main() {
     const boot = await setupRes.json();
 
     assert.equal(boot.version, '2.5.8');
-    assert.equal(boot.updater.repo, 'youdidking/NightLine', 'Hardcoded official GitHub repo must be youdidking/NightLine');
-    assert.equal(boot.updater.repoUrl, 'https://github.com/youdidking/NightLine');
+    assert.equal(boot.updater.repo, 'MrIranMa/panel', 'Updater must target the ArenaPanel repository');
+    assert.equal(boot.updater.repoUrl, 'https://github.com/MrIranMa/panel');
     assert.equal(boot.settings.remarkPrefix, undefined, 'remarkPrefix must be completely removed');
     assert(boot.settings.proxyIPs.length >= 3, 'Default verified ProxyIPs must be populated');
     assert.equal(boot.settings.enableNAT64, true, 'Default NAT64 must be enabled');
@@ -350,19 +350,19 @@ async function main() {
     assert.equal(officialRanges.ipv4[0], '173.245.48.0/20');
     const user = boot.users[0];
 
-    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Zero-Emoji Free Notice in Subscriptions ──
+    // ── TEST 3: All 6 TLS Ports + All 7 HTTP Ports + Subscription metadata without promotional notices ──
     const rawSubRes = await fetch(`${BASE}/sub/${user.subToken}?format=raw`);
     assert.equal(rawSubRes.status, 200);
     const announceHdr = rawSubRes.headers.get('announce') || '';
     assert(announceHdr.startsWith('base64:'), 'Subscription must include announce header');
     const decodedAnnounce = Buffer.from(announceHdr.slice(7), 'base64').toString('utf8');
-    assert(decodedAnnounce.includes('رایگان و متن‌باز'), 'Announce header must state free & non-commercial');
+    assert(decodedAnnounce.includes('ArenaPanel subscription'), 'Announce header must identify ArenaPanel subscription details');
+    assert(!/رایگان|غیرقابل فروش|not for sale|100% free/i.test(decodedAnnounce), 'Announce header must not contain removed promotional notices');
     assert(!/\p{Extended_Pictographic}/u.test(decodedAnnounce), 'Announce header must have 0 emojis');
 
     const rawLines = (await rawSubRes.text()).trim().split('\n');
-    const firstDecodedHash = decodeURIComponent(rawLines[0].split('#')[1] || '');
-    assert(firstDecodedHash.includes('رایگان و غیرقابل فروش'), 'Top URI line must state free & not for sale');
-    assert(!/\p{Extended_Pictographic}/u.test(firstDecodedHash), 'Top URI line must have 0 emojis');
+    assert(rawLines.length > 0, 'Subscription must contain connection data');
+    assert(!/رایگان|غیرقابل فروش|not for sale|100% free/i.test(rawLines.join('\n')), 'Subscription must not contain removed promotional notices');
 
     for (const p of [443, 8443, 2053, 2083, 2087, 2096]) {
       assert(rawLines.some((l) => l.includes(`:${p}?`)), `Expected TLS port ${p} in subscription`);
@@ -386,7 +386,7 @@ async function main() {
     });
     assert.equal(dohHtmlRes.status, 200);
     const dohHtml = await dohHtmlRes.text();
-    assert(dohHtml.includes('NIGHTLINE · PRIVATE DoH'));
+    assert(dohHtml.includes('ArenaPanel · PRIVATE DoH'));
     assert(!/\p{Extended_Pictographic}/u.test(dohHtml), 'DoH HTML guide must contain 0 emojis');
 
     const dohJson = await (await fetch(`${BASE}/dns-query/${user.subToken}?name=example.com&type=A`)).json();
@@ -450,10 +450,7 @@ async function main() {
     await page.goto(`${BASE}/panel`, { waitUntil: 'networkidle' });
 
     // Worker UI decompression and initialization are asynchronous.
-    await page.waitForSelector('#free-notice-modal:not([hidden])', { timeout: 15000 });
-    // Free Notice Popup Modal
-    assert.equal(await page.locator('#free-notice-modal').isVisible(), true);
-    await page.click('#btn-free-close');
+    assert.equal(await page.locator('#free-notice-modal').count(), 0, 'Legacy promotional modal must be removed');
 
     // Sponsor is deliberately absent from the login view; only visible inside admin.
     await page.waitForSelector('#v-login:not([hidden])');
@@ -821,7 +818,7 @@ async function main() {
     console.log(`✓ [14/15] Cloudflare Daily Request Quota Bar & Token Verifier -> ${cfBarState.miniTxt} (${cfBarState.miniWidth}), mini permissions popup verified`);
 
     assert.equal(await page.locator('#warp-section').count(),0,'Removed feature must not remain in the panel');
-    // ── TEST 15: Hardcoded GitHub (`youdidking/NightLine`) Updater & Self-Deploy + Tab 05 Spacing & Clean Copy Audit ──
+    // ── TEST 15: Hardcoded GitHub (`MrIranMa/panel`) Updater & Self-Deploy + Tab 05 Spacing & Clean Copy Audit ──
     const copyAndSpacingAudit = await page.evaluate(() => {
       const fullHtmlText = document.documentElement.innerHTML;
       const bannedMetaPhrases = [
@@ -851,7 +848,7 @@ async function main() {
     assert(gapTab5 >= 12 && Math.abs(gapTab5 - copyAndSpacingAudit.gapTab1) <= 1, `Tab 05 gap (${gapTab5}px) must match Tab 01 gap (${copyAndSpacingAudit.gapTab1}px)`);
 
     await page.waitForSelector('#btn-gh-updater.update-ready',{timeout:10000});assert.equal(await page.locator('#gh-upd-dot').isVisible(),true,'Automatic background check must highlight a newer version');
-    // Open Hardcoded GitHub Updater Modal, check `youdidking/NightLine`, and trigger In-Panel Self-Update!
+    // Open Hardcoded GitHub Updater Modal, check `MrIranMa/panel`, and trigger In-Panel Self-Update!
     await page.click('#btn-gh-updater');
     await page.waitForSelector('#gh-modal:not([hidden])');
     await sleep(450);
@@ -860,7 +857,7 @@ async function main() {
       remVer: document.getElementById('gh-rem-ver')?.textContent || '',
       dotVisible: !document.getElementById('gh-upd-dot')?.hidden,
     }));
-    assert.equal(ghUi.repoHref, 'https://github.com/youdidking/NightLine');
+    assert.equal(ghUi.repoHref, 'https://github.com/MrIranMa/panel');
     assert.equal(ghUi.remVer, 'V2.6.0', `Expected V2.6.0 from mock GitHub release, got: ${ghUi.remVer}`);
     assert.equal(ghUi.dotVisible, true, 'Update NEW indicator must appear when newer version exists on GitHub');
 
@@ -872,12 +869,12 @@ async function main() {
     assert(upload.bodyText.includes('"kv_ns_demo_123"'), 'Self-updater MUST preserve existing KV namespace bindings');
     assert(upload.bodyText.includes('"keep_bindings":["secret_text","secret_key"]'), 'Self-updater MUST preserve existing secrets');
     assert(upload.byteLength > 200000, 'Uploaded Worker bundle must contain full compiled script');
-    console.log(`✓ [15/15] GitHub Self-Updater (youdidking/NightLine) + Tab 05 Spacing (${gapTab5}px == ${copyAndSpacingAudit.gapTab1}px) + Clean Captions verified!`);
+    console.log(`✓ [15/15] GitHub Self-Updater (MrIranMa/panel) + Tab 05 Spacing (${gapTab5}px == ${copyAndSpacingAudit.gapTab1}px) + Clean Captions verified!`);
 
     assert.equal(pageErrors.length, 0, `Unexpected browser JS errors: ${pageErrors.join('; ')}`);
     await browser.close();
     assert(!serverLogs.includes('Uncaught'), `Unexpected Uncaught in workerd logs:\n${serverLogs}`);
-    console.log('\nALL 15/15 NIGHTLINE v2.5.8 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
+    console.log('\nALL 15/15 ArenaPanel v2.5.8 E2E VERIFICATION SUITES PASSED WITH ZERO ERRORS!');
   } catch (err) {
     console.error('\nTEST FAILED:', err);
     if (serverLogs) console.error('SERVER LOGS:\n', serverLogs.slice(-1500));

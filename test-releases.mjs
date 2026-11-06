@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {fetchLatestBundle,sha256} from './src/releases.js';
 const original=globalThis.fetch,bytes=fs.readFileSync('worker-single-file.js'),hash=await sha256(bytes),commit='a'.repeat(40);
 let mode='release',requests=[];
-const release=()=>({tag_name:'v2.6.0',assets:[{name:'worker-single-file.js',size:bytes.length,digest:'sha256:'+hash,browser_download_url:mode==='foreign'?'https://evil.example/worker.js':'https://github.com/youdidking/NightLine/releases/download/v2.6.0/worker-single-file.js'}]});
+const release=()=>({tag_name:'v2.6.0',assets:[{name:'worker-single-file.js',size:bytes.length,digest:'sha256:'+hash,browser_download_url:mode==='foreign'?'https://evil.example/worker.js':'https://github.com/MrIranMa/panel/releases/download/v2.6.0/worker-single-file.js'}]});
 globalThis.fetch=async(url,options)=>{
  requests.push(url);assert(!options.headers.authorization);assert.equal(options.credentials,undefined);
  const u=new URL(url);
@@ -16,7 +16,7 @@ globalThis.fetch=async(url,options)=>{
  if(u.hostname==='github.com'){
   const data=Buffer.from(bytes);if(mode==='tamper')data[20]^=1;return new Response(data);
  }
- if(u.pathname.endsWith('/repos/youdidking/NightLine'))return Response.json({default_branch:'main'});
+ if(u.pathname.endsWith('/repos/MrIranMa/panel'))return Response.json({default_branch:'main'});
  if(u.pathname.includes('/commits/'))return Response.json({sha:commit});
  if(u.hostname==='raw.githubusercontent.com'){
   assert(u.pathname.includes('/'+commit+'/'),'Fallback source must be commit-pinned');

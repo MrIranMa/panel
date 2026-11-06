@@ -44,6 +44,6 @@ $('install').addEventListener('submit',async function(event){
 });
 async function copy(value){try{await navigator.clipboard.writeText(value);status('کپی شد.');}catch(e){status('دسترسی کلیپ‌بورد بسته است؛ مقدار را انتخاب و دستی کپی کنید.',true);}}
 $('copy-url').onclick=function(){if(credentials)copy(credentials.url);};$('copy-password').onclick=function(){if(credentials)copy(credentials.password);};$('show-password').onclick=function(){$('password').type=$('password').type==='password'?'text':'password';};
-$('download').onclick=function(){if(!credentials)return;var blob=new Blob(['NIGHTLINE '+credentials.version+'\nPanel: '+credentials.url+'\nAdmin password: '+credentials.password+'\nKeep this file private.\n'],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='nightline-private-login.txt';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);};
+$('download').onclick=function(){if(!credentials)return;var blob=new Blob(['ArenaPanel '+credentials.version+'\nPanel: '+credentials.url+'\nAdmin password: '+credentials.password+'\nKeep this file private.\n'],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='arenapanel-private-login.txt';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);};
 window.addEventListener('beforeunload',function(e){if(active){e.preventDefault();e.returnValue='';}});
 })();

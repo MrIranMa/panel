@@ -1,12 +1,12 @@
-/* Version-independent NIGHTLINE installer. All progress is reported by the server on the same origin. */
+/* Version-independent ArenaPanel installer. All progress is reported by the server on the same origin. */
 import { initializePanelState } from './storage.js';
 import { fetchLatestBundle } from './releases.js';
 import { INSTALLER_HTML } from './generated/installer-ui.js';
 
 const API='https://api.cloudflare.com/client/v4';
 const permissions=[['account_analytics','read'],['account_settings','read'],['workers_scripts','edit'],['workers_kv_storage','edit']].map(([key,type])=>({key,type}));
-export const TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions))+'&accountId=*&name=NIGHTLINE%20Free%20Installer';
-export const PAGES_TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions.map(p=>p.key==='workers_scripts'?{key:'page',type:'edit'}:p)))+'&accountId=*&name=NIGHTLINE%20Free%20Pages%20Installer';
+export const TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions))+'&accountId=*&name=ArenaPanel%20Installer';
+export const PAGES_TOKEN_TEMPLATE='https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys='+encodeURIComponent(JSON.stringify(permissions.map(p=>p.key==='workers_scripts'?{key:'page',type:'edit'}:p)))+'&accountId=*&name=ArenaPanel%20Pages%20Installer';
 const locks=new Set();
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -54,7 +54,7 @@ export async function runInstallation(initialToken,emit,apiBase=API,releaseOptio
     locks.add(account);ownsLock=true;
     if(!pages){
       subdomain=await cf(`/accounts/${account}/workers/subdomain`,'GET',undefined,true);
-      if(!subdomain?.subdomain)subdomain=await cf(`/accounts/${account}/workers/subdomain`,'PUT',{subdomain:'nightline-free-'+crypto.randomUUID().slice(0,8)});
+      if(!subdomain?.subdomain)subdomain=await cf(`/accounts/${account}/workers/subdomain`,'PUT',{subdomain:'arenapanel-'+crypto.randomUUID().slice(0,8)});
       if(!/^[a-z0-9-]+$/.test(subdomain?.subdomain||''))throw Error('workers.dev در این اکانت فعال نیست؛ وضعیت اکانت را در داشبورد بررسی کنید.');
     }
     stage('account','done',pages?'اکانت مقصد برای ساخت پروژهٔ Pages شناسایی شد.':'اکانت مقصد و زیردامنه شناسایی شدند؛ نام موجود تغییر نمی‌کند.',14);
@@ -62,14 +62,14 @@ export async function runInstallation(initialToken,emit,apiBase=API,releaseOptio
     const bundle=await fetchLatestBundle(message=>stage('package','running',message,20),releaseOptions);
     const source=bundle.source,installedVersion=bundle.version;
     stage('package','done','نسخهٔ '+installedVersion+' از مخزن رسمی دریافت شد.',25);
-    script='nightline-free-'+crypto.randomUUID().replaceAll('-','').slice(0,12);
+    script='arenapanel-'+crypto.randomUUID().replaceAll('-','').slice(0,12);
     stage('storage','running','در حال ساخت KV اختصاصی پنل…',28);
     namespace=await cf(`/accounts/${account}/storage/kv/namespaces`,'POST',{title:script+'-kv'});
     stage('storage','done','فضای ذخیره‌سازی جدید ساخته شد.',38);
     stage('security','running','تولید گذرواژه و ثبت وضعیت مدیریت پیش از انتشار…',40);
     const password=[...crypto.getRandomValues(new Uint8Array(24))].map(b=>b.toString(16).padStart(2,'0')).join('');
     const kv={get:async()=>null,put:async(key,value)=>{await cf(`/accounts/${account}/storage/kv/namespaces/${namespace.id}/values/${encodeURIComponent(key)}`,'PUT',value);}};
-    await initializePanelState({KV:kv},{password,firstUserName:'مدیر NIGHTLINE رایگان',settings:pages?{tlsPorts:[443],earlyData:0,alpn:'http/1.1'}:undefined});
+    await initializePanelState({KV:kv},{password,firstUserName:'مدیر ArenaPanel',settings:pages?{tlsPorts:[443],earlyData:0,alpn:'http/1.1'}:undefined});
     stage('security','done','مدیریت ایجاد شد؛ راه‌اندازی عمومی در پنل نصب‌شده قفل می‌شود.',50);
     if(pages){
       stage('worker','running','ساخت پروژهٔ Pages و اتصال KV و قفل مدیریت…',53);
