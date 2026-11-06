@@ -1,4 +1,4 @@
-/* NIGHTLINE v2.5.8 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
+/* ArenaPanel v2.5.8 — Complete Client Application (Vanilla ES6, zero external deps, zero emojis) */
 (function () {
   'use strict';
 
